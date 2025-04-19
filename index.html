@@ -330,6 +330,17 @@
             let minutes = 0;
             let hours = 0;
             
+            // Agregar controlador para prevenir refrescar la página accidentalmente
+            window.addEventListener('beforeunload', function(e) {
+                // Solo mostrar confirmación si hay datos registrados o el timer está corriendo
+                if (closedCount > 0 || managedCount > 0 || timerRunning) {
+                    // Mensaje que se mostrará (los navegadores modernos usan su propio mensaje genérico)
+                    const mensaje = "¿Estás seguro de que quieres salir? Perderás todos los datos registrados.";
+                    e.returnValue = mensaje; // Estándar
+                    return mensaje; // Para navegadores antiguos
+                }
+            });
+            
             // Función para mostrar mensaje de error
             function mostrarError(mensaje) {
                 mensajeError.textContent = mensaje;
