@@ -507,6 +507,25 @@
                 actualizarEstadoBotones();
             });
             
+            // Evento para añadir caso cerrado
+            btnClosed.addEventListener('click', function() {
+                if (closedCount < managedCount) {
+                    closedCount++;
+                    casesClosed.textContent = closedCount;
+                    updateStats();
+                } else {
+                    mostrarError("No puedes cerrar más casos de los que has gestionado");
+                }
+            });
+            
+            // Evento para añadir caso gestionado
+            btnManaged.addEventListener('click', function() {
+                managedCount++;
+                casesManaged.textContent = managedCount;
+                updateStats();
+                actualizarEstadoBotones();
+            });
+            
             // Evento para reiniciar
             btnReset.addEventListener('click', function() {
                 // Reiniciar contadores
