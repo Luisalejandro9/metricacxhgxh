@@ -485,26 +485,6 @@
                 updateStats();
             }
             
-            // Evento para casos cerrados
-            btnClosed.addEventListener('click', function() {
-                // Verificar que no haya más casos cerrados que gestionados
-                if (closedCount >= managedCount) {
-                    mostrarError("No puedes cerrar más casos de los que has gestionado");
-                    return;
-                }
-                
-                closedCount++;
-                casesClosed.textContent = closedCount;
-                updateStats();
-            });
-            
-            // Evento para casos gestionados
-            btnManaged.addEventListener('click', function() {
-                managedCount++;
-                casesManaged.textContent = managedCount;
-                updateStats();
-            });
-            
             // Evento para iniciar/detener el temporizador
             btnTimer.addEventListener('click', function() {
                 if (timerRunning) {
