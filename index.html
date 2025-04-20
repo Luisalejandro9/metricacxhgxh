@@ -326,6 +326,8 @@
             let managedCount = 0;
             let timerRunning = false;
             let timerInterval;
+            let startTime; // Tiempo de inicio en milisegundos
+            let pausedTime = 0; // Tiempo acumulado en pausas anteriores
             let seconds = 0;
             let minutes = 0;
             let hours = 0;
@@ -462,17 +464,15 @@
             
             // Función para actualizar el temporizador
             function updateTimer() {
-                seconds++;
+                // Calcular el tiempo transcurrido basado en la hora actual
+                const currentTime = Date.now();
+                const elapsedMilliseconds = currentTime - startTime + pausedTime;
                 
-                if (seconds >= 60) {
-                    seconds = 0;
-                    minutes++;
-                    
-                    if (minutes >= 60) {
-                        minutes = 0;
-                        hours++;
-                    }
-                }
+                // Convertir a segundos, minutos y horas
+                const totalSeconds = Math.floor(elapsedMilliseconds / 1000);
+                seconds = totalSeconds % 60;
+                minutes = Math.floor(totalSeconds / 60) % 60;
+                hours = Math.floor(totalSeconds / 3600);
                 
                 // Formatear el tiempo como HH:MM:SS
                 const formattedTime = [
@@ -510,11 +510,14 @@
                 if (timerRunning) {
                     // Detener el temporizador
                     clearInterval(timerInterval);
+                    // Guardar el tiempo transcurrido hasta ahora
+                    pausedTime += Date.now() - startTime;
                     btnTimer.textContent = "Iniciar Tiempo";
                     mensajeInfo.textContent = "Tiempo detenido. Inicia el tiempo para continuar registrando casos";
                     mensajeInfo.style.display = "block";
                 } else {
-                    // Iniciar el temporizador
+                    // Iniciar el temporizador con la hora actual
+                    startTime = Date.now();
                     timerInterval = setInterval(updateTimer, 1000);
                     btnTimer.textContent = "Detener Tiempo";
                     mensajeInfo.style.display = "none";
@@ -533,6 +536,8 @@
                 // Reiniciar temporizador
                 clearInterval(timerInterval);
                 timerRunning = false;
+                startTime = 0;
+                pausedTime = 0;
                 seconds = 0;
                 minutes = 0;
                 hours = 0;
