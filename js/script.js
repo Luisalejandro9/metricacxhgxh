@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const avgManaged = document.getElementById('avgManaged');
     const tiempoPorCaso = document.getElementById('tiempoPorCaso');
     const standardTiempoPorCaso = document.getElementById('standardTiempoPorCaso');
+    const tiempoPorGestionado = document.getElementById('tiempoPorGestionado');
+    const standardTiempoPorGestionado = document.getElementById('standardTiempoPorGestionado');
     const timer = document.getElementById('timer');
     const mensajeError = document.getElementById('mensajeError');
     const mensajeInfo = document.getElementById('mensajeInfo');
@@ -19,36 +21,121 @@ document.addEventListener('DOMContentLoaded', function() {
     const standardAvgClosed = document.getElementById('standardAvgClosed');
     const standardAvgManaged = document.getElementById('standardAvgManaged');
     
-    // Estándares definidos
-    const STANDARD_CLOSED_PER_HOUR = 2.8;
-    const STANDARD_MANAGED_PER_HOUR = 3.8;
-    const STANDARD_TIME_PER_CASE = 950; // Nuevo estándar: tiempo promedio por caso en segundos
-    
-    // Variables para contadores
+    // Variables globales
     let closedCount = 0;
     let managedCount = 0;
     let timerRunning = false;
-    let timerInterval;
-    let startTime; // Tiempo de inicio en milisegundos
-    let pausedTime = 0; // Tiempo acumulado en pausas anteriores
+    let timerInterval = null;
+    let startTime = 0;
+    let pausedTime = 0;
     let seconds = 0;
     let minutes = 0;
     let hours = 0;
-    
-    // Variables para control de notificaciones
-    let lastNotificationTime = 0;
-    const NOTIFICATION_COOLDOWN = 300000; // 5 minutos en milisegundos
     let notificationsEnabled = false;
-    // Variables para control de notificaciones
     let belowStandardMetrics = {
         closed: false,
         managed: false,
         total: false,
-        tiempoPorCaso: false
+        tiempoPorCaso: false,
+        tiempoPorGestionado: false
     };
     
+    // Estándares definidos
+    const STANDARD_CLOSED_PER_HOUR = 2.8;
+    const STANDARD_MANAGED_PER_HOUR = 3.8;
+    const STANDARD_TIME_PER_CASE = 950; // Estándar: tiempo promedio por caso en segundos
+    const STANDARD_TIME_PER_MANAGED = 700; // Estándar: tiempo promedio por caso gestionado en segundos
+    
+    // Función para mostrar mensajes de error
+    function mostrarError(mensaje) {
+        mensajeError.textContent = mensaje;
+        mensajeError.classList.add('activo');
+        
+        setTimeout(function() {
+            mensajeError.classList.remove('activo');
+        }, 3000);
+    }
+    
+    // Función para solicitar permiso para notificaciones
+    function requestNotificationPermission() {
+        if (!("Notification" in window)) {
+            console.log("Este navegador no soporta notificaciones");
+            return;
+        }
+        
+        Notification.requestPermission().then(function(permission) {
+            if (permission === "granted") {
+                notificationsEnabled = true;
+                console.log("Permiso de notificaciones concedido");
+            }
+        });
+    }
+    
+    // Función para enviar notificaciones
+    function sendNotification(title, message) {
+        if (!notificationsEnabled) return;
+        
+        const options = {
+            body: message,
+            icon: 'img/icon.png'
+        };
+        
+        new Notification(title, options);
+    }
+    
+    // Función para calcular el tiempo promedio por caso cerrado en segundos
+    function calcularTiempoPromedioPorCaso() {
+        if (closedCount === 0) {
+            return 0;
+        }
+        
+        // Calcular el tiempo total en segundos
+        const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
+        
+        // Calcular el promedio (tiempo total / casos cerrados)
+        return Math.floor(totalSeconds / closedCount);
+    }
+    
+    // Función para calcular el tiempo promedio por caso gestionado en segundos
+    function calcularTiempoPromedioPorGestionado() {
+        if (managedCount === 0) {
+            return 0;
+        }
+        
+        // Calcular el tiempo total en segundos
+        const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
+        
+        // Calcular el promedio (tiempo total / casos gestionados)
+        return Math.floor(totalSeconds / managedCount);
+    }
+    
+    // Función para actualizar el estado de los botones
+    function actualizarEstadoBotones() {
+        // Verificar si el temporizador está en marcha
+        if (!timerRunning) {
+            btnClosed.classList.add('disabled');
+            btnClosed.disabled = true;
+            btnManaged.classList.add('disabled');
+            btnManaged.disabled = true;
+            return;
+        }
+        
+        // Habilitar botón de casos gestionados
+        btnManaged.classList.remove('disabled');
+        btnManaged.disabled = false;
+        
+        // Verificar si se pueden cerrar más casos
+        if (closedCount >= managedCount) {
+            btnClosed.classList.add('disabled');
+            btnClosed.disabled = true;
+        } else {
+            btnClosed.classList.remove('disabled');
+            btnClosed.disabled = false;
+        }
+    }
+    
     // Función para verificar métricas y enviar notificaciones
-    function checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio) {
+    function checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado) {
         // Solo verificar si el timer está corriendo y han pasado al menos 5 minutos
         if (!timerRunning || (hours === 0 && minutes < 5)) return;
         
@@ -88,6 +175,17 @@ document.addEventListener('DOMContentLoaded', function() {
             belowStandardMetrics.tiempoPorCaso = false;
         }
         
+        // Verificar tiempo promedio por caso gestionado
+        if (tiempoPromedioGestionado > 0 && tiempoPromedioGestionado >= STANDARD_TIME_PER_MANAGED) {
+            if (!belowStandardMetrics.tiempoPorGestionado) {
+                belowStandardMessages.push(`Tiempo promedio por caso gestionado (${tiempoPromedioGestionado} seg) por encima del estándar (${STANDARD_TIME_PER_MANAGED} seg)`);
+                belowStandardMetrics.tiempoPorGestionado = true;
+                anyBelowStandard = true;
+            }
+        } else {
+            belowStandardMetrics.tiempoPorGestionado = false;
+        }
+        
         // Enviar notificación si hay métricas por debajo del estándar
         if (anyBelowStandard) {
             const title = "¡Alerta de Rendimiento!";
@@ -96,96 +194,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Verificar soporte para notificaciones
-    function checkNotificationSupport() {
-        if (!("Notification" in window)) {
-            console.log("Este navegador no soporta notificaciones de escritorio");
-            return false;
-        }
-        return true;
-    }
-    
-    // Solicitar permiso para notificaciones
-    function requestNotificationPermission() {
-        if (!checkNotificationSupport()) return;
+    // Función para actualizar estadísticas
+    function updateStats() {
+        // Porcentaje de cierre
+        const percentage = managedCount > 0 ? ((closedCount / managedCount) * 100).toFixed(1) : 0;
+        closeRate.textContent = percentage + '%';
         
-        Notification.requestPermission().then(function(permission) {
-            if (permission === "granted") {
-                notificationsEnabled = true;
-                console.log("Notificaciones habilitadas");
-            }
-        });
-    }
-    
-    // Solicitar permiso al iniciar
-    requestNotificationPermission();
-    
-    // Función para enviar notificación
-    function sendNotification(title, message) {
-        if (!notificationsEnabled) return;
+        // Calcular métricas basadas en tiempo
+        const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
+        const totalHours = totalSeconds / 3600;
         
-        // Verificar si ha pasado suficiente tiempo desde la última notificación
-        const now = Date.now();
-        if (now - lastNotificationTime < NOTIFICATION_COOLDOWN) return;
+        let closedPerHour = 0;
+        let managedPerHour = 0;
+        let totalPerHour = 0;
         
-        lastNotificationTime = now;
-        
-        const notification = new Notification(title, {
-            body: message,
-            icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z" fill="currentColor"/></svg>'
-        });
-        
-        notification.onclick = function() {
-            window.focus();
-            this.close();
-        };
-    }
-    
-    // Agregar controlador para prevenir refrescar la página accidentalmente
-    window.addEventListener('beforeunload', function(e) {
-        // Solo mostrar confirmación si hay datos registrados o el timer está corriendo
-        if (closedCount > 0 || managedCount > 0 || timerRunning) {
-            // Mensaje que se mostrará (los navegadores modernos usan su propio mensaje genérico)
-            const mensaje = "¿Estás seguro de que quieres salir? Perderás todos los datos registrados.";
-            e.returnValue = mensaje; // Estándar
-            return mensaje; // Para navegadores antiguos
-        }
-    });
-    
-    // Función para mostrar mensaje de error
-    function mostrarError(mensaje) {
-        mensajeError.textContent = mensaje;
-        mensajeError.classList.add('activo');
-        
-        // Ocultar el mensaje después de 3 segundos
-        setTimeout(() => {
-            mensajeError.classList.remove('activo');
-        }, 3000);
-    }
-    
-    // Función para actualizar el estado de los botones
-    function actualizarEstadoBotones() {
-        // Verificar si el temporizador está en marcha
-        if (!timerRunning) {
-            btnClosed.classList.add('disabled');
-            btnClosed.disabled = true;
-            btnManaged.classList.add('disabled');
-            btnManaged.disabled = true;
-            return;
+        if (totalSeconds > 0) {
+            // Casos por hora (total)
+            totalPerHour = totalHours > 0 ? ((managedCount) / totalHours).toFixed(1) : 0;
+            casesPerHour.textContent = totalPerHour;
+            
+            // Promedio de casos cerrados por hora
+            closedPerHour = totalHours > 0 ? (closedCount / totalHours).toFixed(1) : 0;
+            avgClosed.textContent = closedPerHour;
+            
+            // Promedio de casos gestionados por hora
+            managedPerHour = totalHours > 0 ? (managedCount / totalHours).toFixed(1) : 0;
+            avgManaged.textContent = managedPerHour;
+            
+            // Tiempo promedio por caso cerrado (en segundos)
+            const tiempoPromedio = calcularTiempoPromedioPorCaso();
+            tiempoPorCaso.textContent = tiempoPromedio;
+            
+            // Tiempo promedio por caso gestionado (en segundos)
+            const tiempoPromedioGestionado = calcularTiempoPromedioPorGestionado();
+            tiempoPorGestionado.textContent = tiempoPromedioGestionado;
+            
+            // Actualizar indicadores de estándares
+            actualizarIndicadoresEstandares(closedPerHour, managedPerHour);
         }
         
-        // Habilitar botón de casos gestionados
-        btnManaged.classList.remove('disabled');
-        btnManaged.disabled = false;
-        
-        // Verificar si se pueden cerrar más casos
-        if (closedCount >= managedCount) {
-            btnClosed.classList.add('disabled');
-            btnClosed.disabled = true;
-        } else {
-            btnClosed.classList.remove('disabled');
-            btnClosed.disabled = false;
-        }
+        // Actualizar estado de botones
+        actualizarEstadoBotones();
     }
     
     // Función para actualizar los indicadores de estándares
@@ -251,60 +300,24 @@ document.addEventListener('DOMContentLoaded', function() {
             standardTiempoPorCaso.textContent = "Por encima del estándar";
         }
         
+        // Verificar estándar para tiempo por caso gestionado
+        const tiempoPromedioGestionado = calcularTiempoPromedioPorGestionado();
+        if (tiempoPromedioGestionado > 0 && tiempoPromedioGestionado < STANDARD_TIME_PER_MANAGED) {
+            tiempoPorGestionado.classList.remove('stat-below-standard');
+            tiempoPorGestionado.classList.add('stat-meets-standard');
+            standardTiempoPorGestionado.classList.remove('standard-below');
+            standardTiempoPorGestionado.classList.add('standard-meets');
+            standardTiempoPorGestionado.textContent = "Cumple el estándar";
+        } else if (tiempoPromedioGestionado > 0) {
+            tiempoPorGestionado.classList.remove('stat-meets-standard');
+            tiempoPorGestionado.classList.add('stat-below-standard');
+            standardTiempoPorGestionado.classList.remove('standard-meets');
+            standardTiempoPorGestionado.classList.add('standard-below');
+            standardTiempoPorGestionado.textContent = "Por encima del estándar";
+        }
+        
         // Verificar métricas y enviar notificaciones si es necesario
-        checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio);
-    }
-    
-    // Función para calcular el tiempo promedio por caso cerrado en segundos
-    function calcularTiempoPromedioPorCaso() {
-        if (closedCount === 0) {
-            return 0;
-        }
-        
-        // Calcular el tiempo total en segundos
-        const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
-        
-        // Calcular el promedio (tiempo total / casos cerrados)
-        return Math.floor(totalSeconds / closedCount);
-    }
-    
-    // Función para actualizar estadísticas
-    function updateStats() {
-        // Porcentaje de cierre
-        const percentage = managedCount > 0 ? ((closedCount / managedCount) * 100).toFixed(1) : 0;
-        closeRate.textContent = percentage + '%';
-        
-        // Calcular métricas basadas en tiempo
-        const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
-        const totalHours = totalSeconds / 3600;
-        
-        let closedPerHour = 0;
-        let managedPerHour = 0;
-        let totalPerHour = 0;
-        
-        if (totalSeconds > 0) {
-            // Casos por hora (total)
-            totalPerHour = totalHours > 0 ? ((managedCount) / totalHours).toFixed(1) : 0;
-            casesPerHour.textContent = totalPerHour;
-            
-            // Promedio de casos cerrados por hora
-            closedPerHour = totalHours > 0 ? (closedCount / totalHours).toFixed(1) : 0;
-            avgClosed.textContent = closedPerHour;
-            
-            // Promedio de casos gestionados por hora
-            managedPerHour = totalHours > 0 ? (managedCount / totalHours).toFixed(1) : 0;
-            avgManaged.textContent = managedPerHour;
-            
-            // Tiempo promedio por caso cerrado (en segundos)
-            const tiempoPromedio = calcularTiempoPromedioPorCaso();
-            tiempoPorCaso.textContent = tiempoPromedio;
-            
-            // Actualizar indicadores de estándares
-            actualizarIndicadoresEstandares(closedPerHour, managedPerHour);
-        }
-        
-        // Actualizar estado de botones
-        actualizarEstadoBotones();
+        checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado);
     }
     
     // Función para actualizar el temporizador
@@ -400,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
         avgClosed.textContent = '0';
         avgManaged.textContent = '0';
         tiempoPorCaso.textContent = '0';
+        tiempoPorGestionado.textContent = '0';
         timer.textContent = '00:00:00';
         
         btnTimer.textContent = "Iniciar Tiempo";
@@ -433,8 +447,20 @@ document.addEventListener('DOMContentLoaded', function() {
         standardTiempoPorCaso.classList.add('standard-below');
         standardTiempoPorCaso.textContent = "Por debajo del estándar";
         
-        // Resetear estado de botones
-        actualizarEstadoBotones();
+        tiempoPorGestionado.classList.remove('stat-meets-standard');
+        tiempoPorGestionado.classList.add('stat-below-standard');
+        standardTiempoPorGestionado.classList.remove('standard-meets');
+        standardTiempoPorGestionado.classList.add('standard-below');
+        standardTiempoPorGestionado.textContent = "Por debajo del estándar";
+        
+        // Reiniciar variables de notificación
+        belowStandardMetrics = {
+            closed: false,
+            managed: false,
+            total: false,
+            tiempoPorCaso: false,
+            tiempoPorGestionado: false
+        };
     });
     
     // Inicializar estado de botones
