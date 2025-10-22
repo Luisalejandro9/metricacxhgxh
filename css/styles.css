@@ -200,6 +200,27 @@ button {
     margin-bottom: 30px;
 }
 
+.chart-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.chart-card h2 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+#productivityChart {
+    width: 100%;
+    height: 360px;
+    max-height: 360px;
+}
+
 .stat-card {
     background-color: white;
     border-radius: 8px;
@@ -296,6 +317,15 @@ button {
     .stat-value {
         font-size: 1.5rem;
     }
+
+    .chart-card {
+        padding: 15px;
+    }
+
+    #productivityChart {
+        height: 300px;
+        max-height: 300px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -337,9 +367,14 @@ button {
     .stat-value {
         font-size: 1.3rem;
     }
-    
+
     .standard-indicator {
         font-size: 0.7rem;
+    }
+
+    #productivityChart {
+        height: 260px;
+        max-height: 260px;
     }
 }
 

@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const standardCasesPerHour = document.getElementById('standardCasesPerHour');
     const standardAvgClosed = document.getElementById('standardAvgClosed');
     const standardAvgManaged = document.getElementById('standardAvgManaged');
+    const productivityChartCanvas = document.getElementById('productivityChart');
     
     // Variables globales
     let closedCount = 0;
@@ -39,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
         tiempoPorCaso: false,
         tiempoPorGestionado: false
     };
+    let productivityChart = null;
+    let lastChartSnapshot = { seconds: null, managed: 0, closed: 0 };
+
+    const CHART_POINT_LIMIT = 30;
     
     // Estándares definidos
     const STANDARD_CLOSED_PER_HOUR = 2.8;
@@ -74,13 +79,141 @@ document.addEventListener('DOMContentLoaded', function() {
     // Función para enviar notificaciones
     function sendNotification(title, message) {
         if (!notificationsEnabled) return;
-        
+
         const options = {
             body: message,
             icon: 'img/icon.png'
         };
-        
+
         new Notification(title, options);
+    }
+
+    function formatTimeLabel(totalSeconds) {
+        const hoursPart = Math.floor(totalSeconds / 3600);
+        const minutesPart = Math.floor((totalSeconds % 3600) / 60);
+        const secondsPart = totalSeconds % 60;
+
+        return [
+            hoursPart.toString().padStart(2, "0"),
+            minutesPart.toString().padStart(2, "0"),
+            secondsPart.toString().padStart(2, "0")
+        ].join(":");
+    }
+
+    function initializeProductivityChart() {
+        if (!productivityChartCanvas || typeof Chart === "undefined") {
+            return;
+        }
+
+        const context = productivityChartCanvas.getContext('2d');
+        productivityChart = new Chart(context, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Casos Por Hora',
+                        data: [],
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.15)',
+                        fill: true,
+                        tension: 0.35
+                    },
+                    {
+                        label: 'Promedio Cerrados',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: false,
+                        tension: 0.35
+                    },
+                    {
+                        label: 'Promedio Gestionados',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: false,
+                        tension: 0.35
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    function shouldAddChartPoint(totalSeconds) {
+        if (lastChartSnapshot.seconds === null) {
+            return true;
+        }
+
+        if (totalSeconds - lastChartSnapshot.seconds >= 60) {
+            return true;
+        }
+
+        if (managedCount !== lastChartSnapshot.managed || closedCount !== lastChartSnapshot.closed) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function updateProductivityChart(totalSeconds, closedPerHour, managedPerHour, totalPerHour) {
+        if (!productivityChart) {
+            return;
+        }
+
+        if (!shouldAddChartPoint(totalSeconds)) {
+            return;
+        }
+
+        const label = formatTimeLabel(totalSeconds);
+        const formattedTotalPerHour = Number(totalPerHour.toFixed(2));
+        const formattedClosedPerHour = Number(closedPerHour.toFixed(2));
+        const formattedManagedPerHour = Number(managedPerHour.toFixed(2));
+
+        productivityChart.data.labels.push(label);
+        productivityChart.data.datasets[0].data.push(formattedTotalPerHour);
+        productivityChart.data.datasets[1].data.push(formattedClosedPerHour);
+        productivityChart.data.datasets[2].data.push(formattedManagedPerHour);
+
+        if (productivityChart.data.labels.length > CHART_POINT_LIMIT) {
+            productivityChart.data.labels.shift();
+            productivityChart.data.datasets.forEach(dataset => dataset.data.shift());
+        }
+
+        productivityChart.update('none');
+        lastChartSnapshot = {
+            seconds: totalSeconds,
+            managed: managedCount,
+            closed: closedCount
+        };
+    }
+
+    function resetProductivityChart() {
+        if (!productivityChart) {
+            return;
+        }
+
+        productivityChart.data.labels = [];
+        productivityChart.data.datasets.forEach(dataset => {
+            dataset.data = [];
+        });
+
+        productivityChart.update('none');
+        lastChartSnapshot = { seconds: null, managed: 0, closed: 0 };
     }
     
     // Función para calcular el tiempo promedio por caso cerrado en segundos
@@ -145,18 +278,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Verificar casos cerrados por hora
         if (closedPerHour < STANDARD_CLOSED_PER_HOUR) {
             if (!belowStandardMetrics.closed) {
-                belowStandardMessages.push(`Casos cerrados por hora (${closedPerHour}) por debajo del estándar (${STANDARD_CLOSED_PER_HOUR})`);
+                belowStandardMessages.push(`Casos cerrados por hora (${closedPerHour.toFixed(1)}) por debajo del estándar (${STANDARD_CLOSED_PER_HOUR})`);
                 belowStandardMetrics.closed = true;
                 anyBelowStandard = true;
             }
         } else {
             belowStandardMetrics.closed = false;
         }
-        
+
         // Verificar casos gestionados por hora
         if (managedPerHour < STANDARD_MANAGED_PER_HOUR) {
             if (!belowStandardMetrics.managed) {
-                belowStandardMessages.push(`Casos gestionados por hora (${managedPerHour}) por debajo del estándar (${STANDARD_MANAGED_PER_HOUR})`);
+                belowStandardMessages.push(`Casos gestionados por hora (${managedPerHour.toFixed(1)}) por debajo del estándar (${STANDARD_MANAGED_PER_HOUR})`);
                 belowStandardMetrics.managed = true;
                 anyBelowStandard = true;
             }
@@ -207,19 +340,19 @@ document.addEventListener('DOMContentLoaded', function() {
         let closedPerHour = 0;
         let managedPerHour = 0;
         let totalPerHour = 0;
-        
+
         if (totalSeconds > 0) {
             // Casos por hora (total)
-            totalPerHour = totalHours > 0 ? ((managedCount) / totalHours).toFixed(1) : 0;
-            casesPerHour.textContent = totalPerHour;
-            
+            totalPerHour = totalHours > 0 ? (managedCount / totalHours) : 0;
+            casesPerHour.textContent = totalPerHour.toFixed(1);
+
             // Promedio de casos cerrados por hora
-            closedPerHour = totalHours > 0 ? (closedCount / totalHours).toFixed(1) : 0;
-            avgClosed.textContent = closedPerHour;
-            
+            closedPerHour = totalHours > 0 ? (closedCount / totalHours) : 0;
+            avgClosed.textContent = closedPerHour.toFixed(1);
+
             // Promedio de casos gestionados por hora
-            managedPerHour = totalHours > 0 ? (managedCount / totalHours).toFixed(1) : 0;
-            avgManaged.textContent = managedPerHour;
+            managedPerHour = totalHours > 0 ? (managedCount / totalHours) : 0;
+            avgManaged.textContent = managedPerHour.toFixed(1);
             
             // Tiempo promedio por caso cerrado (en segundos)
             const tiempoPromedio = calcularTiempoPromedioPorCaso();
@@ -231,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Actualizar indicadores de estándares
             actualizarIndicadoresEstandares(closedPerHour, managedPerHour);
+            updateProductivityChart(totalSeconds, closedPerHour, managedPerHour, totalPerHour);
         }
         
         // Actualizar estado de botones
@@ -415,9 +549,11 @@ document.addEventListener('DOMContentLoaded', function() {
         tiempoPorCaso.textContent = '0';
         tiempoPorGestionado.textContent = '0';
         timer.textContent = '00:00:00';
-        
+
         btnTimer.textContent = "Iniciar Tiempo";
-        
+
+        resetProductivityChart();
+
         // Restablecer mensaje de información
         mensajeInfo.textContent = "Inicia el tiempo para comenzar a registrar casos";
         mensajeInfo.style.display = "block";
@@ -463,6 +599,8 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     });
     
+    initializeProductivityChart();
+
     // Inicializar estado de botones
     actualizarEstadoBotones();
 });
