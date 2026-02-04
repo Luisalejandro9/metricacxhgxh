@@ -1,0 +1,539 @@
+/* SWISS INTERNATIONAL STYLE RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --color-bg: #F4F4F4;
+    --color-surface: #FFFFFF;
+    --color-text-main: #111111;
+    --color-text-light: #777777;
+    --color-border: #E5E5E5;
+
+    --color-accent-blue: #0033CC;
+    /* International Klein Blue-ish */
+    --color-accent-red: #FF3333;
+    /* Swiss Red */
+    --color-success: #00CC66;
+
+    --font-stack: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --spacing-unit: 20px;
+}
+
+body {
+    font-family: var(--font-stack);
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+    /* App-like feel */
+}
+
+/* --- LAYOUT --- */
+.app-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    height: 100vh;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    background-color: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.sidebar-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+}
+
+.sidebar-header .subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-text-light);
+    letter-spacing: 2px;
+}
+
+/* TIMER */
+.timer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.timer-display {
+    font-size: 48px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+    line-height: 1;
+}
+
+.timer-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+/* BUTTONS */
+.btn {
+    padding: 16px;
+    border: none;
+    font-family: var(--font-stack);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0;
+    /* Sharp edges for Swiss style */
+}
+
+.btn:disabled,
+.btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed !important;
+    /* Force cursor */
+    pointer-events: auto;
+    /* Allow hover to show not-allowed cursor */
+}
+
+.btn-primary {
+    background-color: var(--color-text-main);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #333;
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+    background-color: #555;
+    color: #ccc;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--color-text-main);
+    color: var(--color-text-main);
+}
+
+.btn-secondary:hover {
+    background-color: #f0f0f0;
+}
+
+.btn-secondary:disabled,
+.btn-secondary.disabled {
+    border-color: #ccc;
+    color: #ccc;
+}
+
+/* ACTION BUTTONS (HUGE) */
+.action-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: auto;
+    /* Push to bottom if needed, or just flow */
+}
+
+.action-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.btn-subtract {
+    width: 50px;
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-light);
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+
+.btn-subtract:hover:not(:disabled):not(.disabled) {
+    background-color: #FFF0F0;
+    /* Light red tint for delete action */
+    color: var(--color-accent-red);
+    border-color: var(--color-accent-red);
+}
+
+.btn-subtract:disabled,
+.btn-subtract.disabled {
+    opacity: 0.3;
+    border-color: #eee;
+    color: #ccc;
+    cursor: default !important;
+}
+
+.btn-action {
+    flex: 1;
+    /* Take remaining space */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    border: 1px solid var(--color-text-main);
+    padding: 24px;
+    text-align: left;
+}
+
+.btn-action .btn-label {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.btn-action .btn-icon {
+    font-size: 20px;
+}
+
+.btn-action:hover:not(:disabled):not(.disabled) {
+    background-color: var(--color-text-main);
+    color: white;
+}
+
+.btn-action:disabled,
+.btn-action.disabled {
+    background-color: #F8F8F8;
+    /* Distinct grey-ish */
+    border-color: #DDD;
+    color: #AAA;
+}
+
+/* STANDARDS LIST */
+.standards-section {
+    border-top: 1px solid var(--color-border);
+    padding-top: 20px;
+}
+
+.standards-section h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--color-text-light);
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.standard-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: var(--color-text-main);
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    font-size: 10px;
+    color: var(--color-text-light);
+}
+
+/* --- MAIN CONTENT --- */
+.main-content {
+    padding: 60px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+/* MESSAGES */
+.mensaje {
+    padding: 15px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    display: none;
+    border-left: 4px solid;
+}
+
+.mensaje.activo {
+    display: block;
+}
+
+.mensaje-error {
+    background-color: #FFF0F0;
+    color: var(--color-accent-red);
+    border-color: var(--color-accent-red);
+}
+
+.mensaje-info {
+    background-color: #F0F4FF;
+    color: var(--color-accent-blue);
+    border-color: var(--color-accent-blue);
+    display: block;
+    /* Info usually always visible if logic says so, but script might toggle it too. Let's check script. */
+}
+
+.mensaje-success {
+    background-color: #F0FFF4;
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+/* Script uses style.display = 'block'/'none' for info, so CSS display rule might be overridden, which is fine.
+   But just in case, let's leave it as base. */
+
+/* METRICS GRIDS */
+.grid-primary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+/* Add button row styles */
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-save {
+    background-color: var(--color-success);
+    color: white;
+    flex: 1;
+}
+
+.btn-save:hover {
+    background-color: #00AA55;
+}
+
+.btn-icon {
+    width: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    padding: 0;
+}
+
+.grid-secondary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* CARDS */
+.metric-card {
+    background-color: var(--color-surface);
+    padding: 30px;
+    border: 1px solid transparent;
+    /* Hidden border initially */
+    position: relative;
+    /* Swiss Grid Lines Style */
+    box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.large-card {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+}
+
+.metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-light);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.metric-value {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--color-text-main);
+}
+
+.metric-value.medium {
+    font-size: 32px;
+}
+
+/* DYNAMIC STATUS COLORS */
+.stat-below-standard {
+    color: var(--color-accent-red);
+}
+
+.stat-meets-standard {
+    color: var(--color-success);
+}
+
+.status-indicator {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    display: inline-block;
+    background: #f4f4f4;
+}
+
+.standard-below {
+    color: var(--color-accent-red);
+    background: #FFF0F0;
+}
+
+.standard-meets {
+    color: var(--color-success);
+    background: #F0FFF4;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+    .app-layout {
+        grid-template-columns: 280px 1fr;
+    }
+
+    .metric-value {
+        font-size: 48px;
+    }
+
+    .main-content {
+        padding: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+    }
+
+    .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        height: auto;
+        padding: 30px;
+    }
+
+    .main-content {
+        padding: 30px;
+    }
+
+    .grid-primary {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent black */
+    display: none;
+    /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background-color: var(--color-surface);
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-text-main);
+    /* Swiss border */
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    color: var(--color-text-main);
+}
+
+.time-inputs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--color-text-light);
+}
+
+.input-group input {
+    width: 80px;
+    padding: 15px;
+    font-family: var(--font-stack);
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    outline: none;
+}
+
+.input-group input:focus {
+    border-color: var(--color-accent-blue);
+}
+
+.input-divider {
+    font-size: 32px;
+    font-weight: 700;
+    margin-top: 20px;
+    /* Align with input text roughly */
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
