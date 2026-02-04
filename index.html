@@ -1,102 +1,205 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Métricas para Soporte Técnico</title>
+    <title>Dashboard CxH GxH | Soporte Técnico</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <div class="container">
-        <h1>Real Time CxH GxH para Soporte Técnico RRSS</h1>
-        
-        <div class="standards-container">
-            <h3>Estándares de Rendimiento</h3>
-            <div class="standards-list">
-                <div class="standard-item">
-                    <span class="standard-label">Casos cerrados por hora:</span>
-                    <span class="standard-value">≥ 2.8</span>
-                </div>
-                <div class="standard-item">
-                    <span class="standard-label">Casos gestionados por hora:</span>
-                    <span class="standard-value">≥ 3.8</span>
-                </div>
-                <div class="standard-item">
-                    <span class="standard-label">TMO por caso:</span>
-                    <span class="standard-value"> &lt; 950 seg</span>
-                </div>
-                <div class="standard-item">
-                    <span class="standard-label">TMO por gestionado:</span>
-                    <span class="standard-value"> &lt; 700 seg</span>
+    <div class="app-layout">
+        <!-- Left Sidebar: Controls & Context -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <h1>CxH GxH<br><span class="subtitle">TRACKER</span></h1>
+            </header>
+
+            <div class="timer-section">
+                <div class="timer-display" id="timer">00:00:00</div>
+                <div class="timer-controls">
+                    <button id="btnTimer" class="btn btn-primary">INICIAR TIEMPO</button>
+                    <button id="btnEditTime" class="btn btn-secondary">EDITAR TIEMPO</button>
+                    <button id="btnReset" class="btn btn-secondary">REINICIAR</button>
                 </div>
             </div>
-            <div class="notification-info">
-                <small>Se enviarán notificaciones cuando los indicadores estén por debajo del estándar</small>
+
+            <div class="action-section">
+                <div class="action-row">
+                    <button id="btnSubtractClosed" class="btn btn-subtract disabled" disabled
+                        title="Eliminar Caso Cerrado">
+                        &minus;
+                    </button>
+                    <button id="btnClosed" class="btn btn-action disabled" disabled>
+                        <span class="btn-label">Caso Cerrado</span>
+                        <span class="btn-icon">+</span>
+                    </button>
+                </div>
+
+                <div class="action-row">
+                    <button id="btnSubtractManaged" class="btn btn-subtract disabled" disabled
+                        title="Eliminar Caso Gestionado">
+                        &minus;
+                    </button>
+                    <button id="btnManaged" class="btn btn-action disabled" disabled>
+                        <span class="btn-label">Caso Gestionado</span>
+                        <span class="btn-icon">+</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="standards-section">
+                <h3>Objetivos</h3>
+                <div class="standard-row">
+                    <span>Gestionados/Hora</span>
+                    <strong>≥ 3.78</strong>
+                </div>
+                <div class="standard-row">
+                    <span>TMO Caso</span>
+                    <strong>&lt; 950s</strong>
+                </div>
+                <div class="standard-row">
+                    <span>TMO Gestionado</span>
+                    <strong>&lt; 700s</strong>
+                </div>
+            </div>
+
+            <div class="data-section" style="margin-top: 20px;">
+                <div class="button-row">
+                    <button id="btnSaveData" class="btn btn-save">
+                        GUARDAR EN SHEETS
+                    </button>
+                    <button id="btnConfig" class="btn btn-icon" title="Configurar Hoja">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+
+            <footer class="sidebar-footer">
+                <small>Developed by Luis Acosta</small>
+            </footer>
+        </aside>
+
+        <!-- Right Main Content: Metrics -->
+        <main class="main-content">
+            <div id="mensajeError" class="mensaje mensaje-error">No puedes cerrar más casos de los que has gestionado
+            </div>
+            <div id="mensajeInfo" class="mensaje mensaje-info">Inicia el tiempo para comenzar el registro</div>
+            <div id="mensajeSuccess" class="mensaje mensaje-success">Datos guardados correctamente en Google Sheets
+            </div>
+
+            <!-- Primary Big Counters -->
+            <section class="grid-primary">
+                <div class="metric-card large-card">
+                    <span class="metric-label">Casos Cerrados</span>
+                    <div id="casesClosed" class="metric-value">0</div>
+                </div>
+                <div class="metric-card large-card">
+                    <span class="metric-label">Casos Gestionados</span>
+                    <div id="casesManaged" class="metric-value">0</div>
+                </div>
+            </section>
+
+            <!-- Secondary Detailed Stats -->
+            <section class="grid-secondary">
+                <div class="metric-card">
+                    <span class="metric-label">Efectividad Cierre</span>
+                    <div id="closeRate" class="metric-value medium">0%</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Casos / Hora</span>
+                    <div id="casesPerHour" class="metric-value medium">0</div>
+                    <div id="standardCasesPerHour" class="status-indicator">--</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Prom. Cerrados/h</span>
+                    <div id="avgClosed" class="metric-value medium">0</div>
+                    <div id="standardAvgClosed" class="status-indicator">--</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Prom. Gestionados/h</span>
+                    <div id="avgManaged" class="metric-value medium">0</div>
+                    <div id="standardAvgManaged" class="status-indicator">--</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">TMO Por Caso</span>
+                    <div id="tiempoPorCaso" class="metric-value medium">0</div>
+                    <div id="standardTiempoPorCaso" class="status-indicator">--</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">TMO Gestionado</span>
+                    <div id="tiempoPorGestionado" class="metric-value medium">0</div>
+                    <div id="standardTiempoPorGestionado" class="status-indicator">--</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Time Edit Modal -->
+    <div id="editTimeModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Corregir Tiempo</h2>
+                <button id="btnCloseModal" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="time-inputs">
+                    <div class="input-group">
+                        <label>Horas</label>
+                        <input type="number" id="inputHours" min="0" max="99" value="00">
+                    </div>
+                    <div class="input-divider">:</div>
+                    <div class="input-group">
+                        <label>Minutos</label>
+                        <input type="number" id="inputMinutes" min="0" max="59" value="00">
+                    </div>
+                    <div class="input-divider">:</div>
+                    <div class="input-group">
+                        <label>Segundos</label>
+                        <input type="number" id="inputSeconds" min="0" max="59" value="00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnCancelEdit" class="btn btn-secondary">Cancelar</button>
+                <button id="btnSaveTime" class="btn btn-primary">Guardar Tiempo</button>
             </div>
         </div>
-        
-        <div class="timer-display" id="timer">00:00:00</div>
-        
-        <div id="mensajeError" class="mensaje-error">No puedes cerrar más casos de los que has gestionado</div>
-        
-        <div id="mensajeInfo" class="mensaje-info">Inicia el tiempo para comenzar a registrar casos</div>
-        
-        <div class="btn-container">
-            <button id="btnClosed" class="btn-closed disabled" disabled>Añadir Caso Cerrado</button>
-            <button id="btnManaged" class="btn-managed disabled" disabled>Añadir Caso Gestionado</button>
-            <button id="btnTimer" class="btn-timer">Iniciar Tiempo</button>
-            <button id="btnReset" class="btn-reset">Reiniciar Todo</button>
-        </div>
-        
-        <div class="counters">
-            <div class="counter-card">
-                <h3>Casos Cerrados</h3>
-                <div id="casesClosed" class="counter-value cases-closed">0</div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="configModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Configuración Google Sheets</h2>
+                <button id="btnCloseConfig" class="btn-close">&times;</button>
             </div>
-            <div class="counter-card">
-                <h3>Casos Gestionados</h3>
-                <div id="casesManaged" class="counter-value cases-managed">0</div>
+            <div class="modal-body">
+                <p style="font-size: 12px; color: #777; margin-bottom: 15px;">
+                    Introduce la URL del Web App de Google Apps Script para guardar tus datos.
+                </p>
+                <div class="input-group" style="align-items: stretch; width: 100%;">
+                    <label style="text-align: left;">Web App URL</label>
+                    <input type="text" id="inputWebAppUrl" placeholder="https://script.google.com/macros/s/..."
+                        style="width: 100%; font-size: 14px; padding: 10px; font-weight: 400; text-align: left;">
+                </div>
             </div>
-        </div>
-        
-        <div class="stats-container">
-            <div class="stat-card">
-                <h2>Porcentaje de Cierre</h2>
-                <div id="closeRate" class="stat-value">0%</div>
+            <div class="modal-footer">
+                <button id="btnSaveConfig" class="btn btn-primary" style="width: 100%;">Guardar Configuración</button>
             </div>
-            <div class="stat-card">
-                <h2>Casos Por Hora</h2>
-                <div id="casesPerHour" class="stat-value">0</div>
-                <div id="standardCasesPerHour" class="standard-indicator standard-below">Por debajo del estándar</div>
-            </div>
-            <div class="stat-card">
-                <h2>Promedio Cerrados</h2>
-                <div id="avgClosed" class="stat-value">0</div>
-                <div id="standardAvgClosed" class="standard-indicator standard-below">Por debajo del estándar</div>
-            </div>
-            <div class="stat-card">
-                <h2>Promedio Gestionados</h2>
-                <div id="avgManaged" class="stat-value">0</div>
-                <div id="standardAvgManaged" class="standard-indicator standard-below">Por debajo del estándar</div>
-            </div>
-            <div class="stat-card">
-                <h2>TMO CxH</h2>
-                <div id="tiempoPorCaso" class="stat-value">0</div>
-                <div id="standardTiempoPorCaso" class="standard-indicator standard-below">Por debajo del estándar</div>
-            </div>
-            
-            <div class="stat-card">
-                <h2>TMO GxH</h2>
-                <div id="tiempoPorGestionado" class="stat-value tiempo-gestionado">0</div>
-                <div id="standardTiempoPorGestionado" class="standard-indicator standard-below">Por debajo del estándar</div>
-            </div>
-        </div>
-        
-        <div class="footer">
-            &copy; DESARROLLADO POR LUIS ACOSTA
         </div>
     </div>
 
     <script src="js/script.js"></script>
 </body>
+
 </html>
