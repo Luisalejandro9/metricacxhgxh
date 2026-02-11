@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnSubtractClosed = document.getElementById('btnSubtractClosed');
     const btnManaged = document.getElementById('btnManaged');
     const btnSubtractManaged = document.getElementById('btnSubtractManaged');
+    const btnTechnicians = document.getElementById('btnTechnicians');
+    const btnSubtractTechnicians = document.getElementById('btnSubtractTechnicians');
     const btnTimer = document.getElementById('btnTimer');
     const btnReset = document.getElementById('btnReset');
     const casesClosed = document.getElementById('casesClosed');
@@ -11,21 +13,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const closeRate = document.getElementById('closeRate');
     const casesPerHour = document.getElementById('casesPerHour');
     const avgClosed = document.getElementById('avgClosed');
-    const avgManaged = document.getElementById('avgManaged');
     const tiempoPorCaso = document.getElementById('tiempoPorCaso');
     const standardTiempoPorCaso = document.getElementById('standardTiempoPorCaso');
     const tiempoPorGestionado = document.getElementById('tiempoPorGestionado');
     const standardTiempoPorGestionado = document.getElementById('standardTiempoPorGestionado');
+    const techniciansCountDisplay = document.getElementById('techniciansCount');
+    const resolutionRateDisplay = document.getElementById('resolutionRate');
     const timer = document.getElementById('timer');
     const mensajeError = document.getElementById('mensajeError');
     const mensajeInfo = document.getElementById('mensajeInfo');
     const standardCasesPerHour = document.getElementById('standardCasesPerHour');
     const standardAvgClosed = document.getElementById('standardAvgClosed');
-    const standardAvgManaged = document.getElementById('standardAvgManaged');
+    const standardResolutionRate = document.getElementById('standardResolutionRate');
 
     // Variables globales
     let closedCount = 0;
     let managedCount = 0;
+    let techniciansCount = 0;
     let timerRunning = false;
     let timerInterval = null;
     let startTime = 0;
@@ -39,14 +43,20 @@ document.addEventListener('DOMContentLoaded', function () {
         managed: false,
         total: false,
         tiempoPorCaso: false,
-        tiempoPorGestionado: false
+        tiempoPorGestionado: false,
+        resolution: false
     };
+
+    // Variables Gráfica
+    let casesChart = null;
+    let managedTimestamps = [];
 
     // Estándares definidos
     const STANDARD_MANAGED_PER_HOUR = 3.78;
     const STANDARD_CLOSED_PER_HOUR = 3.78;
     const STANDARD_TIME_PER_CASE = 950; // Estándar: tiempo promedio por caso en segundos
-    const STANDARD_TIME_PER_MANAGED = 700; // Estándar: tiempo promedio por caso gestionado en segundos
+    const STANDARD_TIME_PER_MANAGED = 950; // Estándar: tiempo promedio por caso gestionado en segundos
+    const STANDARD_RESOLUTION_PERCENTAGE = 76.80;
 
     // Función para mostrar mensajes de error
     function mostrarError(mensaje) {
@@ -124,6 +134,11 @@ document.addEventListener('DOMContentLoaded', function () {
             btnManaged.disabled = true;
             btnSubtractManaged.classList.add('disabled');
             btnSubtractManaged.disabled = true;
+
+            btnTechnicians.classList.add('disabled');
+            btnTechnicians.disabled = true;
+            btnSubtractTechnicians.classList.add('disabled');
+            btnSubtractTechnicians.disabled = true;
             return;
         }
 
@@ -164,10 +179,23 @@ document.addEventListener('DOMContentLoaded', function () {
             btnClosed.classList.remove('disabled');
             btnClosed.disabled = false;
         }
+
+        // Habilitar botón de técnicos si el timer corre
+        btnTechnicians.classList.remove('disabled');
+        btnTechnicians.disabled = false;
+
+        // Habilitar botón de restar técnicos solo si > 0
+        if (techniciansCount > 0) {
+            btnSubtractTechnicians.classList.remove('disabled');
+            btnSubtractTechnicians.disabled = false;
+        } else {
+            btnSubtractTechnicians.classList.add('disabled');
+            btnSubtractTechnicians.disabled = true;
+        }
     }
 
     // Función para verificar métricas y enviar notificaciones
-    function checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado) {
+    function checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado, resolutionPercentage) {
         // Solo verificar si el timer está corriendo y han pasado al menos 5 minutos
         if (!timerRunning || (hours === 0 && minutes < 5)) return;
 
@@ -218,6 +246,17 @@ document.addEventListener('DOMContentLoaded', function () {
             belowStandardMetrics.tiempoPorGestionado = false;
         }
 
+        // Verificar porcentaje de resolución (si hay casos gestionados)
+        if (managedCount > 0 && resolutionPercentage < STANDARD_RESOLUTION_PERCENTAGE) {
+            if (!belowStandardMetrics.resolution) {
+                belowStandardMessages.push(`Porcentaje de resolución (${resolutionPercentage}%) por debajo del estándar (${STANDARD_RESOLUTION_PERCENTAGE}%)`);
+                belowStandardMetrics.resolution = true;
+                anyBelowStandard = true;
+            }
+        } else {
+            belowStandardMetrics.resolution = false;
+        }
+
         // Enviar notificación si hay métricas por debajo del estándar
         if (anyBelowStandard) {
             const title = "¡Alerta de Rendimiento!";
@@ -231,6 +270,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Porcentaje de cierre
         const percentage = managedCount > 0 ? ((closedCount / managedCount) * 100).toFixed(1) : 0;
         closeRate.textContent = percentage + '%';
+
+        // Porcentaje de resolución
+        const resolution = managedCount > 0 ? (((managedCount - techniciansCount) / managedCount) * 100).toFixed(1) : 0;
+        resolutionRateDisplay.textContent = resolution + '%';
+        techniciansCountDisplay.textContent = techniciansCount;
 
         // Calcular métricas basadas en tiempo
         const totalSeconds = seconds + (minutes * 60) + (hours * 3600);
@@ -249,9 +293,8 @@ document.addEventListener('DOMContentLoaded', function () {
             closedPerHour = totalHours > 0 ? (closedCount / totalHours).toFixed(1) : 0;
             avgClosed.textContent = closedPerHour;
 
-            // Promedio de casos gestionados por hora
             managedPerHour = totalHours > 0 ? (managedCount / totalHours).toFixed(1) : 0;
-            avgManaged.textContent = managedPerHour;
+            // Removed avgManaged update as per user request (redundant with casesPerHour)
 
             // Tiempo promedio por caso cerrado (en segundos)
             const tiempoPromedio = calcularTiempoPromedioPorCaso();
@@ -262,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tiempoPorGestionado.textContent = tiempoPromedioGestionado;
 
             // Actualizar indicadores de estándares
-            actualizarIndicadoresEstandares(closedPerHour, managedPerHour);
+            actualizarIndicadoresEstandares(closedPerHour, managedPerHour, resolution);
         }
 
         // Actualizar estado de botones
@@ -270,35 +313,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Función para actualizar los indicadores de estándares
-    function actualizarIndicadoresEstandares(closedPerHour, managedPerHour) {
+    function actualizarIndicadoresEstandares(closedPerHour, managedPerHour, resolutionPercentage) {
         // Verificar estándar para casos cerrados
         if (closedPerHour >= STANDARD_CLOSED_PER_HOUR) {
             avgClosed.classList.remove('stat-below-standard');
             avgClosed.classList.add('stat-meets-standard');
             standardAvgClosed.classList.remove('standard-below');
             standardAvgClosed.classList.add('standard-meets');
-            standardAvgClosed.textContent = "Cumple el estándar";
+            standardAvgClosed.textContent = "CUMPLE CON LA MÉTRICA";
         } else {
             avgClosed.classList.remove('stat-meets-standard');
             avgClosed.classList.add('stat-below-standard');
             standardAvgClosed.classList.remove('standard-meets');
             standardAvgClosed.classList.add('standard-below');
-            standardAvgClosed.textContent = "Por debajo del estándar";
-        }
-
-        // Verificar estándar para casos gestionados
-        if (managedPerHour >= STANDARD_MANAGED_PER_HOUR) {
-            avgManaged.classList.remove('stat-below-standard');
-            avgManaged.classList.add('stat-meets-standard');
-            standardAvgManaged.classList.remove('standard-below');
-            standardAvgManaged.classList.add('standard-meets');
-            standardAvgManaged.textContent = "Cumple el estándar";
-        } else {
-            avgManaged.classList.remove('stat-meets-standard');
-            avgManaged.classList.add('stat-below-standard');
-            standardAvgManaged.classList.remove('standard-meets');
-            standardAvgManaged.classList.add('standard-below');
-            standardAvgManaged.textContent = "Por debajo del estándar";
+            standardAvgClosed.textContent = "NO CUMPLE LA MÉTRICA";
         }
 
         // Verificar estándar para casos totales por hora
@@ -307,13 +335,13 @@ document.addEventListener('DOMContentLoaded', function () {
             casesPerHour.classList.add('stat-meets-standard');
             standardCasesPerHour.classList.remove('standard-below');
             standardCasesPerHour.classList.add('standard-meets');
-            standardCasesPerHour.textContent = "Cumple el estándar";
+            standardCasesPerHour.textContent = "CUMPLE CON LA MÉTRICA";
         } else {
             casesPerHour.classList.remove('stat-meets-standard');
             casesPerHour.classList.add('stat-below-standard');
             standardCasesPerHour.classList.remove('standard-meets');
             standardCasesPerHour.classList.add('standard-below');
-            standardCasesPerHour.textContent = "Por debajo del estándar";
+            standardCasesPerHour.textContent = "NO CUMPLE LA MÉTRICA";
         }
 
         // Verificar estándar para tiempo por caso
@@ -323,13 +351,13 @@ document.addEventListener('DOMContentLoaded', function () {
             tiempoPorCaso.classList.add('stat-meets-standard');
             standardTiempoPorCaso.classList.remove('standard-below');
             standardTiempoPorCaso.classList.add('standard-meets');
-            standardTiempoPorCaso.textContent = "Cumple el estándar";
+            standardTiempoPorCaso.textContent = "CUMPLE CON LA MÉTRICA";
         } else if (tiempoPromedio > 0) {
             tiempoPorCaso.classList.remove('stat-meets-standard');
             tiempoPorCaso.classList.add('stat-below-standard');
             standardTiempoPorCaso.classList.remove('standard-meets');
             standardTiempoPorCaso.classList.add('standard-below');
-            standardTiempoPorCaso.textContent = "Por encima del estándar";
+            standardTiempoPorCaso.textContent = "NO CUMPLE LA MÉTRICA";
         }
 
         // Verificar estándar para tiempo por caso gestionado
@@ -339,22 +367,44 @@ document.addEventListener('DOMContentLoaded', function () {
             tiempoPorGestionado.classList.add('stat-meets-standard');
             standardTiempoPorGestionado.classList.remove('standard-below');
             standardTiempoPorGestionado.classList.add('standard-meets');
-            standardTiempoPorGestionado.textContent = "Cumple el estándar";
+            standardTiempoPorGestionado.textContent = "CUMPLE CON LA MÉTRICA";
         } else if (tiempoPromedioGestionado > 0) {
             tiempoPorGestionado.classList.remove('stat-meets-standard');
             tiempoPorGestionado.classList.add('stat-below-standard');
             standardTiempoPorGestionado.classList.remove('standard-meets');
             standardTiempoPorGestionado.classList.add('standard-below');
-            standardTiempoPorGestionado.textContent = "Por encima del estándar";
+            standardTiempoPorGestionado.textContent = "NO CUMPLE LA MÉTRICA";
+        }
+
+        // Verificar estándar para porcentaje de resolución
+        if (managedCount > 0) {
+            if (parseFloat(resolutionPercentage) >= STANDARD_RESOLUTION_PERCENTAGE) {
+                resolutionRateDisplay.classList.remove('stat-below-standard');
+                resolutionRateDisplay.classList.add('stat-meets-standard');
+                standardResolutionRate.classList.remove('standard-below');
+                standardResolutionRate.classList.add('standard-meets');
+                standardResolutionRate.textContent = "CUMPLE CON LA MÉTRICA";
+            } else {
+                resolutionRateDisplay.classList.remove('stat-meets-standard');
+                resolutionRateDisplay.classList.add('stat-below-standard');
+                standardResolutionRate.classList.remove('standard-meets');
+                standardResolutionRate.classList.add('standard-below');
+                standardResolutionRate.textContent = "NO CUMPLE LA MÉTRICA";
+            }
+        } else {
+            // Reset if no managed cases
+            resolutionRateDisplay.classList.remove('stat-below-standard', 'stat-meets-standard');
+            standardResolutionRate.classList.remove('standard-below', 'standard-meets');
+            standardResolutionRate.textContent = "--";
         }
 
         // Verificar métricas y enviar notificaciones si es necesario
-        checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado);
+        checkMetricsAndNotify(closedPerHour, managedPerHour, tiempoPromedio, tiempoPromedioGestionado, resolutionPercentage);
     }
 
     // Función para actualizar el temporizador
     function updateTimer() {
-        // Calcular el tiempo transcurrido basado en la hora actual
+        // Calcular el tiempo transcurrido basado en la hora actual REAL
         const currentTime = Date.now();
         const elapsedMilliseconds = currentTime - startTime + pausedTime;
 
@@ -427,9 +477,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Evento para añadir caso gestionado
     btnManaged.addEventListener('click', function () {
         managedCount++;
+        managedTimestamps.push(new Date()); // Registrar marca de tiempo
         casesManaged.textContent = managedCount;
         updateStats();
         actualizarEstadoBotones();
+        updateChartData(); // Actualizar gráfica
     });
 
     // Evento para RESTAR caso gestionado
@@ -438,12 +490,37 @@ document.addEventListener('DOMContentLoaded', function () {
             // Final check
             if (managedCount - 1 >= closedCount) {
                 managedCount--;
+                managedTimestamps.pop(); // Eliminar última marca de tiempo (asumiendo corrección del último)
                 casesManaged.textContent = managedCount;
                 updateStats();
                 actualizarEstadoBotones();
+                updateChartData(); // Actualizar gráfica
             } else {
                 mostrarError("No puedes tener menos casos gestionados que cerrados. Resta un caso cerrado primero.");
             }
+        }
+    });
+
+    // Evento para añadir técnico
+    btnTechnicians.addEventListener('click', function () {
+        if (managedCount > 0 && techniciansCount < managedCount) {
+            techniciansCount++;
+            updateStats();
+            actualizarEstadoBotones();
+        } else if (managedCount === 0) {
+            mostrarError("No puedes enviar técnicos si no hay casos gestionados.");
+        } else {
+            // Optional: Error if trying to add more technicians than cases
+            mostrarError("No puedes enviar más técnicos que casos gestionados.");
+        }
+    });
+
+    // Evento para RESTAR técnico
+    btnSubtractTechnicians.addEventListener('click', function () {
+        if (techniciansCount > 0) {
+            techniciansCount--;
+            updateStats();
+            actualizarEstadoBotones();
         }
     });
 
@@ -452,8 +529,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Reiniciar contadores
         closedCount = 0;
         managedCount = 0;
+        techniciansCount = 0;
+        managedTimestamps = []; // Reiniciar timestamps
 
-        // Reiniciar temporizador
+        // Reiniciar variables de tiempo
         clearInterval(timerInterval);
         timerRunning = false;
         startTime = 0;
@@ -468,9 +547,10 @@ document.addEventListener('DOMContentLoaded', function () {
         closeRate.textContent = '0%';
         casesPerHour.textContent = '0';
         avgClosed.textContent = '0';
-        avgManaged.textContent = '0';
         tiempoPorCaso.textContent = '0';
         tiempoPorGestionado.textContent = '0';
+        techniciansCountDisplay.textContent = '0';
+        resolutionRateDisplay.textContent = '0%';
         timer.textContent = '00:00:00';
 
         btnTimer.textContent = "Iniciar Tiempo";
@@ -484,31 +564,33 @@ document.addEventListener('DOMContentLoaded', function () {
         avgClosed.classList.add('stat-below-standard');
         standardAvgClosed.classList.remove('standard-meets');
         standardAvgClosed.classList.add('standard-below');
-        standardAvgClosed.textContent = "Por debajo del estándar";
+        standardAvgClosed.textContent = "NO CUMPLE LA MÉTRICA";
 
-        avgManaged.classList.remove('stat-meets-standard');
-        avgManaged.classList.add('stat-below-standard');
-        standardAvgManaged.classList.remove('standard-meets');
-        standardAvgManaged.classList.add('standard-below');
-        standardAvgManaged.textContent = "Por debajo del estándar";
+        standardAvgClosed.textContent = "NO CUMPLE LA MÉTRICA";
 
         casesPerHour.classList.remove('stat-meets-standard');
         casesPerHour.classList.add('stat-below-standard');
         standardCasesPerHour.classList.remove('standard-meets');
         standardCasesPerHour.classList.add('standard-below');
-        standardCasesPerHour.textContent = "Por debajo del estándar";
+        standardCasesPerHour.textContent = "NO CUMPLE LA MÉTRICA";
 
         tiempoPorCaso.classList.remove('stat-meets-standard');
         tiempoPorCaso.classList.add('stat-below-standard');
         standardTiempoPorCaso.classList.remove('standard-meets');
         standardTiempoPorCaso.classList.add('standard-below');
-        standardTiempoPorCaso.textContent = "Por debajo del estándar";
+        standardTiempoPorCaso.textContent = "NO CUMPLE LA MÉTRICA";
 
         tiempoPorGestionado.classList.remove('stat-meets-standard');
         tiempoPorGestionado.classList.add('stat-below-standard');
         standardTiempoPorGestionado.classList.remove('standard-meets');
         standardTiempoPorGestionado.classList.add('standard-below');
-        standardTiempoPorGestionado.textContent = "Por debajo del estándar";
+        standardTiempoPorGestionado.textContent = "NO CUMPLE LA MÉTRICA";
+
+        resolutionRateDisplay.classList.remove('stat-meets-standard');
+        resolutionRateDisplay.classList.remove('stat-below-standard');
+        standardResolutionRate.classList.remove('standard-meets');
+        standardResolutionRate.classList.remove('standard-below');
+        standardResolutionRate.textContent = "--";
 
         // Reiniciar variables de notificación
         belowStandardMetrics = {
@@ -516,10 +598,12 @@ document.addEventListener('DOMContentLoaded', function () {
             managed: false,
             total: false,
             tiempoPorCaso: false,
-            tiempoPorGestionado: false
+            tiempoPorGestionado: false,
+            resolution: false
         };
 
         actualizarEstadoBotones();
+        updateChartData(); // Reiniciar gráfica
     });
 
     // Evento para inicializar estado de botones
@@ -584,6 +668,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Update stats with new time
         updateStats();
+
+        // Forzar actualización de la gráfica para asegurar consistencia visual
+        if (typeof updateChartData === 'function') {
+            updateChartData();
+        }
 
         closeModal();
     }
@@ -664,9 +753,10 @@ document.addEventListener('DOMContentLoaded', function () {
             efectividad: closeRate.textContent,
             casosPorHora: casesPerHour.textContent,
             promedioCerrados: avgClosed.textContent,
-            promedioGestionados: avgManaged.textContent,
             tmoCaso: tiempoPorCaso.textContent,
-            tmoGestionado: tiempoPorGestionado.textContent
+            tmoGestionado: tiempoPorGestionado.textContent,
+            tecnicosEnviados: techniciansCountDisplay.textContent,
+            porcentajeResolucion: resolutionRateDisplay.textContent
         };
 
         btnSaveData.textContent = "ENVIANDO...";
@@ -706,4 +796,180 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     btnSaveData.addEventListener('click', sendDataToSheet);
+
+    /* --- CHART LOGIC --- */
+    function initChart() {
+        const ctx = document.getElementById('casesChart').getContext('2d');
+
+        // Plugin simple para dibujar etiquetas de datos encima de las barras
+        const dataLabelsPlugin = {
+            id: 'dataLabels',
+            afterDatasetsDraw: (chart) => {
+                const { ctx } = chart;
+
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            // Obtener el valor
+                            const data = dataset.data[index];
+                            if (data === 0) return; // No dibujar si es 0 para limpieza
+
+                            // Configuración de fuente y color
+                            ctx.fillStyle = '#333333';
+                            ctx.font = 'bold 12px Inter, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+
+                            // Posición
+                            const position = element.tooltipPosition();
+                            // Dibujar texto un poco más arriba de la barra
+                            ctx.fillText(data, position.x, position.y - 5);
+                        });
+                    }
+                });
+            }
+        };
+
+        const initialData = {
+            labels: [],
+            datasets: [{
+                label: 'Casos Gestionados',
+                data: [],
+                backgroundColor: '#206bc4', // Azul sólido similar a la imagen
+                borderColor: '#185196',
+                borderWidth: 1,
+                borderRadius: 2, // Ligero borde redondeado en la cima
+                barPercentage: 0.6, // Ancho de las barras
+                categoryPercentage: 0.8
+            }]
+        };
+
+        const config = {
+            type: 'bar',
+            data: initialData,
+            plugins: [dataLabelsPlugin],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true, // Mantener tooltips por si acaso
+                        backgroundColor: '#333',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        callbacks: {
+                            label: function (context) {
+                                return `Gestionados: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false, // Sin grid vertical
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#555',
+                            font: {
+                                size: 12
+                            }
+                        },
+                        border: {
+                            display: true,
+                            color: '#ccc'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e5e5e5', // Líneas horizontales suaves
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            color: '#777',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                layout: {
+                    padding: {
+                        top: 20 // Espacio extra arriba para las etiquetas
+                    }
+                }
+            }
+        };
+
+        casesChart = new Chart(ctx, config);
+        updateChartData();
+    }
+
+    function updateChartData() {
+        if (!casesChart) return;
+
+        // Determinar hora de inicio basado SOLO en los registros reales
+        // Esto evita que editar el tiempo (afectar startTime) deforme la gráfica visualmente con horas vacías
+        let startTimestamp;
+
+        if (managedTimestamps.length > 0) {
+            startTimestamp = managedTimestamps[0].getTime();
+        } else {
+            startTimestamp = Date.now();
+        }
+
+        // Redondear a la hora :00 anterior
+        if (!startTimestamp || isNaN(startTimestamp)) startTimestamp = Date.now();
+
+        let startDate = new Date(startTimestamp);
+        startDate.setMinutes(0, 0, 0);
+
+        let endDate = new Date(); // Ahora
+
+        // Generar buckets por hora
+        let labels = [];
+        let data = [];
+
+        // Iterar hora por hora desde startDate hasta ahora
+        let currentHour = new Date(startDate);
+
+        // Asegurarnos de que al menos mostramos la hora actual
+        while (currentHour <= endDate || labels.length === 0) {
+            // Formato HH:00
+            let label = currentHour.getHours().toString().padStart(2, '0') + ":00";
+            labels.push(label);
+
+            // Contar casos en esta hora
+            // Un caso pertenece a esta hora si: currentHour <= timestamp < currentHour + 1h
+            let nextHour = new Date(currentHour);
+            nextHour.setHours(currentHour.getHours() + 1);
+
+            let count = managedTimestamps.filter(ts => {
+                let t = new Date(ts);
+                return t >= currentHour && t < nextHour;
+            }).length;
+
+            data.push(count); // 'Promedio' por hora es el conteo en esa hora
+
+            // Avanzar iterador
+            currentHour.setHours(currentHour.getHours() + 1);
+
+            // Safety break para evitar bucles infinitos en casos raros
+            if (labels.length > 24) break;
+        }
+
+        casesChart.data.labels = labels;
+        casesChart.data.datasets[0].data = data;
+        casesChart.update();
+    }
+
+    // Inicializar gráfica
+    initChart();
 });

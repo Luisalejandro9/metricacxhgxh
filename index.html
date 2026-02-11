@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -50,6 +51,17 @@
                         <span class="btn-icon">+</span>
                     </button>
                 </div>
+
+                <div class="action-row">
+                    <button id="btnSubtractTechnicians" class="btn btn-subtract disabled" disabled
+                        title="Eliminar Técnico Enviado">
+                        &minus;
+                    </button>
+                    <button id="btnTechnicians" class="btn btn-action disabled" disabled>
+                        <span class="btn-label">Técnico Enviado</span>
+                        <span class="btn-icon">+</span>
+                    </button>
+                </div>
             </div>
 
             <div class="standards-section">
@@ -64,13 +76,17 @@
                 </div>
                 <div class="standard-row">
                     <span>TMO Gestionado</span>
-                    <strong>&lt; 700s</strong>
+                    <strong>&lt; 950s</strong>
+                </div>
+                <div class="standard-row">
+                    <span>Resolución</span>
+                    <strong>&gt; 76.80%</strong>
                 </div>
             </div>
 
             <div class="data-section" style="margin-top: 20px;">
                 <div class="button-row">
-                    <button id="btnSaveData" class="btn btn-save">
+                    <button id="btnSaveData" class="btn btn-save" disabled style="opacity: 0.5; cursor: not-allowed;">
                         GUARDAR EN SHEETS
                     </button>
                     <button id="btnConfig" class="btn btn-icon" title="Configurar Hoja">
@@ -124,12 +140,6 @@
                 </div>
 
                 <div class="metric-card">
-                    <span class="metric-label">Prom. Gestionados/h</span>
-                    <div id="avgManaged" class="metric-value medium">0</div>
-                    <div id="standardAvgManaged" class="status-indicator">--</div>
-                </div>
-
-                <div class="metric-card">
                     <span class="metric-label">TMO Por Caso</span>
                     <div id="tiempoPorCaso" class="metric-value medium">0</div>
                     <div id="standardTiempoPorCaso" class="status-indicator">--</div>
@@ -139,6 +149,29 @@
                     <span class="metric-label">TMO Gestionado</span>
                     <div id="tiempoPorGestionado" class="metric-value medium">0</div>
                     <div id="standardTiempoPorGestionado" class="status-indicator">--</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Técnicos Enviados</span>
+                    <div id="techniciansCount" class="metric-value medium">0</div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">% Resolución</span>
+                    <div id="resolutionRate" class="metric-value medium">0%</div>
+                    <div id="standardResolutionRate" class="status-indicator">--</div>
+                </div>
+            </section>
+
+            <!-- Chart Section -->
+            <section class="chart-section" style="margin-top: 20px;">
+                <div class="metric-card" style="width: 100%; height: auto; padding: 20px;">
+                    <h3
+                        style="margin-top: 0; margin-bottom: 15px; font-size: 14px; color: #444; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Evolución de Casos por Hora</h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="casesChart"></canvas>
+                    </div>
                 </div>
             </section>
         </main>
