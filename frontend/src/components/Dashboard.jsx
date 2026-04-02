@@ -47,6 +47,11 @@ function Dashboard({ user }) {
   const [techniciansCount, setTechniciansCount] = useState(0);
   const [managedTimestamps, setManagedTimestamps] = useState([]);
 
+  // History State
+  const [history, setHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [searchDate, setSearchDate] = useState('');
+
   // Timer State
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -62,6 +67,34 @@ function Dashboard({ user }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
+
+  // --- Data Fetching ---
+  const fetchHistory = async () => {
+    if (!user) return;
+    setIsLoadingHistory(true);
+    const { data, error } = await supabase
+      .from('daily_metrics')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error al cargar historial:', error.message);
+    } else {
+      setHistory(data || []);
+    }
+    setIsLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, [user]);
+
+  // --- Filtered History ---
+  const filteredHistory = useMemo(() => {
+    if (!searchDate) return history;
+    return history.filter(item => item.date.includes(searchDate));
+  }, [history, searchDate]);
 
   // --- Timer Logic ---
   useEffect(() => {
@@ -141,9 +174,10 @@ function Dashboard({ user }) {
         {
           label: 'Casos Gestionados',
           data,
-          backgroundColor: '#0033CC',
-          borderColor: '#0033CC',
+          backgroundColor: '#6366f1',
+          borderColor: '#6366f1',
           borderWidth: 1,
+          borderRadius: 4
         },
       ],
     };
@@ -164,9 +198,7 @@ function Dashboard({ user }) {
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
-    if (type !== 'info') {
-      setTimeout(() => setMessage({ type: null, text: '' }), 4000);
-    }
+    setTimeout(() => setMessage({ type: null, text: '' }), 4000);
   };
 
   const saveToSupabase = async () => {
@@ -193,6 +225,7 @@ function Dashboard({ user }) {
       showMessage('error', 'Error al guardar: ' + error.message);
     } else {
       showMessage('success', '¡Métricas guardadas correctamente!');
+      await fetchHistory();
     }
     setIsSaving(false);
   };
@@ -218,10 +251,10 @@ function Dashboard({ user }) {
           <div className="timer-controls">
             <button className={`btn btn-primary ${isTimerRunning ? 'active' : ''}`} onClick={toggleTimer}>
               {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
-              <span style={{ marginLeft: 10 }}>{isTimerRunning ? 'Detener Tiempo' : 'Iniciar Tiempo'}</span>
+              <span>{isTimerRunning ? 'Detener Tiempo' : 'Iniciar Tiempo'}</span>
             </button>
             <button className="btn btn-secondary" onClick={() => setShowEditTimeModal(true)}>
-              <Clock size={16} style={{ marginRight: 10 }} /> Editar Tiempo
+              <Clock size={16} /> Editar Tiempo
             </button>
           </div>
         </section>
@@ -258,7 +291,7 @@ function Dashboard({ user }) {
           </div>
           
           <button className="btn btn-secondary" onClick={resetAll}>
-            <RotateCcw size={16} style={{ marginRight: 10 }} /> Reiniciar Todo
+            <RotateCcw size={16} /> Reiniciar Todo
           </button>
         </section>
 
@@ -297,10 +330,9 @@ function Dashboard({ user }) {
 
           <div className="metric-card large-card">
             <div className="button-row" style={{ marginBottom: 20 }}>
-              <button className="btn btn-save" onClick={saveToSupabase} disabled={isSaving || managedCount === 0}>
-                {isSaving ? 'GUARDANDO...' : 'GUARDAR EN SUPABASE'}
+              <button className="btn btn-save" onClick={saveToSupabase} disabled={isSaving || managedCount === 0} style={{ width: '100%', background: 'var(--primary)', color: 'white', fontWeight: 'bold', fontSize: '18px' }}>
+                {isSaving ? 'GUARDANDO...' : 'GUARDAR'}
               </button>
-              <button className="btn btn-secondary btn-icon"><Save size={20} /></button>
             </div>
             <div>
               <span className="metric-label">Casos Gestionados</span>
@@ -315,7 +347,7 @@ function Dashboard({ user }) {
             <div className="metric-value medium">{stats.closeRate}%</div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Gestionados por Hora</span>
+            <span className="metric-label">Gest. por Hora</span>
             <div className={`metric-value medium ${parseFloat(stats.managedPerHour) < STANDARDS.MANAGED_PER_HOUR ? 'stat-below-standard' : 'stat-meets-standard'}`}>
               {stats.managedPerHour}
             </div>
@@ -333,10 +365,8 @@ function Dashboard({ user }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">TMO por Gestión</span>
-            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : 'stat-meets-standard'}`}>
-              {stats.tmoManaged}s
-            </div>
+            <span className="metric-label">Técnicos Enviados</span>
+            <div className="metric-value medium">{techniciansCount}</div>
           </div>
           <div className="metric-card">
             <span className="metric-label">% Resolución Real</span>
@@ -346,17 +376,81 @@ function Dashboard({ user }) {
           </div>
         </div>
 
-        <div className="metric-card" style={{ height: 300 }}>
-          <span className="metric-label">Productividad por Horas</span>
-          <Bar 
-            data={chartData} 
-            options={{ 
-              responsive: true, 
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }} 
-          />
+        <div className="grid-primary">
+          <div className="metric-card" style={{ height: 400 }}>
+            <span className="metric-label">Productividad por Horas</span>
+            <div style={{ flexGrow: 1, position: 'relative' }}>
+              <Bar 
+                data={chartData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: { 
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: 'var(--text-muted)', stepSize: 1 } 
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'var(--text-muted)' }
+                    }
+                  }
+                }} 
+              />
+            </div>
+          </div>
+
+          <div className="metric-card h-full">
+            <div className="table-header">
+                <span className="metric-label">Historial de Registros</span>
+                <div className="filter-group">
+                    <label>Filtrar por fecha:</label>
+                    <input 
+                        type="date" 
+                        value={searchDate} 
+                        onChange={(e) => setSearchDate(e.target.value)}
+                        className="filter-input"
+                    />
+                </div>
+            </div>
+            
+            <div className="table-container">
+                {isLoadingHistory ? (
+                    <div className="loading-state">Cargando historial...</div>
+                ) : filteredHistory.length === 0 ? (
+                    <div className="empty-state">No hay nada que mostrar aún...</div>
+                ) : (
+                    <table className="history-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Gest.</th>
+                                <th>Cerr.</th>
+                                <th>TCO</th>
+                                <th>Eficacia</th>
+                                <th>G/h</th>
+                                <th>TMO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredHistory.map((item) => (
+                                <tr key={item.id}>
+                                    <td>{item.date}</td>
+                                    <td>{item.cases_managed}</td>
+                                    <td>{item.cases_closed}</td>
+                                    <td>{item.technicians_sent}</td>
+                                    <td>{item.efficiency}%</td>
+                                    <td>{item.cases_per_hour}</td>
+                                    <td>{item.tmo_case}s</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+          </div>
         </div>
       </main>
 
@@ -370,22 +464,22 @@ function Dashboard({ user }) {
           <div className="time-inputs">
             <div className="input-group">
               <label>Horas</label>
-              <input type="number" value={editTime.h} onChange={e => setEditTime({...editTime, h: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" value={editTime.h} onChange={e => setEditTime({...editTime, h: parseInt(e.target.value) || 0})}/>
             </div>
             <div className="input-divider">:</div>
             <div className="input-group">
               <label>Minutos</label>
-              <input type="number" value={editTime.m} onChange={e => setEditTime({...editTime, m: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" max="59" value={editTime.m} onChange={e => setEditTime({...editTime, m: parseInt(e.target.value) || 0})}/>
             </div>
             <div className="input-divider">:</div>
             <div className="input-group">
               <label>Segundos</label>
-              <input type="number" value={editTime.s} onChange={e => setEditTime({...editTime, s: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" max="59" value={editTime.s} onChange={e => setEditTime({...editTime, s: parseInt(e.target.value) || 0})}/>
             </div>
           </div>
-          <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={() => setShowEditTimeModal(false)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={() => {
+          <div className="modal-footer" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowEditTimeModal(false)}>Cancelar</button>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
               const total = (editTime.h * 3600) + (editTime.m * 60) + editTime.s;
               setTimerSeconds(total);
               setShowEditTimeModal(false);
