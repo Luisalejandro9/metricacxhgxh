@@ -6,19 +6,38 @@ import Dashboard from './components/Dashboard';
 import './App.css';
 
 function App() {
-  // Auth State
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- Auth Logic ---
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    // Initial session check
+    const checkSession = async () => {
+      console.log('[Debug] Verificando sesión inicial...');
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('[Debug] Error al obtener sesión:', error.message);
+      } else if (session) {
+        console.log('[Debug] Sesión encontrada para:', session.user.email);
+        setUser(session.user);
+      } else {
+        console.log('[Debug] No hay sesión inicial activa.');
+      }
       setLoading(false);
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    checkSession();
+
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Debug] Cambio de estado auth detectado:', event);
+      if (session) {
+        console.log('[Debug] Usuario logeado:', session.user.email);
+        setUser(session.user);
+      } else {
+        console.log('[Debug] Usuario deslogeado.');
+        setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();
