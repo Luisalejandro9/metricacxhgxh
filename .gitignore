@@ -1,0 +1,10 @@
+# Root .gitignore
+node_modules/
+dist/
+.DS_Store
+*.local
+.env
+frontend/.env
+frontend/node_modules/
+frontend/dist/
+vanilla-backup/js/config.js
