@@ -225,7 +225,22 @@ function App() {
     setIsSaving(false);
   };
 
-  if (loading) return <div className="loading" style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',fontSize:24}}>Cargando...</div>;
+  if (loading) return <div className="loading" style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',fontSize:24}}>Cargando sesión...</div>;
+
+  const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (envsMissing) {
+    return (
+      <div className="login-overlay active">
+        <div className="login-card" style={{border: '2px solid red'}}>
+          <h1 style={{color: 'red'}}>¡ERROR DE CONFIGURACIÓN!</h1>
+          <p>Faltan las variables de entorno <strong>(VITE_SUPABASE_URL / ANON_KEY)</strong>.</p>
+          <p>Debes configurarlas en el panel de Netlify &rarr; Environment Variables.</p>
+          <div style={{marginTop: 20, fontSize: 12, opacity: 0.6}}>Si acabas de configurarlas, espera un minuto o haz un "Trigger Deploy".</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
