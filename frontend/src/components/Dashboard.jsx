@@ -52,10 +52,13 @@ function Dashboard({ user }) {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [searchDate, setSearchDate] = useState('');
 
-  // Timer State
+  // Timer State - Using timestamps for accurate time tracking even when tab is inactive
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [startTimestamp, setStartTimestamp] = useState(null); // When timer was started
+  const [accumulatedSeconds, setAccumulatedSeconds] = useState(0); // Time accumulated before pauses
   const timerIntervalRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
   // UI State
   const [showEditTimeModal, setShowEditTimeModal] = useState(false);
@@ -97,18 +100,65 @@ function Dashboard({ user }) {
   }, [history, searchDate]);
 
   // --- Timer Logic ---
+  // Calculate elapsed time based on real timestamps (works even when tab is inactive)
+  const calculateElapsedSeconds = () => {
+    if (!startTimestamp) return accumulatedSeconds;
+    const now = Date.now();
+    const elapsedSinceStart = Math.floor((now - startTimestamp) / 1000);
+    return accumulatedSeconds + elapsedSinceStart;
+  };
+
+  // Update timer display using requestAnimationFrame for better performance
   useEffect(() => {
+    const updateTimer = () => {
+      if (isTimerRunning) {
+        setTimerSeconds(calculateElapsedSeconds());
+        animationFrameRef.current = requestAnimationFrame(updateTimer);
+      }
+    };
+
     if (isTimerRunning) {
+      // Use both setInterval (for when tab is inactive) and requestAnimationFrame (for smooth updates)
       timerIntervalRef.current = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
+        setTimerSeconds(calculateElapsedSeconds());
       }, 1000);
+      
+      animationFrameRef.current = requestAnimationFrame(updateTimer);
     } else {
       clearInterval(timerIntervalRef.current);
+      cancelAnimationFrame(animationFrameRef.current);
     }
-    return () => clearInterval(timerIntervalRef.current);
-  }, [isTimerRunning]);
 
-  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
+    return () => {
+      clearInterval(timerIntervalRef.current);
+      cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [isTimerRunning, startTimestamp, accumulatedSeconds]);
+
+  // Handle visibility change - recalculate time when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isTimerRunning) {
+        setTimerSeconds(calculateElapsedSeconds());
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isTimerRunning, startTimestamp, accumulatedSeconds]);
+
+  const toggleTimer = () => {
+    if (!isTimerRunning) {
+      // Starting the timer
+      setStartTimestamp(Date.now());
+      setIsTimerRunning(true);
+    } else {
+      // Pausing the timer - save accumulated time
+      setAccumulatedSeconds(calculateElapsedSeconds());
+      setStartTimestamp(null);
+      setIsTimerRunning(false);
+    }
+  };
 
   const resetAll = () => {
     if (window.confirm('¿Estás seguro de reiniciar todos los contadores?')) {
@@ -116,6 +166,8 @@ function Dashboard({ user }) {
       setManagedCount(0);
       setTechniciansCount(0);
       setTimerSeconds(0);
+      setAccumulatedSeconds(0);
+      setStartTimestamp(null);
       setManagedTimestamps([]);
       setIsTimerRunning(false);
       showMessage('info', 'Contadores reiniciados.');
@@ -482,6 +534,10 @@ function Dashboard({ user }) {
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
               const total = (editTime.h * 3600) + (editTime.m * 60) + editTime.s;
               setTimerSeconds(total);
+              setAccumulatedSeconds(total);
+              if (isTimerRunning) {
+                setStartTimestamp(Date.now());
+              }
               setShowEditTimeModal(false);
             }}>Guardar Cambios</button>
           </div>
