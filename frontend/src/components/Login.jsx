@@ -16,6 +16,16 @@ function Login({ handleGoogleLogin, envsMissing }) {
 
   return (
     <div className="login-overlay active">
+      {/* Animated Background */}
+      <div className="login-bg">
+        <div className="bg-shape bg-shape-1"></div>
+        <div className="bg-shape bg-shape-2"></div>
+        <div className="bg-shape bg-shape-3"></div>
+        <div className="bg-line bg-line-1"></div>
+        <div className="bg-line bg-line-2"></div>
+        <div className="bg-line bg-line-3"></div>
+      </div>
+
       <div className="login-card">
         <h1>SOPORTE MÉTRICAS</h1>
         <p>Herramienta interna de gestión de rendimiento</p>

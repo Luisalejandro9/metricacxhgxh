@@ -349,20 +349,87 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow: hidden;
+}
+
+/* Animated Background */
+.login-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  opacity: 0.3;
+  border-radius: var(--radius-full);
+}
+
+.bg-shape-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--primary);
+  top: -100px;
+  right: -100px;
+  animation: float 20s infinite ease-in-out;
+}
+
+.bg-shape-2 {
+  width: 350px;
+  height: 350px;
+  background: var(--primary-light);
+  bottom: -50px;
+  left: -50px;
+  animation: float 25s infinite ease-in-out reverse;
+}
+
+.bg-shape-3 {
+  width: 250px;
+  height: 250px;
+  background: var(--accent-info);
+  top: 50%;
+  left: 20%;
+  animation: float 30s infinite ease-in-out;
+}
+
+.bg-line {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  height: 1px;
+  width: 100%;
+}
+
+.bg-line-1 { top: 20%; transform: rotate(-15deg); animation: line-move 15s infinite linear; }
+.bg-line-2 { top: 50%; transform: rotate(10deg); animation: line-move 20s infinite linear reverse; }
+.bg-line-3 { top: 80%; transform: rotate(-5deg); animation: line-move 18s infinite linear; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 40px) scale(0.9); }
+}
+
+@keyframes line-move {
+  0% { transform: translateX(-100%) rotate(inherit); }
+  100% { transform: translateX(100%) rotate(inherit); }
 }
 
 .login-card {
   width: 100%;
   max-width: 440px;
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-light);
+  background: rgba(17, 18, 25, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   padding: 48px;
   text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
   animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 10;
 }
 
 @keyframes slideUp {
