@@ -56,6 +56,7 @@ function Dashboard({ user }) {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerIntervalRef = useRef(null);
+  const startTimeRef = useRef(null);
 
   // UI State
   const [showEditTimeModal, setShowEditTimeModal] = useState(false);
@@ -88,7 +89,37 @@ function Dashboard({ user }) {
 
   useEffect(() => {
     fetchHistory();
+    
+    // Load persisted timer state
+    const savedState = localStorage.getItem('gxh_timer_state');
+    if (savedState) {
+      try {
+        const { seconds, isRunning, startTime } = JSON.parse(savedState);
+        if (isRunning && startTime) {
+          const now = Date.now();
+          const elapsed = Math.floor((now - startTime) / 1000);
+          setTimerSeconds(elapsed);
+          setIsTimerRunning(true);
+          startTimeRef.current = startTime;
+        } else {
+          setTimerSeconds(seconds || 0);
+          setIsTimerRunning(false);
+        }
+      } catch (e) {
+        console.error('Error loading timer state', e);
+      }
+    }
   }, [user]);
+
+  // Persist timer state
+  useEffect(() => {
+    const state = {
+      seconds: timerSeconds,
+      isRunning: isTimerRunning,
+      startTime: startTimeRef.current
+    };
+    localStorage.setItem('gxh_timer_state', JSON.stringify(state));
+  }, [timerSeconds, isTimerRunning]);
 
   // --- Filtered History ---
   const filteredHistory = useMemo(() => {
@@ -99,13 +130,33 @@ function Dashboard({ user }) {
   // --- Timer Logic ---
   useEffect(() => {
     if (isTimerRunning) {
+      // Calculate a virtual start time based on current timerSeconds to handle resume/edits
+      startTimeRef.current = Date.now() - (timerSeconds * 1000);
+      
       timerIntervalRef.current = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
-      }, 1000);
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+        // Only update if the second has actually changed to avoid unnecessary renders
+        setTimerSeconds(elapsed);
+      }, 500); // Frequent checks to maintain perceived accuracy
     } else {
       clearInterval(timerIntervalRef.current);
     }
     return () => clearInterval(timerIntervalRef.current);
+  }, [isTimerRunning]);
+
+  // Sync timer when coming back to the tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isTimerRunning && startTimeRef.current) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+        setTimerSeconds(elapsed);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isTimerRunning]);
 
   const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
@@ -118,6 +169,8 @@ function Dashboard({ user }) {
       setTimerSeconds(0);
       setManagedTimestamps([]);
       setIsTimerRunning(false);
+      startTimeRef.current = null;
+      localStorage.removeItem('gxh_timer_state');
       showMessage('info', 'Contadores reiniciados.');
     }
   };
@@ -482,6 +535,9 @@ function Dashboard({ user }) {
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
               const total = (editTime.h * 3600) + (editTime.m * 60) + editTime.s;
               setTimerSeconds(total);
+              if (isTimerRunning) {
+                startTimeRef.current = Date.now() - (total * 1000);
+              }
               setShowEditTimeModal(false);
             }}>Guardar Cambios</button>
           </div>
