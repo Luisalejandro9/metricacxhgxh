@@ -112,11 +112,49 @@ function Dashboard({ user }) {
     localStorage.setItem('gxh_timer_state', JSON.stringify(state));
   }, [timerSeconds, isTimerRunning]);
 
+  const historyWithAccum = useMemo(() => {
+    // Sort ascending to calculate accumulators correctly
+    const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    let runningManaged = 0;
+    let runningClosed = 0;
+    let runningTechnicians = 0;
+    let runningSeconds = 0;
+
+    const withAccum = sorted.map(item => {
+      // Parse time string to seconds
+      const [h, m, s] = item.total_time.split(':').map(Number);
+      const rowSeconds = (h * 3600) + (m * 60) + s;
+      
+      runningManaged += item.cases_managed || 0;
+      runningClosed += item.cases_closed || 0;
+      runningTechnicians += item.technicians_sent || 0;
+      runningSeconds += rowSeconds;
+
+      const totalHours = runningSeconds / 3600;
+      
+      return {
+        ...item,
+        accumManaged: runningManaged,
+        accumClosed: runningClosed,
+        accumTechnicians: runningTechnicians,
+        accumSeconds: runningSeconds,
+        // Calculate accum metrics
+        accumCloseRate: runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0",
+        accumResoRate: runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0",
+        accumGxH: totalHours > 0 ? (runningManaged / totalHours).toFixed(1) : "0.0"
+      };
+    });
+
+    // Return in original descending order for the UI
+    return withAccum.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [history]);
+
   // --- Filtered History ---
   const filteredHistory = useMemo(() => {
-    if (!searchDate) return history;
-    return history.filter(item => item.date.includes(searchDate));
-  }, [history, searchDate]);
+    if (!searchDate) return historyWithAccum;
+    return historyWithAccum.filter(item => item.date.includes(searchDate));
+  }, [historyWithAccum, searchDate]);
 
   // --- Timer Logic ---
   useEffect(() => {
@@ -492,8 +530,10 @@ function Dashboard({ user }) {
                       <th>TCO</th>
                       <th>Cierre</th>
                       <th>G/h</th>
-                      <th>TMO Cerr.</th>
                       <th>TMO Gest.</th>
+                      <th>Acum. Cierre</th>
+                      <th>Acum. Reso</th>
+                      <th>Acum. GxH</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -506,8 +546,10 @@ function Dashboard({ user }) {
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>
                         <td>{item.cases_per_hour}</td>
-                        <td>{item.tmo_case}s</td>
                         <td>{item.tmo_managed}s</td>
+                        <td style={{ color: 'var(--primary-light)', fontWeight: 'bold' }}>{item.accumCloseRate}%</td>
+                        <td style={{ color: 'var(--accent-info)', fontWeight: 'bold' }}>{item.accumResoRate}%</td>
+                        <td style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>{item.accumGxH}</td>
                         <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
                             <Edit3 size={16} />
