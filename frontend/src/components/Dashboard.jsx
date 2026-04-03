@@ -19,11 +19,11 @@ const STANDARDS = {
   // GxH
   GXH_GREEN: 3.99,
   GXH_YELLOW: 3.78,
-  
+
   // RESO
   RESOLUTION_GREEN: 78.10,
   RESOLUTION_YELLOW: 76.8,
-  
+
   // CIERRE (Based on image label)
   CLOSED_GREEN: 78.8,
   CLOSED_YELLOW: 76.8,
@@ -57,7 +57,7 @@ function Dashboard({ user }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
-  
+
   // Helper for traffic light colors
   const getStatusClass = (value, greenTarget, yellowTarget) => {
     const val = parseFloat(value);
@@ -133,7 +133,7 @@ function Dashboard({ user }) {
   const historyWithAccum = useMemo(() => {
     // Sort ascending to calculate accumulators correctly
     const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     let runningManaged = 0;
     let runningClosed = 0;
     let runningTechnicians = 0;
@@ -143,14 +143,14 @@ function Dashboard({ user }) {
       // Parse time string to seconds
       const [h, m, s] = item.total_time.split(':').map(Number);
       const rowSeconds = (h * 3600) + (m * 60) + s;
-      
+
       runningManaged += item.cases_managed || 0;
       runningClosed += item.cases_closed || 0;
       runningTechnicians += item.technicians_sent || 0;
       runningSeconds += rowSeconds;
 
       const totalHours = runningSeconds / 3600;
-      
+
       return {
         ...item,
         accumManaged: runningManaged,
@@ -164,8 +164,8 @@ function Dashboard({ user }) {
       };
     });
 
-    // Return in original descending order for the UI
-    return withAccum.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Return in ascending order as requested (older first)
+    return withAccum;
   }, [history]);
 
   // --- Filtered History ---
@@ -325,10 +325,10 @@ function Dashboard({ user }) {
   const saveRecordEdit = async () => {
     if (!editingRecord) return;
     setIsSaving(true);
-    
+
     const totalSeconds = (recordEditData.h * 3600) + (recordEditData.m * 60) + recordEditData.s;
     const totalHours = totalSeconds / 3600;
-    
+
     const closeRate = recordEditData.managed > 0 ? (recordEditData.closed / recordEditData.managed) * 100 : 0;
     const resolutionRate = recordEditData.managed > 0 ? ((recordEditData.managed - recordEditData.technicians) / recordEditData.managed) * 100 : 0;
     const managedPerHour = totalHours > 0 ? recordEditData.managed / totalHours : 0;
@@ -439,7 +439,7 @@ function Dashboard({ user }) {
           <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
         </section>
 
-        <div className="sidebar-footer">Powered by Supabase & React</div>
+        <div className="sidebar-footer"></div>
       </aside>
 
       {/* MAIN CONTENT */}
@@ -459,12 +459,11 @@ function Dashboard({ user }) {
               <span className="metric-label">Casos Cerrados Hoy</span>
               <div className="metric-value">{closedCount}</div>
             </div>
-            <div className={`status-indicator ${
-                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' : 
+            <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' :
                 parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
               }`}>
-              {parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' : 
-               parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
+              {parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' :
+                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
             </div>
           </div>
 
@@ -637,27 +636,27 @@ function Dashboard({ user }) {
             <h2>Editar Registro</h2>
             <button className="btn-close" onClick={() => setShowEditRecordModal(false)}><X /></button>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div className="input-group">
               <label>Fecha</label>
-              <input type="date" className="filter-input" style={{ width: '100%', marginTop: '5px' }} 
-                value={recordEditData.date} onChange={e => setRecordEditData({...recordEditData, date: e.target.value})}/>
+              <input type="date" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                value={recordEditData.date} onChange={e => setRecordEditData({ ...recordEditData, date: e.target.value })} />
             </div>
             <div className="input-group">
               <label>Gestiones</label>
               <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                value={recordEditData.managed} onChange={e => setRecordEditData({...recordEditData, managed: parseInt(e.target.value) || 0})}/>
+                value={recordEditData.managed} onChange={e => setRecordEditData({ ...recordEditData, managed: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="input-group">
               <label>Cerrados</label>
               <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                value={recordEditData.closed} onChange={e => setRecordEditData({...recordEditData, closed: parseInt(e.target.value) || 0})}/>
+                value={recordEditData.closed} onChange={e => setRecordEditData({ ...recordEditData, closed: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="input-group">
               <label>TCO Enviados</label>
               <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                value={recordEditData.technicians} onChange={e => setRecordEditData({...recordEditData, technicians: parseInt(e.target.value) || 0})}/>
+                value={recordEditData.technicians} onChange={e => setRecordEditData({ ...recordEditData, technicians: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
 
