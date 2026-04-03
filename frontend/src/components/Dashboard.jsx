@@ -16,11 +16,21 @@ import {
 } from 'lucide-react';
 
 const STANDARDS = {
-  MANAGED_PER_HOUR: 3.78,
-  CLOSED_PER_HOUR: 3.78,
+  // GxH
+  GXH_GREEN: 3.99,
+  GXH_YELLOW: 3.78,
+  
+  // RESO
+  RESOLUTION_GREEN: 78.10,
+  RESOLUTION_YELLOW: 76.8,
+  
+  // CIERRE (Based on image label)
+  CLOSED_GREEN: 78.8,
+  CLOSED_YELLOW: 76.8,
+
+  // Legacy/Other
   TIME_PER_CASE: 950,
   TIME_PER_MANAGED: 950,
-  RESOLUTION_PERCENTAGE: 76.80
 };
 
 function Dashboard({ user }) {
@@ -47,6 +57,14 @@ function Dashboard({ user }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  
+  // Helper for traffic light colors
+  const getStatusClass = (value, greenTarget, yellowTarget) => {
+    const val = parseFloat(value);
+    if (val >= greenTarget) return 'stat-meets-standard';
+    if (val >= yellowTarget) return 'stat-warning-standard';
+    return 'stat-below-standard';
+  };
   const [recordEditData, setRecordEditData] = useState({
     date: '',
     h: 0, m: 0, s: 0,
@@ -440,8 +458,12 @@ function Dashboard({ user }) {
               <span className="metric-label">Casos Cerrados Hoy</span>
               <div className="metric-value">{closedCount}</div>
             </div>
-            <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= STANDARDS.CLOSED_PER_HOUR ? 'standard-meets' : 'standard-below'}`}>
-              {parseFloat(stats.closedPerHour) >= STANDARDS.CLOSED_PER_HOUR ? 'CUMPLE CON LA MÉTRICA' : 'NO CUMPLE LA MÉTRICA'}
+            <div className={`status-indicator ${
+                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' : 
+                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
+              }`}>
+              {parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' : 
+               parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
             </div>
           </div>
 
@@ -464,26 +486,26 @@ function Dashboard({ user }) {
             <div className="metric-value medium">{stats.closeRate}%</div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Gest. por Hora</span>
-            <div className={`metric-value medium ${parseFloat(stats.managedPerHour) < STANDARDS.MANAGED_PER_HOUR ? 'stat-below-standard' : 'stat-meets-standard'}`}>
+            <span className="metric-label">Gestionado por Hora</span>
+            <div className={`metric-value medium ${getStatusClass(stats.managedPerHour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}`}>
               {stats.managedPerHour}
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Cerrados por Hora</span>
-            <div className={`metric-value medium ${parseFloat(stats.closedPerHour) < STANDARDS.CLOSED_PER_HOUR ? 'stat-below-standard' : 'stat-meets-standard'}`}>
-              {stats.closedPerHour}
+            <span className="metric-label">Cierre Real</span>
+            <div className={`metric-value medium ${getStatusClass(stats.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>
+              {stats.efficiency}%
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO por Caso</span>
-            <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : 'stat-meets-standard'}`}>
+            <div className={`metric-value medium ${getStatusClass(STANDARDS.TIME_PER_CASE, stats.tmoCase, STANDARDS.TIME_PER_CASE + 50)}`}>
               {stats.tmoCase}s
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO por Gestionado</span>
-            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : 'stat-meets-standard'}`}>
+            <div className={`metric-value medium ${getStatusClass(STANDARDS.TIME_PER_MANAGED, stats.tmoManaged, STANDARDS.TIME_PER_MANAGED + 50)}`}>
               {stats.tmoManaged}s
             </div>
           </div>
@@ -493,7 +515,7 @@ function Dashboard({ user }) {
           </div>
           <div className="metric-card">
             <span className="metric-label">% Resolución Real</span>
-            <div className={`metric-value medium ${parseFloat(stats.resolutionRate) < STANDARDS.RESOLUTION_PERCENTAGE ? 'stat-below-standard' : 'stat-meets-standard'}`}>
+            <div className={`metric-value medium ${getStatusClass(stats.resolutionRate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}`}>
               {stats.resolutionRate}%
             </div>
           </div>
@@ -547,9 +569,15 @@ function Dashboard({ user }) {
                         <td>{item.efficiency}%</td>
                         <td>{item.cases_per_hour}</td>
                         <td>{item.tmo_managed}s</td>
-                        <td style={{ color: 'var(--primary-light)', fontWeight: 'bold' }}>{item.accumCloseRate}%</td>
-                        <td style={{ color: 'var(--accent-info)', fontWeight: 'bold' }}>{item.accumResoRate}%</td>
-                        <td style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>{item.accumGxH}</td>
+                        <td className={getStatusClass(item.accumCloseRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
+                          {item.accumCloseRate}%
+                        </td>
+                        <td className={getStatusClass(item.accumResoRate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
+                          {item.accumResoRate}%
+                        </td>
+                        <td className={getStatusClass(item.accumGxH, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
+                          {item.accumGxH}
+                        </td>
                         <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
                             <Edit3 size={16} />

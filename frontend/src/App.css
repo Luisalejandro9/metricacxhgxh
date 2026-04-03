@@ -320,6 +320,7 @@
 }
 
 .standard-meets { background: rgba(16, 185, 129, 0.1); color: var(--accent-success); border: 1px solid rgba(16, 185, 129, 0.2); }
+.standard-warning { background: rgba(245, 158, 11, 0.1); color: var(--accent-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
 .standard-below { background: rgba(239, 64, 64, 0.1); color: var(--accent-error); border: 1px solid rgba(239, 64, 64, 0.2); }
 
 .grid-secondary {
@@ -330,6 +331,7 @@
 }
 
 .stat-below-standard { color: var(--accent-error); }
+.stat-warning-standard { color: var(--accent-warning); }
 .stat-meets-standard { color: var(--accent-success); }
 
 /* --- LOGIN PAGE --- */
