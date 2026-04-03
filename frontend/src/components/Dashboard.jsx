@@ -382,7 +382,7 @@ function Dashboard({ user }) {
           </div>
         </div>
 
-<div className="grid-primary">
+        <div className="history-section">
 
           <div className="metric-card h-full">
             <div className="table-header">
