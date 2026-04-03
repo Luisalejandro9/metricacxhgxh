@@ -370,7 +370,7 @@ function Dashboard({ user }) {
       {/* SIDEBAR */}
       <aside className="sidebar">
         <header className="sidebar-header">
-          <h1>Soporte GxH</h1>
+          <h1>Soporte Tracker</h1>
           <div className="subtitle">PERFORMANCE TRACKER</div>
         </header>
 
@@ -460,7 +460,7 @@ function Dashboard({ user }) {
               <div className="metric-value">{closedCount}</div>
             </div>
             <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' :
-                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
+              parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
               }`}>
               {parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' :
                 parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
@@ -468,11 +468,6 @@ function Dashboard({ user }) {
           </div>
 
           <div className="metric-card large-card">
-            <div className="button-row" style={{ marginBottom: 20 }}>
-              <button className="btn btn-save" onClick={saveToSupabase} disabled={isSaving || managedCount === 0} style={{ width: '100%', background: 'var(--primary)', color: 'white', fontWeight: 'bold', fontSize: '18px' }}>
-                {isSaving ? 'GUARDANDO...' : 'GUARDAR'}
-              </button>
-            </div>
             <div>
               <span className="metric-label">Casos Gestionados</span>
               <div className="metric-value">{managedCount}</div>
@@ -514,6 +509,36 @@ function Dashboard({ user }) {
               {stats.resolutionRate}%
             </div>
           </div>
+        </div>
+
+        <div className="save-container" style={{ margin: '30px auto', width: '100%', maxWidth: '600px', padding: '0 20px' }}>
+          <button 
+            className="btn btn-save" 
+            onClick={saveToSupabase} 
+            disabled={isSaving || managedCount === 0} 
+            style={{ 
+              width: '100%', 
+              height: '60px', 
+              borderRadius: '16px', 
+              background: 'linear-gradient(135deg, var(--primary), var(--primary-light))', 
+              color: 'white', 
+              fontWeight: '800', 
+              fontSize: '22px', 
+              border: 'none', 
+              cursor: (isSaving || managedCount === 0) ? 'not-allowed' : 'pointer', 
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+              boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              opacity: (isSaving || managedCount === 0) ? 0.6 : 1,
+              transform: 'translateY(0)'
+            }}
+          >
+            <Save size={26} />
+            {isSaving ? 'GUARDANDO...' : 'GUARDAR REGISTRO ACTUAL'}
+          </button>
         </div>
 
         <div className="history-section">
