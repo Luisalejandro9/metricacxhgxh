@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Minus, 
-  Save, 
-  Clock, 
-  LogOut, 
-  CheckCircle2, 
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Minus,
+  Save,
+  Clock,
+  LogOut,
+  CheckCircle2,
   AlertCircle,
   X
 } from 'lucide-react';
@@ -69,7 +69,7 @@ function Dashboard({ user }) {
 
   useEffect(() => {
     fetchHistory();
-    
+
     // Load persisted timer state
     const savedState = localStorage.getItem('gxh_timer_state');
     if (savedState) {
@@ -112,7 +112,7 @@ function Dashboard({ user }) {
     if (isTimerRunning) {
       // Calculate a virtual start time based on current timerSeconds to handle resume/edits
       startTimeRef.current = Date.now() - (timerSeconds * 1000);
-      
+
       timerIntervalRef.current = setInterval(() => {
         const now = Date.now();
         const elapsed = Math.floor((now - startTimeRef.current) / 1000);
@@ -203,7 +203,7 @@ function Dashboard({ user }) {
     setIsSaving(true);
     const localDate = new Date();
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-    
+
     const payload = {
       user_id: user.id,
       date: dateStr,
@@ -220,7 +220,7 @@ function Dashboard({ user }) {
     };
 
     const { error } = await supabase.from('daily_metrics').insert([payload]);
-    
+
     if (error) {
       showMessage('error', 'Error al guardar: ' + error.message);
     } else {
@@ -289,7 +289,7 @@ function Dashboard({ user }) {
               <span className="btn-icon">⚡</span>
             </button>
           </div>
-          
+
           <button className="btn btn-secondary" onClick={resetAll}>
             <RotateCcw size={16} /> Reiniciar Todo
           </button>
@@ -343,7 +343,7 @@ function Dashboard({ user }) {
 
         <div className="grid-secondary">
           <div className="metric-card">
-            <span className="metric-label">% Eficacia (Cerrados/Gest)</span>
+            <span className="metric-label">% Cierre (Cerrados/Gest)</span>
             <div className="metric-value medium">{stats.closeRate}%</div>
           </div>
           <div className="metric-card">
@@ -386,53 +386,53 @@ function Dashboard({ user }) {
 
           <div className="metric-card h-full">
             <div className="table-header">
-                <span className="metric-label">Historial de Registros</span>
-                <div className="filter-group">
-                    <label>Filtrar por fecha:</label>
-                    <input 
-                        type="date" 
-                        value={searchDate} 
-                        onChange={(e) => setSearchDate(e.target.value)}
-                        className="filter-input"
-                    />
-                </div>
+              <span className="metric-label">Historial de Registros</span>
+              <div className="filter-group">
+                <label>Filtrar por fecha:</label>
+                <input
+                  type="date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
             </div>
-            
+
             <div className="table-container">
-                {isLoadingHistory ? (
-                    <div className="loading-state">Cargando historial...</div>
-                ) : filteredHistory.length === 0 ? (
-                    <div className="empty-state">No hay nada que mostrar aún...</div>
-                ) : (
-                    <table className="history-table">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Gest.</th>
-                                <th>Cerr.</th>
-                                <th>TCO</th>
-                                <th>Eficacia</th>
-                                <th>G/h</th>
-                                <th>TMO Cerr.</th>
-                                <th>TMO Gest.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredHistory.map((item) => (
-                                <tr key={item.id}>
-                                    <td>{item.date}</td>
-                                    <td>{item.cases_managed}</td>
-                                    <td>{item.cases_closed}</td>
-                                    <td>{item.technicians_sent}</td>
-                                    <td>{item.efficiency}%</td>
-                                    <td>{item.cases_per_hour}</td>
-                                    <td>{item.tmo_case}s</td>
-                                    <td>{item.tmo_managed}s</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+              {isLoadingHistory ? (
+                <div className="loading-state">Cargando historial...</div>
+              ) : filteredHistory.length === 0 ? (
+                <div className="empty-state">No hay nada que mostrar aún...</div>
+              ) : (
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Gest.</th>
+                      <th>Cerr.</th>
+                      <th>TCO</th>
+                      <th>Cierre</th>
+                      <th>G/h</th>
+                      <th>TMO Cerr.</th>
+                      <th>TMO Gest.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHistory.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.date}</td>
+                        <td>{item.cases_managed}</td>
+                        <td>{item.cases_closed}</td>
+                        <td>{item.technicians_sent}</td>
+                        <td>{item.efficiency}%</td>
+                        <td>{item.cases_per_hour}</td>
+                        <td>{item.tmo_case}s</td>
+                        <td>{item.tmo_managed}s</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
@@ -448,17 +448,17 @@ function Dashboard({ user }) {
           <div className="time-inputs">
             <div className="input-group">
               <label>Horas</label>
-              <input type="number" min="0" value={editTime.h} onChange={e => setEditTime({...editTime, h: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" value={editTime.h} onChange={e => setEditTime({ ...editTime, h: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="input-divider">:</div>
             <div className="input-group">
               <label>Minutos</label>
-              <input type="number" min="0" max="59" value={editTime.m} onChange={e => setEditTime({...editTime, m: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" max="59" value={editTime.m} onChange={e => setEditTime({ ...editTime, m: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="input-divider">:</div>
             <div className="input-group">
               <label>Segundos</label>
-              <input type="number" min="0" max="59" value={editTime.s} onChange={e => setEditTime({...editTime, s: parseInt(e.target.value) || 0})}/>
+              <input type="number" min="0" max="59" value={editTime.s} onChange={e => setEditTime({ ...editTime, s: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
           <div className="modal-footer" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
