@@ -10,7 +10,9 @@ import {
   LogOut,
   CheckCircle2,
   AlertCircle,
-  X
+  X,
+  Trash2,
+  Edit3
 } from 'lucide-react';
 
 const STANDARDS = {
@@ -43,6 +45,15 @@ function Dashboard({ user }) {
   const [editTime, setEditTime] = useState({ h: 0, m: 0, s: 0 });
   const [message, setMessage] = useState({ type: null, text: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [showEditRecordModal, setShowEditRecordModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [recordEditData, setRecordEditData] = useState({
+    date: '',
+    h: 0, m: 0, s: 0,
+    closed: 0,
+    managed: 0,
+    technicians: 0
+  });
 
   // --- Auth Handlers ---
   const handleLogout = async () => {
@@ -226,6 +237,74 @@ function Dashboard({ user }) {
     } else {
       showMessage('success', '¡Métricas guardadas correctamente!');
       await fetchHistory();
+    }
+    setIsSaving(false);
+  };
+
+  const handleDeleteRecord = async (id) => {
+    if (window.confirm('¿Estás seguro de eliminar este registro?')) {
+      const { error } = await supabase.from('daily_metrics').delete().eq('id', id);
+      if (error) {
+        showMessage('error', 'Error al eliminar: ' + error.message);
+      } else {
+        showMessage('success', 'Registro eliminado correctamente.');
+        fetchHistory();
+      }
+    }
+  };
+
+  const handleOpenEditModal = (record) => {
+    const [h, m, s] = record.total_time.split(':').map(Number);
+    setEditingRecord(record);
+    setRecordEditData({
+      date: record.date,
+      h, m, s,
+      closed: record.cases_closed,
+      managed: record.cases_managed,
+      technicians: record.technicians_sent
+    });
+    setShowEditRecordModal(true);
+  };
+
+  const saveRecordEdit = async () => {
+    if (!editingRecord) return;
+    setIsSaving(true);
+    
+    const totalSeconds = (recordEditData.h * 3600) + (recordEditData.m * 60) + recordEditData.s;
+    const totalHours = totalSeconds / 3600;
+    
+    const closeRate = recordEditData.managed > 0 ? (recordEditData.closed / recordEditData.managed) * 100 : 0;
+    const resolutionRate = recordEditData.managed > 0 ? ((recordEditData.managed - recordEditData.technicians) / recordEditData.managed) * 100 : 0;
+    const managedPerHour = totalHours > 0 ? recordEditData.managed / totalHours : 0;
+    const closedPerHour = totalHours > 0 ? recordEditData.closed / totalHours : 0;
+    const tmoCase = recordEditData.closed > 0 ? Math.floor(totalSeconds / recordEditData.closed) : 0;
+    const tmoManaged = recordEditData.managed > 0 ? Math.floor(totalSeconds / recordEditData.managed) : 0;
+
+    const payload = {
+      date: recordEditData.date,
+      total_time: formatTime(totalSeconds),
+      cases_closed: recordEditData.closed,
+      cases_managed: recordEditData.managed,
+      efficiency: parseFloat(closeRate.toFixed(1)),
+      cases_per_hour: parseFloat(managedPerHour.toFixed(1)),
+      avg_closed_per_hour: parseFloat(closedPerHour.toFixed(1)),
+      tmo_case: tmoCase,
+      tmo_managed: tmoManaged,
+      technicians_sent: recordEditData.technicians,
+      resolution_rate: parseFloat(resolutionRate.toFixed(1))
+    };
+
+    const { error } = await supabase
+      .from('daily_metrics')
+      .update(payload)
+      .eq('id', editingRecord.id);
+
+    if (error) {
+      showMessage('error', 'Error al actualizar: ' + error.message);
+    } else {
+      showMessage('success', 'Registro actualizado correctamente.');
+      setShowEditRecordModal(false);
+      fetchHistory();
     }
     setIsSaving(false);
   };
@@ -415,6 +494,7 @@ function Dashboard({ user }) {
                       <th>G/h</th>
                       <th>TMO Cerr.</th>
                       <th>TMO Gest.</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -428,6 +508,14 @@ function Dashboard({ user }) {
                         <td>{item.cases_per_hour}</td>
                         <td>{item.tmo_case}s</td>
                         <td>{item.tmo_managed}s</td>
+                        <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
+                            <Edit3 size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteRecord(item.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -471,6 +559,64 @@ function Dashboard({ user }) {
               }
               setShowEditTimeModal(false);
             }}>Guardar Cambios</button>
+          </div>
+        </div>
+      </div>
+
+      {/* EDIT RECORD MODAL */}
+      <div className={`modal-overlay ${showEditRecordModal ? 'active' : ''}`}>
+        <div className="modal" style={{ maxWidth: '600px' }}>
+          <div className="modal-header">
+            <h2>Editar Registro</h2>
+            <button className="btn-close" onClick={() => setShowEditRecordModal(false)}><X /></button>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            <div className="input-group">
+              <label>Fecha</label>
+              <input type="date" className="filter-input" style={{ width: '100%', marginTop: '5px' }} 
+                value={recordEditData.date} onChange={e => setRecordEditData({...recordEditData, date: e.target.value})}/>
+            </div>
+            <div className="input-group">
+              <label>Gestiones</label>
+              <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                value={recordEditData.managed} onChange={e => setRecordEditData({...recordEditData, managed: parseInt(e.target.value) || 0})}/>
+            </div>
+            <div className="input-group">
+              <label>Cerrados</label>
+              <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                value={recordEditData.closed} onChange={e => setRecordEditData({...recordEditData, closed: parseInt(e.target.value) || 0})}/>
+            </div>
+            <div className="input-group">
+              <label>TCO Enviados</label>
+              <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                value={recordEditData.technicians} onChange={e => setRecordEditData({...recordEditData, technicians: parseInt(e.target.value) || 0})}/>
+            </div>
+          </div>
+
+          <label className="metric-label" style={{ textAlign: 'center', marginBottom: '10px' }}>Tiempo Total</label>
+          <div className="time-inputs">
+            <div className="input-group">
+              <label>H</label>
+              <input type="number" min="0" value={recordEditData.h} onChange={e => setRecordEditData({ ...recordEditData, h: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="input-divider">:</div>
+            <div className="input-group">
+              <label>M</label>
+              <input type="number" min="0" max="59" value={recordEditData.m} onChange={e => setRecordEditData({ ...recordEditData, m: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="input-divider">:</div>
+            <div className="input-group">
+              <label>S</label>
+              <input type="number" min="0" max="59" value={recordEditData.s} onChange={e => setRecordEditData({ ...recordEditData, s: parseInt(e.target.value) || 0 })} />
+            </div>
+          </div>
+
+          <div className="modal-footer" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowEditRecordModal(false)}>Cancelar</button>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveRecordEdit} disabled={isSaving}>
+              {isSaving ? 'Guardando...' : 'Actualizar Registro'}
+            </button>
           </div>
         </div>
       </div>
