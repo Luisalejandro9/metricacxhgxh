@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Login({ handleGoogleLogin, envsMissing }) {
+function Login({ handleGoogleLogin, envsMissing, authError }) {
   if (envsMissing) {
     return (
       <div className="login-overlay active">
@@ -29,6 +29,13 @@ function Login({ handleGoogleLogin, envsMissing }) {
       <div className="login-card">
         <h1>SOPORTE MÉTRICAS</h1>
         <p>Herramienta interna de gestión de rendimiento</p>
+        
+        {authError && (
+          <div className="auth-error-notice" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '13px' }}>
+            {authError}
+          </div>
+        )}
+
         <button className="btn-google" onClick={handleGoogleLogin}>
           <img src="https://www.google.com/favicon.ico" alt="Google" />
           Continuar con Google

@@ -8,6 +8,7 @@ import './App.css';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     // URL Check
@@ -40,13 +41,19 @@ function App() {
   }, []);
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { 
-        redirectTo: window.location.origin + '/dashboard' 
-      }
-    });
-    if (error) console.error('Error al iniciar sesión:', error.message);
+    try {
+      setAuthError(null);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+          redirectTo: window.location.origin + '/dashboard' 
+        }
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error al iniciar sesión:', err.message);
+      setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');
+    }
   };
 
   const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -64,7 +71,7 @@ function App() {
         <Route 
           path="/" 
           element={
-            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} envsMissing={envsMissing} />
+            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} envsMissing={envsMissing} authError={authError} />
           } 
         />
 

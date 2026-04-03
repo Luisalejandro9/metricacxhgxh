@@ -90,6 +90,7 @@ function Dashboard({ user }) {
 
     if (error) {
       console.error('Error al cargar historial:', error.message);
+      showMessage('error', 'No se pudo cargar el historial. Revisa tu conexión.');
     } else {
       setHistory(data || []);
     }
@@ -512,21 +513,21 @@ function Dashboard({ user }) {
         </div>
 
         <div className="save-container" style={{ margin: '30px auto', width: '100%', maxWidth: '600px', padding: '0 20px' }}>
-          <button 
-            className="btn btn-save" 
-            onClick={saveToSupabase} 
-            disabled={isSaving || managedCount === 0} 
-            style={{ 
-              width: '100%', 
-              height: '60px', 
-              borderRadius: '16px', 
-              background: 'linear-gradient(135deg, var(--primary), var(--primary-light))', 
-              color: 'white', 
-              fontWeight: '800', 
-              fontSize: '22px', 
-              border: 'none', 
-              cursor: (isSaving || managedCount === 0) ? 'not-allowed' : 'pointer', 
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+          <button
+            className="btn btn-save"
+            onClick={saveToSupabase}
+            disabled={isSaving || managedCount === 0}
+            style={{
+              width: '100%',
+              height: '60px',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
+              color: 'white',
+              fontWeight: '800',
+              fontSize: '22px',
+              border: 'none',
+              cursor: (isSaving || managedCount === 0) ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
               display: 'flex',
               alignItems: 'center',
@@ -537,7 +538,7 @@ function Dashboard({ user }) {
             }}
           >
             <Save size={26} />
-            {isSaving ? 'GUARDANDO...' : 'GUARDAR REGISTRO ACTUAL'}
+            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIA'}
           </button>
         </div>
 
