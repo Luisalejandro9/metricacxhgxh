@@ -12,25 +12,6 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 const STANDARDS = {
   MANAGED_PER_HOUR: 3.78,
@@ -45,7 +26,6 @@ function Dashboard({ user }) {
   const [closedCount, setClosedCount] = useState(0);
   const [managedCount, setManagedCount] = useState(0);
   const [techniciansCount, setTechniciansCount] = useState(0);
-  const [managedTimestamps, setManagedTimestamps] = useState([]);
 
   // History State
   const [history, setHistory] = useState([]);
@@ -167,7 +147,6 @@ function Dashboard({ user }) {
       setManagedCount(0);
       setTechniciansCount(0);
       setTimerSeconds(0);
-      setManagedTimestamps([]);
       setIsTimerRunning(false);
       startTimeRef.current = null;
       localStorage.removeItem('gxh_timer_state');
@@ -202,50 +181,15 @@ function Dashboard({ user }) {
     };
   }, [closedCount, managedCount, techniciansCount, timerSeconds]);
 
-  // --- Chart Logic ---
-  const chartData = useMemo(() => {
-    const labels = [];
-    const data = [];
-    const now = new Date();
-    
-    for (let i = 7; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-      d.setMinutes(0, 0, 0);
-      const hourStr = d.getHours().toString().padStart(2, '0') + ':00';
-      labels.push(hourStr);
-      
-      const count = managedTimestamps.filter(ts => {
-        const tsDate = new Date(ts);
-        return tsDate.getHours() === d.getHours() && tsDate.getDate() === d.getDate();
-      }).length;
-      data.push(count);
-    }
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Casos Gestionados',
-          data,
-          backgroundColor: '#6366f1',
-          borderColor: '#6366f1',
-          borderWidth: 1,
-          borderRadius: 4
-        },
-      ],
-    };
-  }, [managedTimestamps]);
 
   // --- Handlers ---
   const addManaged = () => {
     setManagedCount(prev => prev + 1);
-    setManagedTimestamps(prev => [...prev, new Date().toISOString()]);
   };
 
   const subtractManaged = () => {
     if (managedCount > closedCount) {
       setManagedCount(prev => prev - 1);
-      setManagedTimestamps(prev => prev.slice(0, -1));
     }
   };
 
@@ -418,6 +362,12 @@ function Dashboard({ user }) {
             </div>
           </div>
           <div className="metric-card">
+            <span className="metric-label">TMO por Gestionado</span>
+            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : 'stat-meets-standard'}`}>
+              {stats.tmoManaged}s
+            </div>
+          </div>
+          <div className="metric-card">
             <span className="metric-label">Técnicos Enviados</span>
             <div className="metric-value medium">{techniciansCount}</div>
           </div>
@@ -429,31 +379,7 @@ function Dashboard({ user }) {
           </div>
         </div>
 
-        <div className="grid-primary">
-          <div className="metric-card" style={{ height: 400 }}>
-            <span className="metric-label">Productividad por Horas</span>
-            <div style={{ flexGrow: 1, position: 'relative' }}>
-              <Bar 
-                data={chartData} 
-                options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: { 
-                    y: { 
-                        beginAtZero: true, 
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: 'var(--text-muted)', stepSize: 1 } 
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: 'var(--text-muted)' }
-                    }
-                  }
-                }} 
-              />
-            </div>
-          </div>
+<div className="grid-primary">
 
           <div className="metric-card h-full">
             <div className="table-header">
@@ -484,7 +410,8 @@ function Dashboard({ user }) {
                                 <th>TCO</th>
                                 <th>Eficacia</th>
                                 <th>G/h</th>
-                                <th>TMO</th>
+                                <th>TMO Cerr.</th>
+                                <th>TMO Gest.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -497,6 +424,7 @@ function Dashboard({ user }) {
                                     <td>{item.efficiency}%</td>
                                     <td>{item.cases_per_hour}</td>
                                     <td>{item.tmo_case}s</td>
+                                    <td>{item.tmo_managed}s</td>
                                 </tr>
                             ))}
                         </tbody>
