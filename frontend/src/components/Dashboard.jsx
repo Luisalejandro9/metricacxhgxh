@@ -33,7 +33,7 @@ const STANDARDS = {
   TIME_PER_MANAGED: 950,
 };
 
-function Dashboard({ user }) {
+function Dashboard({ user, setNetworkError }) {
   // Metrics State
   const [closedCount, setClosedCount] = useState(0);
   const [managedCount, setManagedCount] = useState(0);
@@ -97,6 +97,16 @@ function Dashboard({ user }) {
     technicians: 0
   });
 
+  // --- Error Helper ---
+  const handleSupabaseError = (error, context) => {
+    console.error(`${context}:`, error.message);
+    if (error.message.toLowerCase().includes('fetch')) {
+      setNetworkError(true);
+    } else {
+      showMessage('error', `${context}: ${error.message}`);
+    }
+  };
+
   // --- Auth Handlers ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -113,10 +123,10 @@ function Dashboard({ user }) {
       .order('date', { ascending: false });
 
     if (error) {
-      console.error('Error al cargar historial:', error.message);
-      showMessage('error', 'No se pudo cargar el historial. Revisa tu conexión.');
+      handleSupabaseError(error, 'Error al cargar historial');
     } else {
       setHistory(data || []);
+      setNetworkError(false);
     }
     setIsLoadingHistory(false);
   };
@@ -301,7 +311,7 @@ function Dashboard({ user }) {
     setIsSaving(true);
     const localDate = new Date();
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-
+ 
     const payload = {
       user_id: user.id,
       date: dateStr,
@@ -316,13 +326,14 @@ function Dashboard({ user }) {
       technicians_sent: techniciansCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
-
+ 
     const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
-
+ 
     if (error) {
-      showMessage('error', 'Error al guardar: ' + error.message);
+      handleSupabaseError(error, 'Error al guardar métricas');
     } else {
       showMessage('success', '¡Métricas guardadas correctamente!');
+      setNetworkError(false);
       await fetchHistory();
     }
     setIsSaving(false);
@@ -335,9 +346,10 @@ function Dashboard({ user }) {
       async () => {
         const { error } = await supabase.from('daily_metrics').delete().eq('id', id);
         if (error) {
-          showMessage('error', 'Error al eliminar: ' + error.message);
+          handleSupabaseError(error, 'Error al eliminar');
         } else {
           showMessage('success', 'Registro eliminado correctamente.');
+          setNetworkError(false);
           fetchHistory();
         }
       },
@@ -362,17 +374,17 @@ function Dashboard({ user }) {
   const saveRecordEdit = async () => {
     if (!editingRecord) return;
     setIsSaving(true);
-
+ 
     const totalSeconds = (recordEditData.h * 3600) + (recordEditData.m * 60) + recordEditData.s;
     const totalHours = totalSeconds / 3600;
-
+ 
     const closeRate = recordEditData.managed > 0 ? (recordEditData.closed / recordEditData.managed) * 100 : 0;
     const resolutionRate = recordEditData.managed > 0 ? ((recordEditData.managed - recordEditData.technicians) / recordEditData.managed) * 100 : 0;
     const managedPerHour = totalHours > 0 ? recordEditData.managed / totalHours : 0;
     const closedPerHour = totalHours > 0 ? recordEditData.closed / totalHours : 0;
     const tmoCase = recordEditData.closed > 0 ? Math.floor(totalSeconds / recordEditData.closed) : 0;
     const tmoManaged = recordEditData.managed > 0 ? Math.floor(totalSeconds / recordEditData.managed) : 0;
-
+ 
     const payload = {
       date: recordEditData.date,
       total_time: formatTime(totalSeconds),
@@ -386,17 +398,18 @@ function Dashboard({ user }) {
       technicians_sent: recordEditData.technicians,
       resolution_rate: parseFloat(resolutionRate.toFixed(1))
     };
-
+ 
     const { error } = await supabase
       .from('daily_metrics')
       .update(payload)
       .eq('id', editingRecord.id);
-
+ 
     if (error) {
-      showMessage('error', 'Error al actualizar: ' + error.message);
+      handleSupabaseError(error, 'Error al actualizar registro');
     } else {
       showMessage('success', 'Registro actualizado correctamente.');
       setShowEditRecordModal(false);
+      setNetworkError(false);
       fetchHistory();
     }
     setIsSaving(false);

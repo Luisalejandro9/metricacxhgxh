@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Login({ handleGoogleLogin, envsMissing, authError }) {
+function Login({ handleGoogleLogin, envsMissing, authError, setNetworkError }) {
   if (envsMissing) {
     return (
       <div className="login-overlay active">
