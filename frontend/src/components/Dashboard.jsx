@@ -286,7 +286,7 @@ function Dashboard({ user }) {
       resolution_rate: parseFloat(stats.resolutionRate)
     };
 
-    const { error } = await supabase.from('daily_metrics').insert([payload]);
+    const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
 
     if (error) {
       showMessage('error', 'Error al guardar: ' + error.message);
@@ -432,10 +432,11 @@ function Dashboard({ user }) {
 
         <section className="standards-section">
           <h3>Estándares Requeridos</h3>
-          <div className="standard-row"><span>Gestionados p/h</span> <span>{STANDARDS.MANAGED_PER_HOUR}</span></div>
-          <div className="standard-row"><span>Cerrados p/h</span> <span>{STANDARDS.CLOSED_PER_HOUR}</span></div>
-          <div className="standard-row"><span>TMO (segundos)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
-          <div className="standard-row"><span>% Resolución</span> <span>{STANDARDS.RESOLUTION_PERCENTAGE}%</span></div>
+          <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {STANDARDS.GXH_GREEN}</span></div>
+          <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
+          <div className="standard-row"><span>TMO (máx seg)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
+          <div className="standard-row"><span>% Resolución</span> <span>≥ {STANDARDS.RESOLUTION_GREEN}%</span></div>
+          <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
         </section>
 
         <div className="sidebar-footer">Powered by Supabase & React</div>
@@ -479,12 +480,7 @@ function Dashboard({ user }) {
             </div>
           </div>
         </div>
-
         <div className="grid-secondary">
-          <div className="metric-card">
-            <span className="metric-label">% Cierre (Cerrados/Gest)</span>
-            <div className="metric-value medium">{stats.closeRate}%</div>
-          </div>
           <div className="metric-card">
             <span className="metric-label">Gestionado por Hora</span>
             <div className={`metric-value medium ${getStatusClass(stats.managedPerHour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}`}>
@@ -492,20 +488,20 @@ function Dashboard({ user }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Cierre Real</span>
-            <div className={`metric-value medium ${getStatusClass(stats.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>
-              {stats.efficiency}%
+            <span className="metric-label">Cierre Real (Cerr/Gest)</span>
+            <div className={`metric-value medium ${getStatusClass(stats.closeRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>
+              {stats.closeRate}%
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO por Caso</span>
-            <div className={`metric-value medium ${getStatusClass(STANDARDS.TIME_PER_CASE, stats.tmoCase, STANDARDS.TIME_PER_CASE + 50)}`}>
+            <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoCase}s
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO por Gestionado</span>
-            <div className={`metric-value medium ${getStatusClass(STANDARDS.TIME_PER_MANAGED, stats.tmoManaged, STANDARDS.TIME_PER_MANAGED + 50)}`}>
+            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > STANDARDS.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoManaged}s
             </div>
           </div>
@@ -624,6 +620,7 @@ function Dashboard({ user }) {
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
               const total = (editTime.h * 3600) + (editTime.m * 60) + editTime.s;
               setTimerSeconds(total);
+              // CRITICAL: Update startTimeRef so running timer doesn't jump back
               if (isTimerRunning) {
                 startTimeRef.current = Date.now() - (total * 1000);
               }

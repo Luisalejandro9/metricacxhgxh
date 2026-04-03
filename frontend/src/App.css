@@ -334,6 +334,11 @@
 .stat-warning-standard { color: var(--accent-warning); }
 .stat-meets-standard { color: var(--accent-success); }
 
+/* Increase specificity for table cells */
+.history-table td.stat-below-standard { color: var(--accent-error) !important; font-weight: 700; }
+.history-table td.stat-warning-standard { color: var(--accent-warning) !important; font-weight: 700; }
+.history-table td.stat-meets-standard { color: var(--accent-success) !important; font-weight: 700; }
+
 /* --- LOGIN PAGE --- */
 .login-overlay {
   position: fixed;
