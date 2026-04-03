@@ -7,19 +7,22 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import './App.css';
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [networkError, setNetworkError] = useState(false);
-  const [authError, setAuthError] = useState(null);
+  // --- Global State ---
+  const [user, setUser] = useState(null); // Current authenticated user
+  const [loading, setLoading] = useState(true); // Loading state for initial session check
+  const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
+  const [authError, setAuthError] = useState(null); // Standard auth failures
 
   useEffect(() => {
-    // Initial session check
+    // --- Initial Session Verification ---
+    // Checks if a valid session exists in Supabase on app load
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('[Debug] Error al obtener sesión:', error.message);
+          // If the error is network-related (fetch), trigger the global banner
           if (error.message.toLowerCase().includes('fetch')) {
             setNetworkError(true);
           }
@@ -27,6 +30,7 @@ function App() {
           setUser(session.user);
         }
       } catch (err) {
+        // Catch-all for network request failures
         if (err.message.toLowerCase().includes('fetch')) {
           setNetworkError(true);
         }
@@ -37,7 +41,8 @@ function App() {
 
     checkSession();
 
-    // Listen to auth changes
+    // --- Real-time Auth Listener ---
+    // Updates the 'user' state automatically when logging in or out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setUser(session.user);
@@ -49,6 +54,8 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // --- Authentication Handler ---
+  // Triggers the Google OAuth flow and handles specific network/auth errors
   const handleGoogleLogin = async () => {
     try {
       setAuthError(null);
@@ -62,6 +69,7 @@ function App() {
       if (error) throw error;
     } catch (err) {
       console.error('Error al iniciar sesión:', err.message);
+      // If Supabase is blocked during login, show the network banner
       if (err.message.toLowerCase().includes('fetch')) {
         setNetworkError(true);
       }

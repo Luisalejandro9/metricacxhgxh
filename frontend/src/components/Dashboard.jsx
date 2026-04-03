@@ -58,16 +58,18 @@ function Dashboard({ user, setNetworkError }) {
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
 
-  // Confirmation Modal State
+  // --- Confirmation Modal Management ---
+  // Controls the custom, premium-styled confirmation dialog
   const [confirmModal, setConfirmModal] = useState({
     show: false,
     title: '',
     message: '',
     onConfirm: null,
     confirmText: 'Confirmar',
-    type: 'danger'
+    type: 'danger' // 'danger' for red buttons, 'primary' for blue
   });
 
+  // Reusable function to trigger the custom confirmation modal
   const requestConfirm = (title, message, onConfirm, type = 'danger', confirmText = 'Confirmar') => {
     setConfirmModal({
       show: true,
@@ -97,12 +99,15 @@ function Dashboard({ user, setNetworkError }) {
     technicians: 0
   });
 
-  // --- Error Helper ---
+  // --- Centralized Error Helper ---
+  // Detects network/DNS issues (e.g., "Failed to fetch") to trigger the global banner
   const handleSupabaseError = (error, context) => {
     console.error(`${context}:`, error.message);
+    // If the error message indicates a connection block, alert the global App state
     if (error.message.toLowerCase().includes('fetch')) {
       setNetworkError(true);
     } else {
+      // Otherwise, show a temporary floating message
       showMessage('error', `${context}: ${error.message}`);
     }
   };
@@ -243,6 +248,8 @@ function Dashboard({ user, setNetworkError }) {
 
   const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
 
+  // --- Timer Resetter ---
+  // Opens the custom confirmation modal before resetting all counts
   const resetAll = () => {
     requestConfirm(
       '¿Reiniciar Todo?',
@@ -306,12 +313,14 @@ function Dashboard({ user, setNetworkError }) {
     setTimeout(() => setMessage({ type: null, text: '' }), 4000);
   };
 
+  // --- Save Metrics to Database ---
+  // Upserts current session stats into Supabase. Includes network error check.
   const saveToSupabase = async () => {
     if (!user) return;
     setIsSaving(true);
     const localDate = new Date();
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
- 
+
     const payload = {
       user_id: user.id,
       date: dateStr,
@@ -326,9 +335,9 @@ function Dashboard({ user, setNetworkError }) {
       technicians_sent: techniciansCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
- 
+
     const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
- 
+
     if (error) {
       handleSupabaseError(error, 'Error al guardar métricas');
     } else {
@@ -339,6 +348,8 @@ function Dashboard({ user, setNetworkError }) {
     setIsSaving(false);
   };
 
+  // --- Delete Record Handler ---
+  // Triggers custom confirmation modal before performing the delete operation
   const handleDeleteRecord = async (id) => {
     requestConfirm(
       '¿Eliminar Registro?',
@@ -374,17 +385,17 @@ function Dashboard({ user, setNetworkError }) {
   const saveRecordEdit = async () => {
     if (!editingRecord) return;
     setIsSaving(true);
- 
+
     const totalSeconds = (recordEditData.h * 3600) + (recordEditData.m * 60) + recordEditData.s;
     const totalHours = totalSeconds / 3600;
- 
+
     const closeRate = recordEditData.managed > 0 ? (recordEditData.closed / recordEditData.managed) * 100 : 0;
     const resolutionRate = recordEditData.managed > 0 ? ((recordEditData.managed - recordEditData.technicians) / recordEditData.managed) * 100 : 0;
     const managedPerHour = totalHours > 0 ? recordEditData.managed / totalHours : 0;
     const closedPerHour = totalHours > 0 ? recordEditData.closed / totalHours : 0;
     const tmoCase = recordEditData.closed > 0 ? Math.floor(totalSeconds / recordEditData.closed) : 0;
     const tmoManaged = recordEditData.managed > 0 ? Math.floor(totalSeconds / recordEditData.managed) : 0;
- 
+
     const payload = {
       date: recordEditData.date,
       total_time: formatTime(totalSeconds),
@@ -398,12 +409,12 @@ function Dashboard({ user, setNetworkError }) {
       technicians_sent: recordEditData.technicians,
       resolution_rate: parseFloat(resolutionRate.toFixed(1))
     };
- 
+
     const { error } = await supabase
       .from('daily_metrics')
       .update(payload)
       .eq('id', editingRecord.id);
- 
+
     if (error) {
       handleSupabaseError(error, 'Error al actualizar registro');
     } else {
@@ -538,13 +549,13 @@ function Dashboard({ user, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">TMO por Caso</span>
+            <span className="metric-label">TMO CxH</span>
             <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoCase}s
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">TMO por Gestionado</span>
+            <span className="metric-label">TMO GxH</span>
             <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > STANDARDS.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoManaged}s
             </div>
@@ -587,7 +598,7 @@ function Dashboard({ user, setNetworkError }) {
             }}
           >
             <Save size={26} />
-            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIAEstándares '}
+            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIA '}
           </button>
         </div>
 
@@ -766,47 +777,47 @@ function Dashboard({ user, setNetworkError }) {
       <div className={`modal-overlay ${confirmModal.show ? 'active' : ''}`}>
         <div className="modal" style={{ maxWidth: '400px', textAlign: 'center' }}>
           <div className="modal-header" style={{ justifyContent: 'center', marginBottom: '15px' }}>
-             <div style={{ 
-               width: '60px', 
-               height: '60px', 
-               borderRadius: '50%', 
-               background: confirmModal.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.1)',
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               margin: '0 auto 10px',
-               color: confirmModal.type === 'danger' ? 'var(--accent-error)' : 'var(--primary-light)'
-             }}>
-               <AlertCircle size={32} />
-             </div>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: confirmModal.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 10px',
+              color: confirmModal.type === 'danger' ? 'var(--accent-error)' : 'var(--primary-light)'
+            }}>
+              <AlertCircle size={32} />
+            </div>
           </div>
-          <h2 style={{ 
-            fontSize: '22px', 
+          <h2 style={{
+            fontSize: '22px',
             marginBottom: '12px',
             color: 'var(--text-bright)'
           }}>
             {confirmModal.title}
           </h2>
-          <p style={{ 
-            marginBottom: '30px', 
-            fontSize: '15px', 
+          <p style={{
+            marginBottom: '30px',
+            fontSize: '15px',
             color: 'var(--text-muted)',
             lineHeight: '1.5'
           }}>
             {confirmModal.message}
           </p>
           <div className="modal-footer" style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmModal(p => ({...p, show: false}))}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmModal(p => ({ ...p, show: false }))}>
               Cancelar
             </button>
-            <button 
-              className="btn" 
-              style={{ 
-                flex: 1, 
+            <button
+              className="btn"
+              style={{
+                flex: 1,
                 backgroundColor: confirmModal.type === 'danger' ? 'var(--accent-error)' : 'var(--primary)',
                 color: 'white',
                 fontWeight: '700'
-              }} 
+              }}
               onClick={confirmModal.onConfirm}
             >
               {confirmModal.confirmText}

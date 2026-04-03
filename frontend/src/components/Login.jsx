@@ -16,7 +16,7 @@ function Login({ handleGoogleLogin, envsMissing, authError, setNetworkError }) {
 
   return (
     <div className="login-overlay active">
-      {/* Animated Background */}
+      {/* --- Animated Background Visuals --- */}
       <div className="login-bg">
         <div className="bg-shape bg-shape-1"></div>
         <div className="bg-shape bg-shape-2"></div>
@@ -25,17 +25,18 @@ function Login({ handleGoogleLogin, envsMissing, authError, setNetworkError }) {
         <div className="bg-line bg-line-2"></div>
         <div className="bg-line bg-line-3"></div>
       </div>
-
+ 
       <div className="login-card">
         <h1>SOPORTE MÉTRICAS</h1>
         <p>Control diario.</p>
-
+ 
+        {/* Displays connection or credential errors during login */}
         {authError && (
           <div className="auth-error-notice" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '13px' }}>
             {authError}
           </div>
         )}
-
+ 
         <button className="btn-google" onClick={handleGoogleLogin}>
           <img src="https://www.google.com/favicon.ico" alt="Google" />
           Logear con Google
