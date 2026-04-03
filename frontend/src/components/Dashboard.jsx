@@ -201,9 +201,12 @@ function Dashboard({ user }) {
   const saveToSupabase = async () => {
     if (!user) return;
     setIsSaving(true);
+    const localDate = new Date();
+    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    
     const payload = {
       user_id: user.id,
-      date: new Date().toISOString().split('T')[0],
+      date: dateStr,
       total_time: formatTime(timerSeconds),
       cases_closed: closedCount,
       cases_managed: managedCount,
