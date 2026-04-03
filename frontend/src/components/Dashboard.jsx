@@ -58,6 +58,30 @@ function Dashboard({ user }) {
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
 
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    confirmText: 'Confirmar',
+    type: 'danger'
+  });
+
+  const requestConfirm = (title, message, onConfirm, type = 'danger', confirmText = 'Confirmar') => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      },
+      confirmText,
+      type
+    });
+  };
+
   // Helper for traffic light colors
   const getStatusClass = (value, greenTarget, yellowTarget) => {
     const val = parseFloat(value);
@@ -210,16 +234,22 @@ function Dashboard({ user }) {
   const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
 
   const resetAll = () => {
-    if (window.confirm('¿Estás seguro de reiniciar todos los contadores?')) {
-      setClosedCount(0);
-      setManagedCount(0);
-      setTechniciansCount(0);
-      setTimerSeconds(0);
-      setIsTimerRunning(false);
-      startTimeRef.current = null;
-      localStorage.removeItem('gxh_timer_state');
-      showMessage('info', 'Contadores reiniciados.');
-    }
+    requestConfirm(
+      '¿Reiniciar Todo?',
+      '¿Estás seguro de reiniciar todos los contadores? Se perderá el progreso que no hayas guardado.',
+      () => {
+        setClosedCount(0);
+        setManagedCount(0);
+        setTechniciansCount(0);
+        setTimerSeconds(0);
+        setIsTimerRunning(false);
+        startTimeRef.current = null;
+        localStorage.removeItem('gxh_timer_state');
+        showMessage('info', 'Contadores reiniciados.');
+      },
+      'danger',
+      'Reiniciar'
+    );
   };
 
   const formatTime = (totalSeconds) => {
@@ -299,15 +329,21 @@ function Dashboard({ user }) {
   };
 
   const handleDeleteRecord = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este registro?')) {
-      const { error } = await supabase.from('daily_metrics').delete().eq('id', id);
-      if (error) {
-        showMessage('error', 'Error al eliminar: ' + error.message);
-      } else {
-        showMessage('success', 'Registro eliminado correctamente.');
-        fetchHistory();
-      }
-    }
+    requestConfirm(
+      '¿Eliminar Registro?',
+      '¿Seguro deseas borrar este registro? No podrás recuperarlo...',
+      async () => {
+        const { error } = await supabase.from('daily_metrics').delete().eq('id', id);
+        if (error) {
+          showMessage('error', 'Error al eliminar: ' + error.message);
+        } else {
+          showMessage('success', 'Registro eliminado correctamente.');
+          fetchHistory();
+        }
+      },
+      'danger',
+      'Eliminar Registro'
+    );
   };
 
   const handleOpenEditModal = (record) => {
@@ -432,7 +468,7 @@ function Dashboard({ user }) {
         </section>
 
         <section className="standards-section">
-          <h3>Estándares Requeridos</h3>
+          <h3>Metricas Requeridos</h3>
           <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {STANDARDS.GXH_GREEN}</span></div>
           <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
           <div className="standard-row"><span>TMO (máx seg)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
@@ -538,7 +574,7 @@ function Dashboard({ user }) {
             }}
           >
             <Save size={26} />
-            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIA'}
+            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIAEstándares '}
           </button>
         </div>
 
@@ -708,6 +744,59 @@ function Dashboard({ user }) {
             <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowEditRecordModal(false)}>Cancelar</button>
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveRecordEdit} disabled={isSaving}>
               {isSaving ? 'Guardando...' : 'Actualizar Registro'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* CONFIRMATION DIALOG MODAL */}
+      <div className={`modal-overlay ${confirmModal.show ? 'active' : ''}`}>
+        <div className="modal" style={{ maxWidth: '400px', textAlign: 'center' }}>
+          <div className="modal-header" style={{ justifyContent: 'center', marginBottom: '15px' }}>
+             <div style={{ 
+               width: '60px', 
+               height: '60px', 
+               borderRadius: '50%', 
+               background: confirmModal.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               margin: '0 auto 10px',
+               color: confirmModal.type === 'danger' ? 'var(--accent-error)' : 'var(--primary-light)'
+             }}>
+               <AlertCircle size={32} />
+             </div>
+          </div>
+          <h2 style={{ 
+            fontSize: '22px', 
+            marginBottom: '12px',
+            color: 'var(--text-bright)'
+          }}>
+            {confirmModal.title}
+          </h2>
+          <p style={{ 
+            marginBottom: '30px', 
+            fontSize: '15px', 
+            color: 'var(--text-muted)',
+            lineHeight: '1.5'
+          }}>
+            {confirmModal.message}
+          </p>
+          <div className="modal-footer" style={{ display: 'flex', gap: '12px' }}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmModal(p => ({...p, show: false}))}>
+              Cancelar
+            </button>
+            <button 
+              className="btn" 
+              style={{ 
+                flex: 1, 
+                backgroundColor: confirmModal.type === 'danger' ? 'var(--accent-error)' : 'var(--primary)',
+                color: 'white',
+                fontWeight: '700'
+              }} 
+              onClick={confirmModal.onConfirm}
+            >
+              {confirmModal.confirmText}
             </button>
           </div>
         </div>

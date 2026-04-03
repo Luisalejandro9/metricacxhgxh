@@ -28,8 +28,8 @@ function Login({ handleGoogleLogin, envsMissing, authError }) {
 
       <div className="login-card">
         <h1>SOPORTE MÉTRICAS</h1>
-        <p>Herramienta interna de gestión de rendimiento</p>
-        
+        <p>Control diario.</p>
+
         {authError && (
           <div className="auth-error-notice" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '13px' }}>
             {authError}
@@ -38,7 +38,7 @@ function Login({ handleGoogleLogin, envsMissing, authError }) {
 
         <button className="btn-google" onClick={handleGoogleLogin}>
           <img src="https://www.google.com/favicon.ico" alt="Google" />
-          Continuar con Google
+          Logear con Google
         </button>
       </div>
     </div>
