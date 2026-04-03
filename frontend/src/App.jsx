@@ -11,9 +11,6 @@ function App() {
 
   useEffect(() => {
     // URL Check
-    console.log('[Debug] URL Completa detectada:', window.location.href);
-    console.log('[Debug] Hash detectado:', window.location.hash);
-    console.log('[Debug] Verificando sesión inicial...');
     
     // Initial session check
     const checkSession = async () => {
@@ -22,10 +19,8 @@ function App() {
       if (error) {
         console.error('[Debug] Error al obtener sesión:', error.message);
       } else if (session) {
-        console.log('[Debug] ✅ Sesión encontrada para:', session.user.email);
         setUser(session.user);
       } else {
-        console.log('[Debug] ❌ No hay sesión inicial activa.');
       }
       setLoading(false);
     };
@@ -34,12 +29,9 @@ function App() {
 
     // Listen to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Debug] Cambio de estado auth detectado:', event);
       if (session) {
-        console.log('[Debug] Usuario logeado:', session.user.email);
         setUser(session.user);
       } else {
-        console.log('[Debug] Usuario deslogeado.');
         setUser(null);
       }
     });
