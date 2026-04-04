@@ -269,7 +269,14 @@ function Dashboard({ user, profile, setNetworkError }) {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isTimerRunning]);
 
-  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
+  const toggleTimer = () => {
+    const isNowRunning = !isTimerRunning;
+    setIsTimerRunning(isNowRunning);
+    // Auto-save progress when the timer is stopped
+    if (!isNowRunning) {
+      autoSaveToSupabase();
+    }
+  };
 
   // --- Timer Resetter ---
   // Opens the custom confirmation modal before resetting all counts
@@ -800,6 +807,8 @@ function Dashboard({ user, profile, setNetworkError }) {
                 startTimeRef.current = Date.now() - (total * 1000);
               }
               setShowEditTimeModal(false);
+              // Auto-save manually edited time
+              setTimeout(() => autoSaveToSupabase(), 500);
             }}>Guardar Cambios</button>
           </div>
         </div>
