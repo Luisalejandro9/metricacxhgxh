@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   Database,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,42 +27,45 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   const [users, setUsers] = useState([]);
   const [allMetrics, setAllMetrics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState('all');
 
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    setIsRefreshing(true);
+    try {
+      // 1. Fetch Users from profiles
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('email');
+      
+      if (usersError) throw usersError;
+      setUsers(usersData || []);
+
+      // 2. Fetch all metrics
+      const { data: metricsData, error: metricsError } = await supabase
+        .from('daily_metrics')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (metricsError) throw metricsError;
+      setAllMetrics(metricsData || []);
+
+    } catch (error) {
+      console.error('Error fetching admin data:', error.message);
+      if (error.message.toLowerCase().includes('fetch')) {
+        setNetworkError(true);
+      }
+    } finally {
+      if (!silent) setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
   // Load initial data
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // 1. Fetch Users from profiles
-        const { data: usersData, error: usersError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('email');
-        
-        if (usersError) throw usersError;
-        setUsers(usersData || []);
-
-        // 2. Fetch all metrics
-        const { data: metricsData, error: metricsError } = await supabase
-          .from('daily_metrics')
-          .select('*')
-          .order('date', { ascending: false });
-        
-        if (metricsError) throw metricsError;
-        setAllMetrics(metricsData || []);
-
-      } catch (error) {
-        console.error('Error fetching admin data:', error.message);
-        if (error.message.toLowerCase().includes('fetch')) {
-          setNetworkError(true);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [setNetworkError]);
 
@@ -231,8 +235,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                 <p style={{color: 'var(--text-muted)'}}>Monitoreo de métricas y rendimiento del equipo</p>
              </div>
              
-             <div className="filter-group" style={{maxWidth:'400px', width:'100%'}}>
-                <div style={{position:'relative', width:'100%'}}>
+             <div className="filter-group" style={{maxWidth:'500px', width:'100%', display:'flex', gap:'12px', alignItems:'center'}}>
+                <div style={{position:'relative', flexGrow: 1}}>
                   <Search size={18} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}} />
                   <input 
                     type="text" 
@@ -243,6 +247,21 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => fetchData(true)}
+                  disabled={isRefreshing}
+                  style={{
+                    height: '45px', 
+                    width: '45px', 
+                    padding:0, 
+                    borderRadius: '12px',
+                    borderColor: isRefreshing ? 'var(--primary-light)' : 'var(--border-light)'
+                  }}
+                  title="Recargar datos"
+                >
+                  <RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} />
+                </button>
              </div>
         </div>
 
