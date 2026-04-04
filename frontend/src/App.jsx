@@ -176,9 +176,9 @@ function App() {
         <Route 
           path="/admin" 
           element={
-            (user && profile?.role === 'admin' && profile?.is_enabled) ? 
+            user ? 
               <AdminDashboard user={user} profile={profile} setNetworkError={setNetworkError} /> : 
-              <Navigate to="/dashboard" />
+              <Navigate to="/" />
           } 
         />
 
