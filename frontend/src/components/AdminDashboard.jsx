@@ -10,13 +10,14 @@ import {
   CheckCircle2, 
   AlertCircle,
   Database,
-  Filter,
   RefreshCw,
   Trophy,
   TrendingUp,
   Flame,
   Calendar,
-  Zap
+  Zap,
+  Activity,
+  History
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -61,6 +62,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState('all');
+
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -109,7 +115,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return () => { supabase.removeChannel(channel); };
   }, [setNetworkError]);
 
-  // Combined filters for everything
   const filteredMetrics = useMemo(() => {
     let filtered = [...allMetrics];
     if (selectedUserEmail !== 'all') {
@@ -123,7 +128,10 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return filtered;
   }, [allMetrics, selectedUserEmail, users, searchTerm]);
 
-  // SUMMARY Stats based on filtered data (Updates when changing email filter)
+  // SPLIT METRICS: Current Day vs History
+  const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
+  const metricsHistory = useMemo(() => filteredMetrics.filter(m => m.date !== todayStr).reverse(), [filteredMetrics, todayStr]);
+
   const statsSummary = useMemo(() => {
     if (filteredMetrics.length === 0) return { totalManaged: 0, totalClosed: 0, totalTechs: 0, avgEfficiency: "0.0" };
     const totalManaged = filteredMetrics.reduce((sum, m) => sum + (m.cases_managed || 0), 0);
@@ -185,6 +193,63 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return 'stat-below-standard';
   };
 
+  const MetricTable = ({ data, title, icon: Icon, showEmpty = true }) => {
+    if (!showEmpty && data.length === 0) return null;
+    return (
+      <div className="metric-card" style={{padding: '0', marginBottom: '24px'}}>
+        <div className="table-header" style={{padding: '20px 32px', borderBottom:'1px solid var(--border-light)', background: 'rgba(0,0,0,0.1)'}}>
+           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+              <Icon size={16} className="text-primary" />
+              <span className="metric-label" style={{margin:0, color: 'var(--text-bright)'}}>{title}</span>
+           </div>
+           <div style={{fontSize:'11px', color:'var(--text-dim)'}}>{data.length} registros hallados</div>
+        </div>
+        <div className="table-container" style={{maxHeight:'350px'}}>
+            <table className="history-table admin-table">
+              <thead>
+                <tr>
+                  <th style={{textAlign:'left', paddingLeft:'32px'}}>Operador</th>
+                  <th>Fecha</th>
+                  <th>Tiempo</th>
+                  <th>Gest.</th>
+                  <th>Cerr.</th>
+                  <th>TCO</th>
+                  <th>% Cierre</th>
+                  <th>Acum. Reso</th>
+                  <th>G/h</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan="9" style={{padding: '40px', textAlign:'center', color:'var(--text-dim)'}}>No hay datos para esta sección actualmente.</td></tr>
+                ) : data.map((item) => {
+                  const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
+                  return (
+                    <tr key={item.id}>
+                      <td style={{textAlign:'left', paddingLeft:'32px'}}>
+                        <div style={{display:'flex', flexDirection:'column'}}>
+                           <span style={{fontWeight:'700', color:'var(--text-bright)', fontSize: '12px'}}>{email.split('@')[0]}</span>
+                           <span style={{fontSize:'10px', color:'var(--text-dim)'}}>{email}</span>
+                        </div>
+                      </td>
+                      <td style={{fontWeight:'600'}}>{item.date}</td>
+                      <td>{item.total_time}</td>
+                      <td>{item.cases_managed}</td>
+                      <td>{item.cases_closed}</td>
+                      <td>{item.technicians_sent}</td>
+                      <td className={getStatusClass(item.efficiency, 78.8, 76.8)}>{item.efficiency}%</td>
+                      <td className={getStatusClass(item.resolution_rate, 78.10, 76.8)}>{item.resolution_rate}%</td>
+                      <td className={getStatusClass(item.cases_per_hour, 3.99, 3.78)}>{item.cases_per_hour}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+        </div>
+      </div>
+    );
+  };
+
   if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
     return (
       <div className="login-overlay">
@@ -200,14 +265,14 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
   return (
     <div className="app-layout">
-      {/* SIDEBAR - Restored User List & Leaderboard */}
+      {/* SIDEBAR */}
       <aside className="sidebar">
         <header className="sidebar-header">
           <div style={{display:'flex', alignItems:'center', gap:'10px', justifyContent:'center', marginBottom:'10px'}}>
              <Database className="text-primary" size={24} />
              <h1 style={{margin:0}}>Admin Panel</h1>
           </div>
-          <div className="subtitle">CONTROL Y MÉTRICAS</div>
+          <div className="subtitle">CONTROL Y MONITORIZACIÓN</div>
         </header>
 
         <section className="user-info">
@@ -271,114 +336,77 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                   <h2 style={{fontSize: '32px', margin: 0}}>Admin Panel</h2>
                   <div className="live-container" style={{display:'flex', alignItems:'center', gap:'8px', background:'rgba(239, 68, 68, 0.1)', padding:'6px 12px', borderRadius:'20px', border:'1px solid rgba(239, 68, 68, 0.2)'}}>
                     <div className="pulse-dot"></div>
-                    <span style={{fontSize:'10px', fontWeight:'800', color:'var(--accent-error)', letterSpacing:'0.1em'}}>EN VIVO</span>
+                    <span style={{fontSize:'10px', fontWeight:'800', color:'var(--accent-error)', letterSpacing:'0.1em'}}>MONITOREO EN VIVO</span>
                   </div>
                 </div>
-                <p style={{color: 'var(--text-muted)', marginTop: '8px'}}>Monitoreo consolidado de métricas para {users.length} operadores registrados</p>
+                <p style={{color: 'var(--text-muted)', marginTop: '8px'}}>Gestionando {users.length} operadores registrados en este sistema</p>
              </div>
              
              <div style={{display:'flex', gap:'12px', alignItems:'center', width:'100%', maxWidth:'450px'}}>
                 <div style={{position:'relative', flexGrow: 1}}>
                   <Search size={18} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}} />
-                  <input type="text" placeholder="Buscar operador..." className="filter-input" style={{width:'100%', paddingLeft:'40px', height:'45px', borderRadius:'12px'}} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{width:'100%', paddingLeft:'40px', height:'45px', borderRadius:'12px'}} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
                 <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{height: '45px', width: '45px', padding:0, borderRadius: '12px'}}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
              </div>
         </div>
 
-        {/* RESTORED SUMMARY CARDS (Now dynamic based on filter) */}
+        {/* SUMMARY CARDS */}
         <div className="grid-secondary" style={{marginBottom: '30px'}}>
           <div className="metric-card">
-            <span className="metric-label">Casos Gestionados</span>
+            <span className="metric-label">Gestionados</span>
             <div className="metric-value medium">{statsSummary.totalManaged}</div>
-            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Total acumulado {selectedUserEmail !== 'all' ? 'del usuario' : 'global'}</div>
+            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>{selectedUserEmail !== 'all' ? 'Total histórico del usuario' : 'Total acumulado global'}</div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Casos Cerrados</span>
+            <span className="metric-label">Cerrados</span>
             <div className="metric-value medium">{statsSummary.totalClosed}</div>
-            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Éxito en cierres</div>
+            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Éxito en cierres totales</div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TCO Enviados</span>
             <div className="metric-value medium">{statsSummary.totalTechs}</div>
-            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Gestión técnica</div>
+            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Total derivaciones técnicas</div>
           </div>
           <div className="metric-card">
             <span className="metric-label">Eficiencia Media</span>
             <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, 78.8, 76.8)}`}>{statsSummary.avgEfficiency}%</div>
-            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Promedio de resolución</div>
+            <div style={{fontSize:'10px', color:'var(--text-dim)', marginTop:'5px'}}>Rendimiento acumulado</div>
           </div>
         </div>
 
-        {/* CHARTS CONTAINER */}
-        <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap:'24px', marginBottom:'24px'}}>
-            <div className="metric-card" style={{padding: '24px'}}>
-               <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia de Gestión</span>
-               <div style={{height: '220px'}}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
-            </div>
-            <div className="metric-card" style={{padding: '24px'}}>
-               <span className="metric-label"><BarChart3 size={14} style={{marginRight:5}} /> Actividad por Día de Semana</span>
-               <div style={{height: '220px'}}><Bar data={heatmapData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
-            </div>
-        </div>
+        {/* TABLES SECTION - SPLIT INTO LIVE MONITOR AND HISTORY */}
+        <section className="live-tables">
+           <MetricTable 
+              data={metricsToday} 
+              title="Monitor de Jornada Actual" 
+              icon={Activity} 
+           />
 
-        {/* TABLE SECTION */}
-        <div className="history-section">
-          <div className="metric-card" style={{padding: '0'}}>
-            <div className="table-header" style={{padding: '20px 32px', borderBottom:'1px solid var(--border-light)'}}>
-               <span className="metric-label"><Calendar size={14} style={{marginRight:5}} /> Registros Detallados</span>
-               <div style={{fontSize:'11px', color:'var(--text-dim)'}}>Mostrando {filteredMetrics.length} resultados</div>
-            </div>
-            <div className="table-container" style={{maxHeight:'400px'}}>
-                <table className="history-table admin-table">
-                  <thead>
-                    <tr>
-                      <th style={{textAlign:'left', paddingLeft:'32px'}}>Operador</th>
-                      <th>Fecha</th>
-                      <th>Gest.</th>
-                      <th>Cerr.</th>
-                      <th>TCO</th>
-                      <th>% Cierre</th>
-                      <th>Acum. Reso</th>
-                      <th>G/h</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...filteredMetrics].reverse().map((item) => {
-                      const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
-                      return (
-                        <tr key={item.id}>
-                          <td style={{textAlign:'left', paddingLeft:'32px'}}>
-                            <div style={{display:'flex', flexDirection:'column'}}>
-                               <span style={{fontWeight:'700', color:'var(--text-bright)'}}>{email.split('@')[0]}</span>
-                               <span style={{fontSize:'10px', color:'var(--text-dim)'}}>{email}</span>
-                            </div>
-                          </td>
-                          <td style={{fontWeight:'600'}}>{item.date}</td>
-                          <td>{item.cases_managed}</td>
-                          <td>{item.cases_closed}</td>
-                          <td>{item.technicians_sent}</td>
-                          <td className={getStatusClass(item.efficiency, 78.8, 76.8)}>{item.efficiency}%</td>
-                          <td className={getStatusClass(item.resolution_rate, 78.10, 76.8)}>{item.resolution_rate}%</td>
-                          <td className={getStatusClass(item.cases_per_hour, 3.99, 3.78)}>{item.cases_per_hour}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-            </div>
-          </div>
-        </div>
+           <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap:'24px', marginBottom:'24px'}}>
+              <div className="metric-card" style={{padding: '24px'}}>
+                <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia Semanal</span>
+                <div style={{height: '200px'}}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
+              </div>
+              <div className="metric-card" style={{padding: '24px'}}>
+                <span className="metric-label"><BarChart3 size={14} style={{marginRight:5}} /> Distribución por Jornada</span>
+                <div style={{height: '200px'}}><Bar data={heatmapData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
+              </div>
+           </div>
+
+           <MetricTable 
+              data={metricsHistory} 
+              title="Historial de Métricas Acumuladas" 
+              icon={History} 
+           />
+        </section>
+
       </main>
       
       <style>{`
         .pulse-dot {
-          width: 8px;
-          height: 8px;
-          background: var(--accent-error);
-          border-radius: 50%;
-          box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
-          animation: pulse-ring 1.5s infinite;
+          width: 8px; height: 8px; background: var(--accent-error); border-radius: 50%;
+          box-shadow: 0 0 0 rgba(239, 68, 68, 0.4); animation: pulse-ring 1.5s infinite;
         }
         @keyframes pulse-ring {
           0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
