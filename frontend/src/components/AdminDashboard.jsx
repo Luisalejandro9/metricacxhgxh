@@ -220,15 +220,65 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return 'stat-below-standard';
   };
 
-  if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
+  // ACCESS DENIED VIEW WITH REDIRECT
+  const [countdown, setCountdown] = useState(15);
+  
+  useEffect(() => {
+    if (!loading && (!profile || profile.role !== 'admin' || !profile.is_enabled)) {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/dashboard');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [loading, profile, navigate]);
+
+  if (loading) {
     return (
       <div className="login-overlay">
-        <div className="login-card">
-          <AlertCircle size={48} color="var(--accent-error)" style={{marginBottom: 20}} />
-          <h1>Acceso Denegado</h1>
-          <p>Solo administradores habilitados.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Volver</button>
+        <div className="login-card" style={{textAlign:'center', padding:'40px'}}>
+          <RefreshCw size={48} className="spinning text-primary" style={{marginBottom:20}} />
+          <p>Verificando credenciales de administrador...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
+    return (
+      <div className="login-overlay access-denied-bg">
+        <div className="login-card" style={{textAlign:'center', maxWidth:'400px', border:'1px solid rgba(239, 68, 68, 0.2)'}}>
+          <div style={{position:'relative', width:'fit-content', margin:'0 auto 24px'}}>
+             <div className="pulse-circle" style={{position:'absolute', inset:'-10px', background:'rgba(239, 68, 68, 0.1)', borderRadius:'50%', animation:'ping 2s infinite'}}></div>
+             <AlertCircle size={64} className="text-secondary" style={{color: 'var(--accent-error)', position:'relative'}} />
+          </div>
+          <h1 style={{fontSize:'28px', color:'var(--text-bright)', marginBottom:'10px'}}>¡No tienes acceso!</h1>
+          <p style={{color:'var(--text-dim)', marginBottom:'30px', lineHeight:'1.5'}}>Tu cuenta no cuenta con permisos administrativos o ha sido desahibilitada.</p>
+          
+          <div style={{background:'rgba(239, 68, 68, 0.05)', padding:'15px', borderRadius:'12px', border:'1px solid rgba(239, 68, 68, 0.1)', marginBottom:'25px'}}>
+             <p style={{fontSize:'12px', margin:0, color:'var(--text-dim)'}}>Redirigiendo automáticamente en</p>
+             <div style={{fontSize:'32px', fontWeight:'800', color:'var(--accent-error)'}}>{countdown}s</div>
+          </div>
+
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{width:'100%'}}>
+             <ArrowLeft size={16} /> Volver al Dashboard Ahora
+          </button>
+        </div>
+        <style>{`
+          .access-denied-bg {
+             background: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, #0a0b14 100%);
+          }
+          @keyframes ping {
+            0% { transform: scale(1); opacity: 1; }
+            70%, 100% { transform: scale(1.6); opacity: 0; }
+          }
+        `}</style>
       </div>
     );
   }
