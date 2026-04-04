@@ -16,9 +16,9 @@ async function checkStatus() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
-  if (tab?.url?.includes('yoyzen.com')) {
+  if (tab?.url?.includes('yoyzen.com') || tab?.url?.includes('ysocial.net')) {
     UI.dot.classList.add('online');
-    UI.text.innerText = 'Conectado a Yoyzen';
+    UI.text.innerText = 'Conectado a Yoyzen (Portal Agentic)';
     UI.btn.disabled = false;
     
     // Auto-request data from content script

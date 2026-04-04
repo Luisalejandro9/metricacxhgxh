@@ -14,12 +14,16 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.yoyzen.com/*"],
+      "matches": [
+        "https://*.yoyzen.com/*",
+        "https://human-agent-tecob2c.ysocial.net/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
   "host_permissions": [
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://human-agent-tecob2c.ysocial.net/*"
   ]
 }
