@@ -58,8 +58,11 @@ function Dashboard({ user, profile, setNetworkError }) {
   const [editTime, setEditTime] = useState({ h: 0, m: 0, s: 0 });
   const [message, setMessage] = useState({ type: null, text: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const autoSaveTimeoutRef = useRef(null);
 
   // --- Confirmation Modal Management ---
   // Controls the custom, premium-styled confirmation dialog
@@ -172,6 +175,23 @@ function Dashboard({ user, profile, setNetworkError }) {
     };
     localStorage.setItem('gxh_timer_state', JSON.stringify(state));
   }, [timerSeconds, isTimerRunning]);
+
+  // --- Intelligent Auto-Save (Logic) ---
+  // Debounces saving to Supabase to prevent excessive DB calls while ensuring real-time sync
+  useEffect(() => {
+    // Prevent auto-save on initial mount or if no progress made
+    if (managedCount === 0 && timerSeconds === 0) return;
+
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveToSupabase();
+    }, 4000); // 4-second debounce for optimal performance with 23+ users
+
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    };
+  }, [closedCount, managedCount, techniciansCount]); // Auto-save on count changes
 
   const historyWithAccum = useMemo(() => {
     // Sort ascending to calculate accumulators correctly
@@ -345,10 +365,50 @@ function Dashboard({ user, profile, setNetworkError }) {
       handleSupabaseError(error, 'Error al guardar métricas');
     } else {
       showMessage('success', '¡Métricas guardadas correctamente!');
+      setLastSavedAt(new Date());
       setNetworkError(false);
       await fetchHistory();
     }
     setIsSaving(false);
+  };
+
+  // --- Auto-Save Implementation ---
+  const autoSaveToSupabase = async () => {
+    if (!user || managedCount === 0 || isSaving) return;
+    
+    setIsAutoSaving(true);
+    const localDate = new Date();
+    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+
+    const payload = {
+      user_id: user.id,
+      date: dateStr,
+      total_time: formatTime(timerSeconds),
+      cases_closed: closedCount,
+      cases_managed: managedCount,
+      efficiency: parseFloat(stats.closeRate),
+      cases_per_hour: parseFloat(stats.managedPerHour),
+      avg_closed_per_hour: parseFloat(stats.closedPerHour),
+      tmo_case: stats.tmoCase,
+      tmo_managed: stats.tmoManaged,
+      technicians_sent: techniciansCount,
+      resolution_rate: parseFloat(stats.resolutionRate)
+    };
+
+    const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
+
+    if (!error) {
+      setLastSavedAt(new Date());
+      setNetworkError(false);
+      // Silent history update
+      const { data } = await supabase
+        .from('daily_metrics')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      if (data) setHistory(data);
+    }
+    setIsAutoSaving(false);
   };
 
   // --- Delete Record Handler ---
@@ -617,8 +677,19 @@ function Dashboard({ user, profile, setNetworkError }) {
             }}
           >
             <Save size={26} />
-            {isSaving ? 'GUARDANDO...' : 'GUARDAR METRICAS DEL DIA '}
+            {isSaving ? 'GUARDANDO...' : isAutoSaving ? 'AUTO-GUARDADO...' : 'GUARDAR MÉTRICAS'}
           </button>
+          {lastSavedAt && (
+            <div style={{
+              fontSize: '11px', 
+              color: 'var(--text-dim)', 
+              textAlign: 'center', 
+              marginTop: '10px',
+              fontWeight: '500'
+            }}>
+               Auto-sincronizado a las {lastSavedAt.toLocaleTimeString()}
+            </div>
+          )}
         </div>
 
         <div className="history-section">

@@ -64,9 +64,39 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     }
   };
 
-  // Load initial data
+  // Load initial data and set up realtime subscription
   useEffect(() => {
     fetchData();
+
+    // --- Realtime Subscription ---
+    // Listen for changes in metrics from any user
+    const channel = supabase
+      .channel('admin_live_metrics')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_metrics' },
+        (payload) => {
+          console.log('[Admin] Realtime update received:', payload);
+          
+          setAllMetrics(currentMetrics => {
+            if (payload.eventType === 'INSERT') {
+              return [payload.new, ...currentMetrics];
+            }
+            if (payload.eventType === 'UPDATE') {
+              return currentMetrics.map(m => m.id === payload.new.id ? payload.new : m);
+            }
+            if (payload.eventType === 'DELETE') {
+              return currentMetrics.filter(m => m.id === payload.old.id);
+            }
+            return currentMetrics;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [setNetworkError]);
 
   // Derived: Filtered users and metrics
@@ -231,7 +261,24 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       <main className="main-content">
         <div className="admin-header" style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'30px'}}>
              <div>
-                <h2 style={{fontSize: '32px', marginBottom: '4px'}}>Dashboard Administrador</h2>
+                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                  <h2 style={{fontSize: '32px', marginBottom: '4px'}}>Dashboard Administrador</h2>
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--accent-error)',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <div style={{width: '6px', height: '6px', background: 'var(--accent-error)', borderRadius: '50%', animation: 'pulse 1.5s infinite'}}></div>
+                    EN VIVO
+                  </div>
+                </div>
                 <p style={{color: 'var(--text-muted)'}}>Monitoreo de métricas y rendimiento del equipo</p>
              </div>
              
