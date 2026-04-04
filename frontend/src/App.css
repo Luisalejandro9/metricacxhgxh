@@ -634,3 +634,36 @@
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
   .grid-primary { grid-template-columns: 1fr; }
 }
+/* --- ADMIN DASHBOARD --- */
+.user-list-item:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--border-focus) !important;
+}
+
+.admin-table th {
+  background: rgba(17, 18, 25, 0.9) !important;
+  backdrop-filter: blur(8px);
+}
+
+.admin-table td {
+  padding: 16px 12px !important;
+}
+
+.text-primary {
+  color: var(--primary-light);
+}
+
+/* Spinner for loading state */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(99, 102, 241, 0.1);
+  border-top-color: var(--primary-light);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -3,12 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { supabase } from './lib/supabase';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import AdminDashboard from './components/AdminDashboard';
+import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import './App.css';
 
 function App() {
   // --- Global State ---
   const [user, setUser] = useState(null); // Current authenticated user
+  const [profile, setProfile] = useState(null); // User profile with role and enablement status
   const [loading, setLoading] = useState(true); // Loading state for initial session check
   const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
   const [authError, setAuthError] = useState(null); // Standard auth failures
@@ -41,13 +43,35 @@ function App() {
 
     checkSession();
 
+    // --- Profile Sync ---
+    // Fetches the user profile from Supabase profiles table
+    const syncProfile = async (userId) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (error) {
+          console.error('[Debug] Error al obtener perfil:', error.message);
+        } else {
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error('Error syncing profile:', err);
+      }
+    };
+
     // --- Real-time Auth Listener ---
     // Updates the 'user' state automatically when logging in or out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setUser(session.user);
+        syncProfile(session.user.id);
       } else {
         setUser(null);
+        setProfile(null);
       }
     });
 
@@ -144,7 +168,17 @@ function App() {
         <Route 
           path="/dashboard" 
           element={
-            user ? <Dashboard user={user} setNetworkError={setNetworkError} /> : <Navigate to="/" />
+            user ? <Dashboard user={user} profile={profile} setNetworkError={setNetworkError} /> : <Navigate to="/" />
+          } 
+        />
+
+        {/* ADMIN DASHBOARD ROUTE */}
+        <Route 
+          path="/admin" 
+          element={
+            (user && profile?.role === 'admin' && profile?.is_enabled) ? 
+              <AdminDashboard user={user} profile={profile} setNetworkError={setNetworkError} /> : 
+              <Navigate to="/dashboard" />
           } 
         />
 

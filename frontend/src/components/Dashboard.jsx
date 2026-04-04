@@ -12,8 +12,10 @@ import {
   AlertCircle,
   X,
   Trash2,
-  Edit3
+  Edit3,
+  ShieldCheck
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const STANDARDS = {
   // GxH
@@ -33,7 +35,8 @@ const STANDARDS = {
   TIME_PER_MANAGED: 950,
 };
 
-function Dashboard({ user, setNetworkError }) {
+function Dashboard({ user, profile, setNetworkError }) {
+  const navigate = useNavigate();
   // Metrics State
   const [closedCount, setClosedCount] = useState(0);
   const [managedCount, setManagedCount] = useState(0);
@@ -437,9 +440,25 @@ function Dashboard({ user, setNetworkError }) {
 
         <section className="user-info">
           <span id="userEmail">{user?.email}</span>
-          <button className="btn-logout" onClick={handleLogout}>
-            Cerrar Sesión <LogOut size={10} style={{ marginLeft: 5 }} />
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn-logout" onClick={handleLogout} style={{ flex: 1 }}>
+              <LogOut size={10} style={{ marginRight: 5 }} /> Salir
+            </button>
+            {profile?.role === 'admin' && profile?.is_enabled && (
+              <button 
+                className="btn-logout" 
+                onClick={() => navigate('/admin')}
+                style={{ 
+                  flex: 1, 
+                  background: 'rgba(99, 102, 241, 0.1)', 
+                  color: 'var(--primary-light)', 
+                  borderColor: 'rgba(99, 102, 241, 0.2)' 
+                }}
+              >
+                <ShieldCheck size={10} style={{ marginRight: 5 }} /> Admin
+              </button>
+            )}
+          </div>
         </section>
 
         <section className="timer-section">
