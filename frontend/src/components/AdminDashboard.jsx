@@ -421,12 +421,13 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <th>Total Cerr.</th>
                       <th>% Cierre Med.</th>
                       <th>% Reso Med.</th>
+                      <th>G/h Med.</th>
                       <th>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {unifiedHistory.length === 0 ? (
-                      <tr><td colSpan="7" style={{padding:'40px', textAlign:'center', color:'var(--text-dim)'}}>Iniciando base de datos...</td></tr>
+                      <tr><td colSpan="8" style={{padding:'40px', textAlign:'center', color:'var(--text-dim)'}}>Iniciando base de datos...</td></tr>
                     ) : unifiedHistory.map((u) => (
                       <tr key={u.id} onClick={() => setViewingUserDetails(u)} style={{cursor: 'pointer'}}>
                         <td style={{textAlign:'left', paddingLeft:'32px'}}>
@@ -440,6 +441,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                         <td style={{fontWeight:'600'}}>{u.totalClosed}</td>
                         <td className={getStatusClass(u.efficiency, 78.8, 76.8)}>{u.efficiency}%</td>
                         <td className={getStatusClass(u.resolution, 78.10, 76.8)}>{u.resolution}%</td>
+                        <td className={getStatusClass(u.avgGxh, 3.99, 3.78)}>{u.avgGxh}</td>
                         <td style={{color: 'var(--primary)'}}><div style={{display:'flex', alignItems:'center', gap:5, justifyContent:'center'}}>Ver <ChevronRight size={14}/></div></td>
                       </tr>
                     ))}
