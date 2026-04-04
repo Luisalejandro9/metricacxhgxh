@@ -339,6 +339,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <th>Cerr.</th>
                       <th>TCO</th>
                       <th>% Cierre</th>
+                      <th>Acum. Reso</th>
                       <th>G/h</th>
                     </tr>
                   </thead>
@@ -358,6 +359,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                           <td>{item.cases_closed}</td>
                           <td>{item.technicians_sent}</td>
                           <td className={getStatusClass(item.efficiency, 78.8, 76.8)}>{item.efficiency}%</td>
+                          <td className={getStatusClass(item.resolution_rate, 78.10, 76.8)}>{item.resolution_rate}%</td>
                           <td className={getStatusClass(item.cases_per_hour, 3.99, 3.78)}>{item.cases_per_hour}</td>
                         </tr>
                       );
