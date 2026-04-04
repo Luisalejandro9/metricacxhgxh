@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Yoyzen Sync</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="extension-container">
+    <header>
+      <img src="https://lucide.dev/api/icons/zap?color=6366f1&size=24" alt="Sync Logo">
+      <h1>Yoyzen Sync</h1>
+    </header>
+    
+    <div id="status-card" class="card">
+      <div class="status-indicator">
+        <div id="status-dot"></div>
+        <span id="status-text">Buscando Yoyzen...</span>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span class="label">Gestionados</span>
+        <span id="managed-count" class="value">-</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Cerrados</span>
+        <span id="closed-count" class="value">-</span>
+      </div>
+    </div>
+
+    <!-- User ID Configuration -->
+    <div class="card settings">
+      <label style="font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 5px;">Tu ID de Usuario (Supabase):</label>
+      <input type="text" id="user-id-input" placeholder="Pega tu ID aquí..." style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 6px; border-radius: 6px; font-size: 11px;">
+      <p style="font-size: 9px; color: var(--text-dim); margin: 5px 0 0;">Lo puedes encontrar en el Dashboard (Perfil).</p>
+    </div>
+
+    <div class="actions">
+      <button id="sync-btn" class="btn btn-primary" disabled>Sincronizar Ahora</button>
+      <p class="hint">Asegúrate de estar en la pestaña de Yoyzen con tu sesión iniciada.</p>
+    </div>
+    
+    <footer id="last-sync">
+      Sin sincronizar aún
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
