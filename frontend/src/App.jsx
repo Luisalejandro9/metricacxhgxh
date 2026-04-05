@@ -16,21 +16,22 @@ function App() {
   const [authError, setAuthError] = useState(null); // Standard auth failures
   // --- Profile Sync ---
   const syncProfile = async (userId) => {
-    if (!userId) return;
+    if (!userId) { setProfile(null); return; }
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Timeout after 5 seconds to prevent hanging
+      const result = await Promise.race([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), 5000))
+      ]);
       
-      if (!error && data) {
-        setProfile(data);
+      if (!result.error && result.data) {
+        setProfile(result.data);
       } else {
         setProfile(null);
       }
     } catch (err) {
       console.error('Profile sync error:', err);
+      setProfile(null);
     }
   };
 
@@ -44,8 +45,7 @@ function App() {
         
         if (mounted && data?.session) {
           setUser(data.session.user);
-          // Load profile but don't strictly await it to prevent blocking the whole app
-          syncProfile(data.session.user.id);
+          await syncProfile(data.session.user.id);
         }
       } catch (err) {
         console.error('Session check failed:', err);

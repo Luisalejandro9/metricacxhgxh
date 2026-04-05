@@ -226,26 +226,28 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   // ACCESS DENIED VIEW WITH REDIRECT
   const [countdown, setCountdown] = useState(15);
   
-  useEffect(() => {
-    // Redirigir si ya cargamos y el perfil no tiene permisos
-    if (!loading && profile !== undefined) {
-      if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
-        const timer = setInterval(() => {
-          setCountdown(prev => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              navigate('/dashboard');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        return () => clearInterval(timer);
-      }
-    }
-  }, [loading, profile, navigate]);
+  // Profile permission check — independent of data loading
+  const isProfileLoaded = profile !== undefined;
+  const isAdmin = isProfileLoaded && profile && profile.role === 'admin' && profile.is_enabled;
 
-  if (loading || profile === undefined) {
+  useEffect(() => {
+    if (isProfileLoaded && !isAdmin) {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/dashboard');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isProfileLoaded, isAdmin, navigate]);
+
+  // Still waiting for profile from App.jsx
+  if (!isProfileLoaded) {
     return (
       <div className="login-overlay">
         <div className="login-card" style={{textAlign:'center', padding:'40px'}}>
