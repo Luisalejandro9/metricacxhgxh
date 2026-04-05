@@ -59,6 +59,15 @@ const STANDARDS = {
 
 function AdminDashboard({ user, profile, setNetworkError }) {
   const navigate = useNavigate();
+
+  // Helper for traffic light colors
+  const getStatusClass = (value, greenTarget, yellowTarget) => {
+    const val = parseFloat(value);
+    if (val >= greenTarget) return 'stat-meets-standard';
+    if (val >= yellowTarget) return 'stat-warning-standard';
+    return 'stat-below-standard';
+  };
+
   const [users, setUsers] = useState([]);
   const [allMetrics, setAllMetrics] = useState([]);
   const [loading, setLoading] = useState(true);
