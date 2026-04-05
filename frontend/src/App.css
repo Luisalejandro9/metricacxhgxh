@@ -307,6 +307,17 @@
   font-size: 36px;
 }
 
+.metric-value-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.metric-value-input::-webkit-outer-spin-button,
+.metric-value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .status-indicator {
   display: inline-flex;
   align-items: center;

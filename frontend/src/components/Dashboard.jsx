@@ -62,6 +62,9 @@ function Dashboard({ user, profile, setNetworkError }) {
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [showEditRecordModal, setShowEditRecordModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [isEditingClosed, setIsEditingClosed] = useState(false);
+  const [isEditingManaged, setIsEditingManaged] = useState(false);
+  const [manualCountInput, setManualCountInput] = useState("");
   const autoSaveTimeoutRef = useRef(null);
 
   // --- Confirmation Modal Management ---
@@ -145,8 +148,12 @@ function Dashboard({ user, profile, setNetworkError }) {
   useEffect(() => {
     fetchHistory();
 
-    // Load persisted timer state
+    // Load persisted timer state and counts
     const savedState = localStorage.getItem('gxh_timer_state');
+    const localDate = new Date();
+    const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    const savedCounts = localStorage.getItem(`gxh_counts_${todayStr}`);
+
     if (savedState) {
       try {
         const { seconds, isRunning, startTime } = JSON.parse(savedState);
@@ -164,6 +171,17 @@ function Dashboard({ user, profile, setNetworkError }) {
         console.error('Error loading timer state', e);
       }
     }
+
+    if (savedCounts) {
+      try {
+        const { closed, managed, technicians } = JSON.parse(savedCounts);
+        setClosedCount(closed || 0);
+        setManagedCount(managed || 0);
+        setTechniciansCount(technicians || 0);
+      } catch (e) {
+        console.error('Error loading saved counts', e);
+      }
+    }
   }, [user]);
 
   // Persist timer state
@@ -175,6 +193,18 @@ function Dashboard({ user, profile, setNetworkError }) {
     };
     localStorage.setItem('gxh_timer_state', JSON.stringify(state));
   }, [timerSeconds, isTimerRunning]);
+
+  // Persist counts state
+  useEffect(() => {
+    const localDate = new Date();
+    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    const counts = {
+      closed: closedCount,
+      managed: managedCount,
+      technicians: techniciansCount
+    };
+    localStorage.setItem(`gxh_counts_${dateStr}`, JSON.stringify(counts));
+  }, [closedCount, managedCount, techniciansCount]);
 
   // --- Intelligent Auto-Save (Logic) ---
   // Debounces saving to Supabase to prevent excessive DB calls while ensuring real-time sync
@@ -292,11 +322,54 @@ function Dashboard({ user, profile, setNetworkError }) {
         setIsTimerRunning(false);
         startTimeRef.current = null;
         localStorage.removeItem('gxh_timer_state');
+        const localDate = new Date();
+        const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+        localStorage.removeItem(`gxh_counts_${dateStr}`);
         showMessage('info', 'Contadores reiniciados.');
       },
       'danger',
       'Reiniciar'
     );
+  };
+
+  // --- Manual Edit Handlers ---
+  const handleEditClosed = () => {
+    setManualCountInput(closedCount.toString());
+    setIsEditingClosed(true);
+  };
+
+  const handleEditManaged = () => {
+    setManualCountInput(managedCount.toString());
+    setIsEditingManaged(true);
+  };
+
+  const saveManualClosed = () => {
+    const val = parseInt(manualCountInput) || 0;
+    if (val > managedCount) {
+      showMessage('error', 'Cerrados no puede ser mayor que gestionados');
+      return;
+    }
+    setClosedCount(val);
+    setIsEditingClosed(false);
+  };
+
+  const saveManualManaged = () => {
+    const val = parseInt(manualCountInput) || 0;
+    if (val < closedCount) {
+      showMessage('error', 'Gestionados no puede ser menor que cerrados');
+      return;
+    }
+    setManagedCount(val);
+    setIsEditingManaged(false);
+  };
+
+  const handleManualInputKeyDown = (e, type) => {
+    if (e.key === 'Enter') {
+      type === 'closed' ? saveManualClosed() : saveManualManaged();
+    } else if (e.key === 'Escape') {
+      setIsEditingClosed(false);
+      setIsEditingManaged(false);
+    }
   };
 
   const formatTime = (totalSeconds) => {
@@ -602,9 +675,53 @@ function Dashboard({ user, profile, setNetworkError }) {
 
         <div className="grid-primary">
           <div className="metric-card large-card">
-            <div>
+            <div style={{ position: 'relative' }}>
               <span className="metric-label">Casos Cerrados Hoy</span>
-              <div className="metric-value">{closedCount}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {isEditingClosed ? (
+                  <input
+                    type="number"
+                    className="metric-value-input"
+                    value={manualCountInput}
+                    onChange={(e) => setManualCountInput(e.target.value)}
+                    onBlur={saveManualClosed}
+                    onKeyDown={(e) => handleManualInputKeyDown(e, 'closed')}
+                    autoFocus
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--primary)',
+                      color: 'var(--text-bright)',
+                      fontSize: '32px',
+                      fontWeight: '800',
+                      width: '100px',
+                      borderRadius: '8px',
+                      padding: '4px 10px'
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="metric-value">{closedCount}</div>
+                    <button 
+                      onClick={handleEditClosed}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--text-dim)', 
+                        cursor: 'pointer',
+                        padding: '5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-dim)'}
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' :
               parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
@@ -615,9 +732,53 @@ function Dashboard({ user, profile, setNetworkError }) {
           </div>
 
           <div className="metric-card large-card">
-            <div>
+            <div style={{ position: 'relative' }}>
               <span className="metric-label">Casos Gestionados</span>
-              <div className="metric-value">{managedCount}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {isEditingManaged ? (
+                  <input
+                    type="number"
+                    className="metric-value-input"
+                    value={manualCountInput}
+                    onChange={(e) => setManualCountInput(e.target.value)}
+                    onBlur={saveManualManaged}
+                    onKeyDown={(e) => handleManualInputKeyDown(e, 'managed')}
+                    autoFocus
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--primary)',
+                      color: 'var(--text-bright)',
+                      fontSize: '32px',
+                      fontWeight: '800',
+                      width: '100px',
+                      borderRadius: '8px',
+                      padding: '4px 10px'
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="metric-value">{managedCount}</div>
+                    <button 
+                      onClick={handleEditManaged}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--text-dim)', 
+                        cursor: 'pointer',
+                        padding: '5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-dim)'}
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

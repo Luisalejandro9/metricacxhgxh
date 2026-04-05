@@ -213,11 +213,14 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     };
   }, [filteredMetrics]);
 
-  const getStatusClass = (value, greenTarget, yellowTarget) => {
-    const val = parseFloat(value);
-    if (val >= greenTarget) return 'stat-meets-standard';
-    if (val >= yellowTarget) return 'stat-warning-standard';
-    return 'stat-below-standard';
+  const formatLastUpdated = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+      return 'N/A';
+    }
   };
 
   // ACCESS DENIED VIEW WITH REDIRECT
@@ -411,11 +414,12 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <th>% Cierre</th>
                       <th>Acum. Reso</th>
                       <th>G/h</th>
+                      <th>Última Act.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {metricsToday.length === 0 ? (
-                      <tr><td colSpan="7" style={{padding: '30px', textAlign:'center', color:'var(--text-dim)'}}>No hay actividad registrada para hoy.</td></tr>
+                      <tr><td colSpan="8" style={{padding: '30px', textAlign:'center', color:'var(--text-dim)'}}>No hay actividad registrada para hoy.</td></tr>
                     ) : metricsToday.map((item) => {
                       const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
                       return (
@@ -432,6 +436,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                           <td className={getStatusClass(item.efficiency, 78.8, 76.8)}>{item.efficiency}%</td>
                           <td className={getStatusClass(item.resolution_rate, 78.10, 76.8)}>{item.resolution_rate}%</td>
                           <td className={getStatusClass(item.cases_per_hour, 3.99, 3.78)}>{item.cases_per_hour}</td>
+                          <td style={{fontSize: '11px', color: 'var(--text-dim)'}}>{formatLastUpdated(item.updated_at)}</td>
                         </tr>
                       );
                     })}
