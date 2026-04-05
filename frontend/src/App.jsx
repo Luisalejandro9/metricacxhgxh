@@ -10,73 +10,71 @@ import './App.css';
 function App() {
   // --- Global State ---
   const [user, setUser] = useState(null); // Current authenticated user
-  const [profile, setProfile] = useState(null); // User profile with role and enablement status
+  const [profile, setProfile] = useState(undefined); // undefined: not loaded, null: not found, object: loaded
   const [loading, setLoading] = useState(true); // Loading state for initial session check
   const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
   const [authError, setAuthError] = useState(null); // Standard auth failures
-  useEffect(() => {
-    // --- Profile Sync ---
-    // Fetches the user profile from Supabase profiles table
-    const syncProfile = async (userId) => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
-        if (error) {
-          console.error('[Debug] Error al obtener perfil:', error.message);
-          return null;
-        } else {
-          setProfile(data);
-          return data;
-        }
-      } catch (err) {
-        console.error('Error syncing profile:', err);
-        return null;
+  // --- Profile Sync ---
+  const syncProfile = async (userId) => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (!error && data) {
+        setProfile(data);
+      } else {
+        setProfile(null);
       }
-    };
+    } catch (err) {
+      console.error('Profile sync error:', err);
+    }
+  };
 
-    // --- Initial Session Verification ---
-    // Checks if a valid session exists in Supabase on app load
+  useEffect(() => {
+    let mounted = true;
+
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
         
-        if (error) {
-          console.error('[Debug] Error al obtener sesión:', error.message);
-          if (error.message.toLowerCase().includes('fetch')) {
-            setNetworkError(true);
-          }
-        } else if (session) {
-          setUser(session.user);
-          await syncProfile(session.user.id);
+        if (mounted && data?.session) {
+          setUser(data.session.user);
+          // Load profile but don't strictly await it to prevent blocking the whole app
+          syncProfile(data.session.user.id);
         }
       } catch (err) {
-        if (err.message.toLowerCase().includes('fetch')) {
+        console.error('Session check failed:', err);
+        if (err.message?.toLowerCase().includes('fetch')) {
           setNetworkError(true);
         }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     checkSession();
 
-    // --- Real-time Auth Listener ---
-    // Updates the 'user' state automatically when logging in or out
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        setUser(session.user);
-        await syncProfile(session.user.id);
-      } else {
-        setUser(null);
-        setProfile(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mounted) {
+        if (session) {
+          setUser(session.user);
+          syncProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // --- Authentication Handler ---

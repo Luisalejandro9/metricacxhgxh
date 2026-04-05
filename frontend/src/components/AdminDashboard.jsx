@@ -227,22 +227,25 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   const [countdown, setCountdown] = useState(15);
   
   useEffect(() => {
-    if (!loading && (!profile || profile.role !== 'admin' || !profile.is_enabled)) {
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            navigate('/dashboard');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
+    // Redirigir si ya cargamos y el perfil no tiene permisos
+    if (!loading && profile !== undefined) {
+      if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              navigate('/dashboard');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(timer);
+      }
     }
   }, [loading, profile, navigate]);
 
-  if (loading) {
+  if (loading || profile === undefined) {
     return (
       <div className="login-overlay">
         <div className="login-card" style={{textAlign:'center', padding:'40px'}}>
