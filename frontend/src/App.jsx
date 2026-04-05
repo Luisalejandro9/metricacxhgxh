@@ -14,35 +14,7 @@ function App() {
   const [loading, setLoading] = useState(true); // Loading state for initial session check
   const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
   const [authError, setAuthError] = useState(null); // Standard auth failures
-
   useEffect(() => {
-    // --- Initial Session Verification ---
-    // Checks if a valid session exists in Supabase on app load
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('[Debug] Error al obtener sesión:', error.message);
-          // If the error is network-related (fetch), trigger the global banner
-          if (error.message.toLowerCase().includes('fetch')) {
-            setNetworkError(true);
-          }
-        } else if (session) {
-          setUser(session.user);
-        }
-      } catch (err) {
-        // Catch-all for network request failures
-        if (err.message.toLowerCase().includes('fetch')) {
-          setNetworkError(true);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
     // --- Profile Sync ---
     // Fetches the user profile from Supabase profiles table
     const syncProfile = async (userId) => {
@@ -55,20 +27,49 @@ function App() {
         
         if (error) {
           console.error('[Debug] Error al obtener perfil:', error.message);
+          return null;
         } else {
           setProfile(data);
+          return data;
         }
       } catch (err) {
         console.error('Error syncing profile:', err);
+        return null;
       }
     };
 
+    // --- Initial Session Verification ---
+    // Checks if a valid session exists in Supabase on app load
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[Debug] Error al obtener sesión:', error.message);
+          if (error.message.toLowerCase().includes('fetch')) {
+            setNetworkError(true);
+          }
+        } else if (session) {
+          setUser(session.user);
+          await syncProfile(session.user.id);
+        }
+      } catch (err) {
+        if (err.message.toLowerCase().includes('fetch')) {
+          setNetworkError(true);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
     // --- Real-time Auth Listener ---
     // Updates the 'user' state automatically when logging in or out
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         setUser(session.user);
-        syncProfile(session.user.id);
+        await syncProfile(session.user.id);
       } else {
         setUser(null);
         setProfile(null);
