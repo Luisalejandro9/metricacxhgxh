@@ -51,10 +51,12 @@ ChartJS.register(
 );
 
 const STANDARDS = {
-  GXH_GREEN: 3.99,
-  GXH_YELLOW: 3.78,
-  RESOLUTION_GREEN: 78.10,
-  CLOSED_GREEN: 78.8,
+  GXH_GREEN: 4.00,
+  GXH_YELLOW: 3.50,
+  RESOLUTION_GREEN: 81.0,
+  RESOLUTION_YELLOW: 78.2,
+  CLOSED_GREEN: 76.5,
+  CLOSED_YELLOW: 74.8,
 };
 
 function AdminDashboard({ user, profile, setNetworkError }) {
@@ -404,7 +406,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
           </div>
           <div className="metric-card">
             <span className="metric-label">Eficiencia Media</span>
-            <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, 78.8, 76.8)}`}>{statsSummary.avgEfficiency}%</div>
+            <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{statsSummary.avgEfficiency}%</div>
           </div>
         </div>
 
@@ -447,9 +449,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                           <td>{item.cases_managed}</td>
                           <td>{item.cases_closed}</td>
                           <td>{item.technicians_sent}</td>
-                          <td className={getStatusClass(item.efficiency, 78.8, 76.8)}>{item.efficiency}%</td>
-                          <td className={getStatusClass(item.resolution_rate, 78.10, 76.8)}>{item.resolution_rate}%</td>
-                          <td className={getStatusClass(item.cases_per_hour, 3.99, 3.78)}>{item.cases_per_hour}</td>
+                          <td className={getStatusClass(item.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{item.efficiency}%</td>
+                          <td className={getStatusClass(item.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
+                          <td className={getStatusClass(item.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{item.cases_per_hour}</td>
                           <td style={{fontSize: '11px', color: 'var(--text-dim)'}}>{formatLastUpdated(item.updated_at)}</td>
                         </tr>
                       );
@@ -508,9 +510,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                         <td>{u.recordsCount}</td>
                         <td style={{fontWeight:'600'}}>{u.totalManaged}</td>
                         <td style={{fontWeight:'600'}}>{u.totalClosed}</td>
-                        <td className={getStatusClass(u.efficiency, 78.8, 76.8)}>{u.efficiency}%</td>
-                        <td className={getStatusClass(u.resolution, 78.10, 76.8)}>{u.resolution}%</td>
-                        <td className={getStatusClass(u.avgGxh, 3.99, 3.78)}>{u.avgGxh}</td>
+                        <td className={getStatusClass(u.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{u.efficiency}%</td>
+                        <td className={getStatusClass(u.resolution, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{u.resolution}%</td>
+                        <td className={getStatusClass(u.avgGxh, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{u.avgGxh}</td>
                         <td style={{color: 'var(--primary)'}}><div style={{display:'flex', alignItems:'center', gap:5, justifyContent:'center'}}>Ver <ChevronRight size={14}/></div></td>
                       </tr>
                     ))}
@@ -544,7 +546,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                     </div>
                     <div className="metric-card" style={{background:'rgba(255,255,255,0.02)'}}>
                         <span className="metric-label">Eficiencia Total</span>
-                        <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, 78.8, 76.8)}`}>{viewingUserDetails.efficiency}%</div>
+                        <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
                     </div>
                  </div>
 
@@ -570,9 +572,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                             <td>{row.cases_managed}</td>
                             <td>{row.cases_closed}</td>
                             <td>{row.technicians_sent}</td>
-                            <td className={getStatusClass(row.efficiency, 78.8, 76.8)}>{row.efficiency}%</td>
-                            <td className={getStatusClass(row.resolution_rate, 78.10, 76.8)}>{row.resolution_rate}%</td>
-                            <td className={getStatusClass(row.cases_per_hour, 3.99, 3.78)}>{row.cases_per_hour}</td>
+                            <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
+                            <td className={getStatusClass(row.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{row.resolution_rate}%</td>
+                            <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
                          </tr>
                        ))}
                     </tbody>

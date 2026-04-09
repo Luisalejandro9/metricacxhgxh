@@ -18,21 +18,54 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 const STANDARDS = {
-  // GxH
-  GXH_GREEN: 3.99,
-  GXH_YELLOW: 3.78,
+  // GxH Working
+  GXH_GREEN: 4.00,
+  GXH_YELLOW: 3.50,
 
-  // RESO
-  RESOLUTION_GREEN: 78.10,
-  RESOLUTION_YELLOW: 76.8,
+  // % Resolución Neta
+  RESOLUTION_GREEN: 81.0,
+  RESOLUTION_YELLOW: 78.2,
 
-  // CIERRE (Based on image label)
-  CLOSED_GREEN: 78.8,
-  CLOSED_YELLOW: 76.8,
+  // FCR 7D (Cierre)
+  CLOSED_GREEN: 76.5,
+  CLOSED_YELLOW: 74.8,
 
   // Legacy/Other
   TIME_PER_CASE: 950,
   TIME_PER_MANAGED: 950,
+};
+
+// --- Bonus Percentage Tables (from image) ---
+// GxH Working bonuses
+const getGxHBonus = (value) => {
+  const val = parseFloat(value);
+  if (val >= 4.50) return 2.0;
+  if (val >= 4.00) return 1.0;
+  if (val >= 3.50) return 0.0;
+  if (val >= 3.00) return -1.0;
+  return -2.0;
+};
+
+// % Resolución Neta bonuses
+const getResolucionBonus = (value) => {
+  const val = parseFloat(value);
+  if (val >= 81.0) return 3.0;
+  if (val >= 79.6) return 2.0;
+  if (val >= 78.2) return 1.0;
+  if (val >= 76.8) return 0.0;
+  if (val >= 75.4) return -1.0;
+  return -2.0;
+};
+
+// FCR 7D (Cierre) bonuses
+const getCierreBonus = (value) => {
+  const val = parseFloat(value);
+  if (val >= 76.5) return 3.0;
+  if (val >= 75.7) return 2.0;
+  if (val >= 74.8) return 1.0;
+  if (val >= 74.0) return 0.0;
+  if (val >= 73.2) return -1.0;
+  return -2.0;
 };
 
 function Dashboard({ user, profile, setNetworkError }) {
@@ -656,7 +689,50 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
           <div className="standard-row"><span>TMO (máx seg)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
           <div className="standard-row"><span>% Resolución</span> <span>≥ {STANDARDS.RESOLUTION_GREEN}%</span></div>
-          <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
+          <div className="standard-row"><span>% Cierre (FCR)</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
+        </section>
+
+        <section className="standards-section" style={{ marginTop: '12px' }}>
+          <h3>📊 Bonificaciones Día a Día</h3>
+          <div style={{ marginBottom: '10px' }}>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>GxH Working</div>
+            <div className="standard-row">
+              <span>Actual: {stats.managedPerHour}</span>
+              <span style={{
+                fontWeight: '800',
+                color: getGxHBonus(stats.managedPerHour) > 0 ? 'var(--accent-success)' :
+                       getGxHBonus(stats.managedPerHour) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
+              }}>
+                {getGxHBonus(stats.managedPerHour) > 0 ? '+' : ''}{getGxHBonus(stats.managedPerHour).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>% Resolución Neta</div>
+            <div className="standard-row">
+              <span>Actual: {stats.resolutionRate}%</span>
+              <span style={{
+                fontWeight: '800',
+                color: getResolucionBonus(stats.resolutionRate) > 0 ? 'var(--accent-success)' :
+                       getResolucionBonus(stats.resolutionRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
+              }}>
+                {getResolucionBonus(stats.resolutionRate) > 0 ? '+' : ''}{getResolucionBonus(stats.resolutionRate).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+          <div>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>FCR 7D (Cierre)</div>
+            <div className="standard-row">
+              <span>Actual: {stats.closeRate}%</span>
+              <span style={{
+                fontWeight: '800',
+                color: getCierreBonus(stats.closeRate) > 0 ? 'var(--accent-success)' :
+                       getCierreBonus(stats.closeRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
+              }}>
+                {getCierreBonus(stats.closeRate) > 0 ? '+' : ''}{getCierreBonus(stats.closeRate).toFixed(1)}%
+              </span>
+            </div>
+          </div>
         </section>
 
         <div className="sidebar-footer"></div>
