@@ -26,17 +26,20 @@ const STANDARDS = {
   RESOLUTION_GREEN: 81.0,
   RESOLUTION_YELLOW: 78.2,
 
-  // FCR 7D (Cierre)
-  CLOSED_GREEN: 76.5,
-  CLOSED_YELLOW: 74.8,
+  // Cierre (Basado en Gestión Real)
+  CLOSED_GREEN: 79.0,
+  CLOSED_YELLOW: 77.0,
+
+  // FCR 7D (Referencial)
+  FCR_GREEN: 76.5,
+  FCR_YELLOW: 74.8,
 
   // Legacy/Other
   TIME_PER_CASE: 950,
   TIME_PER_MANAGED: 950,
 };
 
-// --- Bonus Percentage Tables (from image) ---
-// GxH Working bonuses
+// --- Bonus Percentage Tables ---
 const getGxHBonus = (value) => {
   const val = parseFloat(value);
   if (val >= 4.50) return 2.0;
@@ -46,7 +49,6 @@ const getGxHBonus = (value) => {
   return -2.0;
 };
 
-// % Resolución Neta bonuses
 const getResolucionBonus = (value) => {
   const val = parseFloat(value);
   if (val >= 81.0) return 3.0;
@@ -57,15 +59,18 @@ const getResolucionBonus = (value) => {
   return -2.0;
 };
 
-// FCR 7D (Cierre) bonuses
 const getCierreBonus = (value) => {
   const val = parseFloat(value);
-  if (val >= 76.5) return 3.0;
-  if (val >= 75.7) return 2.0;
-  if (val >= 74.8) return 1.0;
-  if (val >= 74.0) return 0.0;
-  if (val >= 73.2) return -1.0;
+  if (val >= 79.0) return 3.0;
+  if (val >= 77.6) return 2.0;
+  if (val >= 76.2) return 1.0;
+  if (val >= 74.8) return 0.0;
+  if (val >= 73.4) return -1.0;
   return -2.0;
+};
+
+const calculateRecordBonus = (managedPerHour, resolutionRate, closeRate) => {
+    return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate) + getCierreBonus(closeRate);
 };
 
 function Dashboard({ user, profile, setNetworkError }) {
@@ -283,6 +288,8 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumClosed: runningClosed,
         accumTechnicians: runningTechnicians,
         accumSeconds: runningSeconds,
+        // Calculate bonus for this specific day
+        dayBonus: calculateRecordBonus(item.cases_per_hour, item.resolution_rate, item.efficiency),
         // Calculate accum metrics
         accumCloseRate: runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0",
         accumResoRate: runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0",
@@ -293,6 +300,11 @@ function Dashboard({ user, profile, setNetworkError }) {
     // Return in ascending order as requested (older first)
     return withAccum;
   }, [history]);
+
+  // --- Total Accumulated Bonus Calculation ---
+  const accumulatedBonusTotal = useMemo(() => {
+    return historyWithAccum.reduce((sum, item) => sum + (item.dayBonus || 0), 0);
+  }, [historyWithAccum]);
 
   // --- Filtered History ---
   const filteredHistory = useMemo(() => {
@@ -689,11 +701,23 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
           <div className="standard-row"><span>TMO (máx seg)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
           <div className="standard-row"><span>% Resolución</span> <span>≥ {STANDARDS.RESOLUTION_GREEN}%</span></div>
-          <div className="standard-row"><span>% Cierre (FCR)</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
+          <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
+        </section>
+
+        <section className="standards-section" style={{ marginTop: '12px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+          <h3 style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Zap size={14} /> Bono Mensual Acumulado
+          </h3>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: '32px', fontWeight: '900', color: accumulatedBonusTotal >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(1)}%
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Estimado en el Mes</div>
+          </div>
         </section>
 
         <section className="standards-section" style={{ marginTop: '12px' }}>
-          <h3>📊 Bonificaciones Día a Día</h3>
+          <h3>📊 Bonificaciones Hoy</h3>
           <div style={{ marginBottom: '10px' }}>
             <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>GxH Working</div>
             <div className="standard-row">
@@ -721,7 +745,7 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div>
-            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>FCR 7D (Cierre)</div>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>% Cierre</div>
             <div className="standard-row">
               <span>Actual: {stats.closeRate}%</span>
               <span style={{
@@ -732,6 +756,12 @@ function Dashboard({ user, profile, setNetworkError }) {
                 {getCierreBonus(stats.closeRate) > 0 ? '+' : ''}{getCierreBonus(stats.closeRate).toFixed(1)}%
               </span>
             </div>
+          </div>
+          <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700' }}>TOTAL HOY:</span>
+            <span style={{ fontSize: '16px', fontWeight: '900', color: calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate).toFixed(1)}%
+            </span>
           </div>
         </section>
 
