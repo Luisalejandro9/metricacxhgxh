@@ -13,7 +13,8 @@ import {
   X,
   Trash2,
   Edit3,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,24 +23,20 @@ const STANDARDS = {
   GXH_GREEN: 4.00,
   GXH_YELLOW: 3.50,
 
-  // % Resolución Neta
+  // % Resolución Neta (bonifica)
   RESOLUTION_GREEN: 81.0,
   RESOLUTION_YELLOW: 78.2,
 
-  // Cierre (Basado en Gestión Real)
+  // Cierre — solo objetivo, NO bonifica
   CLOSED_GREEN: 79.0,
   CLOSED_YELLOW: 77.0,
 
-  // FCR 7D (Referencial)
-  FCR_GREEN: 76.5,
-  FCR_YELLOW: 74.8,
-
-  // Legacy/Other
+  // Tiempos
   TIME_PER_CASE: 950,
   TIME_PER_MANAGED: 950,
 };
 
-// --- Bonus Percentage Tables ---
+// --- Funciones de Bonificación (solo GxH y Resolución) ---
 const getGxHBonus = (value) => {
   const val = parseFloat(value);
   if (val >= 4.50) return 2.0;
@@ -59,18 +56,9 @@ const getResolucionBonus = (value) => {
   return -2.0;
 };
 
-const getCierreBonus = (value) => {
-  const val = parseFloat(value);
-  if (val >= 79.0) return 3.0;
-  if (val >= 77.6) return 2.0;
-  if (val >= 76.2) return 1.0;
-  if (val >= 74.8) return 0.0;
-  if (val >= 73.4) return -1.0;
-  return -2.0;
-};
-
-const calculateRecordBonus = (managedPerHour, resolutionRate, closeRate) => {
-    return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate) + getCierreBonus(closeRate);
+// Bono diario = GxH + Resolución (Cierre NO bonifica, solo es objetivo)
+const calculateRecordBonus = (managedPerHour, resolutionRate) => {
+  return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate);
 };
 
 function Dashboard({ user, profile, setNetworkError }) {
@@ -289,7 +277,7 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumTechnicians: runningTechnicians,
         accumSeconds: runningSeconds,
         // Calculate bonus for this specific day
-        dayBonus: calculateRecordBonus(item.cases_per_hour, item.resolution_rate, item.efficiency),
+        dayBonus: calculateRecordBonus(item.cases_per_hour, item.resolution_rate),
         // Calculate accum metrics
         accumCloseRate: runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0",
         accumResoRate: runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0",
@@ -744,23 +732,22 @@ function Dashboard({ user, profile, setNetworkError }) {
               </span>
             </div>
           </div>
-          <div>
-            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--primary-light)' }}>% Cierre</div>
+          <div style={{ marginBottom: '10px' }}>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-dim)' }}>% Cierre (objetivo ≥{STANDARDS.CLOSED_GREEN}%)</div>
             <div className="standard-row">
               <span>Actual: {stats.closeRate}%</span>
-              <span style={{
-                fontWeight: '800',
-                color: getCierreBonus(stats.closeRate) > 0 ? 'var(--accent-success)' :
-                       getCierreBonus(stats.closeRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
-              }}>
-                {getCierreBonus(stats.closeRate) > 0 ? '+' : ''}{getCierreBonus(stats.closeRate).toFixed(1)}%
+              <span className={parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? 'stat-meets-standard' :
+                               parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
+                style={{ fontWeight: '800', fontSize: '13px' }}>
+                {parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? '✓ OK' :
+                 parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
               </span>
             </div>
           </div>
           <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: '700' }}>TOTAL HOY:</span>
-            <span style={{ fontSize: '16px', fontWeight: '900', color: calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate, stats.closeRate).toFixed(1)}%
+            <span style={{ fontSize: '16px', fontWeight: '900', color: calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate).toFixed(1)}%
             </span>
           </div>
         </section>
