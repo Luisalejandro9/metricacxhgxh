@@ -270,18 +270,24 @@ function Dashboard({ user, profile, setNetworkError }) {
 
       const totalHours = runningSeconds / 3600;
 
+      // Compute accumulated metrics first
+      const accumCloseRate = runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0";
+      const accumResoRate = runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0";
+      const accumGxH = totalHours > 0 ? (runningManaged / totalHours).toFixed(1) : "0.0";
+
+      // Bono del periodo acumulado hasta este día (usa acumulados, NO valores del día)
+      const accumBonus = calculateRecordBonus(accumGxH, accumResoRate);
+
       return {
         ...item,
         accumManaged: runningManaged,
         accumClosed: runningClosed,
         accumTechnicians: runningTechnicians,
         accumSeconds: runningSeconds,
-        // Calculate bonus for this specific day
-        dayBonus: calculateRecordBonus(item.cases_per_hour, item.resolution_rate),
-        // Calculate accum metrics
-        accumCloseRate: runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0",
-        accumResoRate: runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0",
-        accumGxH: totalHours > 0 ? (runningManaged / totalHours).toFixed(1) : "0.0"
+        accumCloseRate,
+        accumResoRate,
+        accumGxH,
+        accumBonus, // bono según acumulados hasta este día
       };
     });
 
@@ -289,9 +295,12 @@ function Dashboard({ user, profile, setNetworkError }) {
     return withAccum;
   }, [history]);
 
-  // --- Total Accumulated Bonus Calculation ---
+  // --- Bono Mensual Acumulado ---
+  // Es el bono que corresponde al ÚLTIMO estado acumulado (Acum. GxH + Acum. Reso actuales)
   const accumulatedBonusTotal = useMemo(() => {
-    return historyWithAccum.reduce((sum, item) => sum + (item.dayBonus || 0), 0);
+    if (historyWithAccum.length === 0) return 0;
+    const lastItem = historyWithAccum[historyWithAccum.length - 1];
+    return lastItem.accumBonus || 0;
   }, [historyWithAccum]);
 
   // --- Filtered History ---
