@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  Users, 
-  ArrowLeft, 
-  Search, 
-  Mail, 
-  Clock, 
-  CheckCircle2, 
+import {
+  Users,
+  ArrowLeft,
+  Search,
+  Mail,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   Database,
   RefreshCw,
@@ -93,7 +93,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         .from('profiles')
         .select('*')
         .order('email');
-      
+
       if (usersError) throw usersError;
       setUsers(usersData || []);
 
@@ -101,7 +101,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         .from('daily_metrics')
         .select('*')
         .order('date', { ascending: true });
-      
+
       if (metricsError) throw metricsError;
       setAllMetrics(metricsData || []);
 
@@ -122,11 +122,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       .channel('admin_live_metrics')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_metrics' }, (payload) => {
         setAllMetrics(currentMetrics => {
-          if (payload.eventType === 'INSERT') return [...currentMetrics, payload.new].sort((a,b) => new Date(a.date) - new Date(b.date));
+          if (payload.eventType === 'INSERT') return [...currentMetrics, payload.new].sort((a, b) => new Date(a.date) - new Date(b.date));
           if (payload.eventType === 'UPDATE') return currentMetrics.map(m => m.id === payload.new.id ? payload.new : m);
           if (payload.eventType === 'DELETE') {
-             // BUG FIX: Must return elements that are NOT the deleted one
-             return currentMetrics.filter(m => m.id !== payload.old.id);
+            // BUG FIX: Must return elements that are NOT the deleted one
+            return currentMetrics.filter(m => m.id !== payload.old.id);
           }
           return currentMetrics;
         });
@@ -158,26 +158,30 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   // UNIFIED USER HISTORY (Accumulated per Month)
   const unifiedHistory = useMemo(() => {
     return users.map(u => {
-        const userRows = monthFilteredMetrics.filter(m => m.user_id === u.id);
-        if (userRows.length === 0) return null;
-        
-        const totalManaged = userRows.reduce((s, m) => s + (m.cases_managed || 0), 0);
-        const totalClosed = userRows.reduce((s, m) => s + (m.cases_closed || 0), 0);
-        const totalTechs = userRows.reduce((s, m) => s + (m.technicians_sent || 0), 0);
-        const avgGxh = userRows.length > 0 ? (userRows.reduce((s,m) => s + (parseFloat(m.cases_per_hour) || 0), 0) / userRows.length).toFixed(2) : "0.00";
-        const efficiency = totalManaged > 0 ? ((totalClosed / totalManaged) * 100).toFixed(1) : "0.0";
-        const resolution = totalManaged > 0 ? (userRows.reduce((s,m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
+      const userRows = monthFilteredMetrics.filter(m => m.user_id === u.id);
+      if (userRows.length === 0) return null;
+
+      const totalManaged = userRows.reduce((s, m) => s + (m.cases_managed || 0), 0);
+      const totalClosed = userRows.reduce((s, m) => s + (m.cases_closed || 0), 0);
+      const totalTechs = userRows.reduce((s, m) => s + (m.technicians_sent || 0), 0);
+      const avgGxh = userRows.length > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.cases_per_hour) || 0), 0) / userRows.length).toFixed(2) : "0.00";
+      const efficiency = totalManaged > 0 ? ((totalClosed / totalManaged) * 100).toFixed(1) : "0.0";
+      const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
+
+        const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
+        const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
 
         return {
-            ...u,
-            totalManaged,
-            totalClosed,
-            totalTechs,
-            avgGxh,
-            efficiency,
-            resolution,
-            recordsCount: userRows.length,
-            rows: userRows.sort((a,b) => new Date(b.date) - new Date(a.date)) // Detailed sorted by date descending
+          ...u,
+          totalManaged,
+          totalClosed,
+          totalTechs,
+          avgGxh,
+          efficiency,
+          resolution,
+          closingBalance,
+          recordsCount: userRows.length,
+          rows: userRows.sort((a, b) => new Date(b.date) - new Date(a.date)) // Detailed sorted by date descending
         };
     }).filter(Boolean);
   }, [monthFilteredMetrics, users]);
@@ -196,7 +200,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   }, [filteredMetrics]);
 
   const leaderboard = useMemo(() => {
-    const list = unifiedHistory.sort((a,b) => parseFloat(b.efficiency) - parseFloat(a.efficiency));
+    const list = unifiedHistory.sort((a, b) => parseFloat(b.efficiency) - parseFloat(a.efficiency));
     return list.slice(0, 5);
   }, [unifiedHistory]);
 
@@ -206,8 +210,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   }, [filteredMetrics]);
 
   const trendChartData = useMemo(() => {
-    const managedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_managed || 0), 0));
-    const closedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_closed || 0), 0));
+    const managedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s, m) => s + (m.cases_managed || 0), 0));
+    const closedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s, m) => s + (m.cases_closed || 0), 0));
     return {
       labels: allWorkDays.map(d => d.split('-').slice(1).reverse().join('/')),
       datasets: [
@@ -231,7 +235,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
   // ACCESS DENIED VIEW WITH REDIRECT
   const [countdown, setCountdown] = useState(15);
-  
+
   // Profile permission check — independent of data loading
   const isProfileLoaded = profile !== undefined;
   const isAdmin = isProfileLoaded && profile && profile.role === 'admin' && profile.is_enabled;
@@ -256,8 +260,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   if (!isProfileLoaded) {
     return (
       <div className="login-overlay">
-        <div className="login-card" style={{textAlign:'center', padding:'40px'}}>
-          <RefreshCw size={48} className="spinning text-primary" style={{marginBottom:20}} />
+        <div className="login-card" style={{ textAlign: 'center', padding: '40px' }}>
+          <RefreshCw size={48} className="spinning text-primary" style={{ marginBottom: 20 }} />
           <p>Verificando credenciales de administrador...</p>
         </div>
       </div>
@@ -267,21 +271,21 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
     return (
       <div className="login-overlay access-denied-bg">
-        <div className="login-card" style={{textAlign:'center', maxWidth:'400px', border:'1px solid rgba(239, 68, 68, 0.2)'}}>
-          <div style={{position:'relative', width:'fit-content', margin:'0 auto 24px'}}>
-             <div className="pulse-circle" style={{position:'absolute', inset:'-10px', background:'rgba(239, 68, 68, 0.1)', borderRadius:'50%', animation:'ping 2s infinite'}}></div>
-             <AlertCircle size={64} className="text-secondary" style={{color: 'var(--accent-error)', position:'relative'}} />
+        <div className="login-card" style={{ textAlign: 'center', maxWidth: '400px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto 24px' }}>
+            <div className="pulse-circle" style={{ position: 'absolute', inset: '-10px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', animation: 'ping 2s infinite' }}></div>
+            <AlertCircle size={64} className="text-secondary" style={{ color: 'var(--accent-error)', position: 'relative' }} />
           </div>
-          <h1 style={{fontSize:'28px', color:'var(--text-bright)', marginBottom:'10px'}}>¡No tienes acceso!</h1>
-          <p style={{color:'var(--text-dim)', marginBottom:'30px', lineHeight:'1.5'}}>Tu cuenta no cuenta con permisos administrativos o ha sido desahibilitada.</p>
-          
-          <div style={{background:'rgba(239, 68, 68, 0.05)', padding:'15px', borderRadius:'12px', border:'1px solid rgba(239, 68, 68, 0.1)', marginBottom:'25px'}}>
-             <p style={{fontSize:'12px', margin:0, color:'var(--text-dim)'}}>Redirigiendo automáticamente en</p>
-             <div style={{fontSize:'32px', fontWeight:'800', color:'var(--accent-error)'}}>{countdown}s</div>
+          <h1 style={{ fontSize: '28px', color: 'var(--text-bright)', marginBottom: '10px' }}>¡No tienes acceso!</h1>
+          <p style={{ color: 'var(--text-dim)', marginBottom: '30px', lineHeight: '1.5' }}>Tu cuenta no cuenta con permisos administrativos o ha sido desahibilitada.</p>
+
+          <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px' }}>
+            <p style={{ fontSize: '12px', margin: 0, color: 'var(--text-dim)' }}>Redirigiendo automáticamente en</p>
+            <div style={{ fontSize: '32px', fontWeight: '800', color: 'var(--accent-error)' }}>{countdown}s</div>
           </div>
 
-          <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{width:'100%'}}>
-             <ArrowLeft size={16} /> Volver al Dashboard Ahora
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{ width: '100%' }}>
+            <ArrowLeft size={16} /> Volver al Dashboard Ahora
           </button>
         </div>
         <style>{`
@@ -302,101 +306,101 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       {/* SIDEBAR */}
       <aside className="sidebar">
         <header className="sidebar-header">
-          <div style={{display:'flex', alignItems:'center', gap:'10px', justifyContent:'center', marginBottom:'10px'}}>
-             <Database className="text-primary" size={24} />
-             <h1 style={{margin:0}}>Admin Panel</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', marginBottom: '10px' }}>
+            <Database className="text-primary" size={24} />
+            <h1 style={{ margin: 0 }}>Admin Panel</h1>
           </div>
           <div className="subtitle">CONTROL CENTRAL</div>
         </header>
 
         <section className="user-info">
           <span>{user?.email}</span>
-          <div style={{fontSize: '10px', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold'}}>ADMINISTRADOR</div>
+          <div style={{ fontSize: '10px', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>ADMINISTRADOR</div>
         </section>
 
-        <nav className="action-section" style={{gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px'}}>
-          <button className="btn btn-secondary" style={{width:'100%', marginBottom: '10px'}} onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Panel Usuario</button>
-          
+        <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
+          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '10px' }} onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Panel Usuario</button>
+
           <div>
-             <h3 className="metric-label" style={{fontSize:'11px', marginBottom:'12px'}}><Trophy size={11} style={{marginRight:5}} /> Ranking Top Eficiencia</h3>
-             <div style={{display:'flex', flexDirection:'column', gap:'8px', marginBottom: '20px'}}>
-                {leaderboard.map((u, i) => (
-                  <div key={u.id} style={{
-                    display:'flex', alignItems:'center', gap:'8px', padding:'8px 12px', borderRadius:'10px', 
-                    background: i === 0 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
-                    border: '1px solid', borderColor: i === 0 ? 'rgba(245, 158, 11, 0.2)' : 'var(--border-light)'
-                  }}>
-                    <div style={{width:20, height:20, borderRadius:'50%', background: i === 0 ? 'var(--accent-warning)' : 'var(--border-light)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:'bold'}}>
-                       {i === 0 ? <Zap size={10} color="white" /> : i+1}
-                    </div>
-                    <span style={{fontSize:11, fontWeight:'600', color: i === 0 ? 'var(--accent-warning)' : 'var(--text-bright)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flexGrow: 1}}>{u.email.split('@')[0]}</span>
-                    <span style={{fontSize:10, color:'var(--text-dim)'}}>{u.efficiency}%</span>
+            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}><Trophy size={11} style={{ marginRight: 5 }} /> Ranking Top Eficiencia</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {leaderboard.map((u, i) => (
+                <div key={u.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px',
+                  background: i === 0 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+                  border: '1px solid', borderColor: i === 0 ? 'rgba(245, 158, 11, 0.2)' : 'var(--border-light)'
+                }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: i === 0 ? 'var(--accent-warning)' : 'var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 'bold' }}>
+                    {i === 0 ? <Zap size={10} color="white" /> : i + 1}
                   </div>
-                ))}
-             </div>
+                  <span style={{ fontSize: 11, fontWeight: '600', color: i === 0 ? 'var(--accent-warning)' : 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email.split('@')[0]}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{u.efficiency}%</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
-             <h3 className="metric-label" style={{fontSize:'11px', marginBottom:'12px'}}><Mail size={11} style={{marginRight:5}} /> Directorio</h3>
-             <div style={{display:'flex', flexDirection:'column', gap:'6px'}}>
-                {users.map(u => (
-                  <div key={u.id} className={`user-list-item ${selectedUserEmail === u.email ? 'active' : ''}`} onClick={() => setSelectedUserEmail(u.email)}
-                    style={{
-                      padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid',
-                      background: selectedUserEmail === u.email ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                      borderColor: selectedUserEmail === u.email ? 'var(--primary-light)' : 'transparent',
-                      color: selectedUserEmail === u.email ? 'var(--text-bright)' : 'var(--text-dim)'
-                    }}
-                  >
-                    <div style={{width:6, height:6, borderRadius:'50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)'}}></div>
-                    <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{u.email}</span>
-                  </div>
-                ))}
-                <div onClick={() => setSelectedUserEmail('all')} style={{
-                    padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', textAlign: 'center', marginTop: '5px',
-                    background: selectedUserEmail === 'all' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)',
-                    border: '1px solid', borderColor: selectedUserEmail === 'all' ? 'var(--primary-light)' : 'var(--border-light)'
-                }}>Mostrar Global</div>
-             </div>
+            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}><Mail size={11} style={{ marginRight: 5 }} /> Directorio</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {users.map(u => (
+                <div key={u.id} className={`user-list-item ${selectedUserEmail === u.email ? 'active' : ''}`} onClick={() => setSelectedUserEmail(u.email)}
+                  style={{
+                    padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid',
+                    background: selectedUserEmail === u.email ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                    borderColor: selectedUserEmail === u.email ? 'var(--primary-light)' : 'transparent',
+                    color: selectedUserEmail === u.email ? 'var(--text-bright)' : 'var(--text-dim)'
+                  }}
+                >
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                </div>
+              ))}
+              <div onClick={() => setSelectedUserEmail('all')} style={{
+                padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', textAlign: 'center', marginTop: '5px',
+                background: selectedUserEmail === 'all' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)',
+                border: '1px solid', borderColor: selectedUserEmail === 'all' ? 'var(--primary-light)' : 'var(--border-light)'
+              }}>Mostrar Global</div>
+            </div>
           </div>
         </nav>
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="main-content">
-        <div className="admin-header" style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'30px'}}>
-             <div>
-                <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                  <h2 style={{fontSize: '32px', margin: 0}}>Admin Panel</h2>
-                  <div className="live-container" style={{display:'flex', alignItems:'center', gap:'8px', background:'rgba(239, 68, 68, 0.1)', padding:'6px 12px', borderRadius:'20px', border:'1px solid rgba(239, 68, 68, 0.2)'}}>
-                    <div className="pulse-dot"></div>
-                    <span style={{fontSize:'10px', fontWeight:'800', color:'var(--accent-error)', letterSpacing:'0.1em'}}>EN VIVO</span>
-                  </div>
-                </div>
-                <p style={{color: 'var(--text-muted)', marginTop: '8px'}}>Gestionando {users.length} operadores activos</p>
-             </div>
-             
-             <div style={{display:'flex', gap:'12px', alignItems:'center', width:'100%', maxWidth:'650px'}}>
-                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                   <span style={{fontSize:'10px', color:'var(--text-dim)', fontWeight:'bold'}}>MES DE CONSULTA</span>
-                   <input type="month" className="filter-input" style={{height:'45px', borderRadius:'12px'}} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-                </div>
-                <div style={{position:'relative', flexGrow: 1, display:'flex', flexDirection:'column', gap:'4px'}}>
-                   <span style={{fontSize:'10px', color:'var(--text-dim)', fontWeight:'bold'}}>BUSCAR OPERADOR</span>
-                   <div style={{position:'relative'}}>
-                      <Search size={18} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}} />
-                      <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{width:'100%', paddingLeft:'40px', height:'45px', borderRadius:'12px'}} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                   </div>
-                </div>
-                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                   <span style={{fontSize:'10px', color:'transparent'}}>REFRESH</span>
-                   <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{height: '45px', width: '45px', padding:0, borderRadius: '12px'}}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
-                </div>
-             </div>
+        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <h2 style={{ fontSize: '32px', margin: 0 }}>Admin Panel</h2>
+              <div className="live-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239, 68, 68, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <div className="pulse-dot"></div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--accent-error)', letterSpacing: '0.1em' }}>EN VIVO</span>
+              </div>
+            </div>
+            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Gestionando {users.length} operadores activos</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', maxWidth: '650px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>MES DE CONSULTA</span>
+              <input type="month" className="filter-input" style={{ height: '45px', borderRadius: '12px' }} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+            </div>
+            <div style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>BUSCAR OPERADOR</span>
+              <div style={{ position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{ width: '100%', paddingLeft: '40px', height: '45px', borderRadius: '12px' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '10px', color: 'transparent' }}>REFRESH</span>
+              <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{ height: '45px', width: '45px', padding: 0, borderRadius: '12px' }}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
+            </div>
+          </div>
         </div>
 
         {/* SUMMARY CARDS */}
-        <div className="grid-secondary" style={{marginBottom: '30px'}}>
+        <div className="grid-secondary" style={{ marginBottom: '30px' }}>
           <div className="metric-card">
             <span className="metric-label">Gestionados Acum.</span>
             <div className="metric-value medium">{statsSummary.totalManaged}</div>
@@ -410,185 +414,195 @@ function AdminDashboard({ user, profile, setNetworkError }) {
             <div className="metric-value medium">{statsSummary.totalTechs}</div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Eficiencia Media</span>
+            <span className="metric-label">Cierre Promedio</span>
             <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{statsSummary.avgEfficiency}%</div>
           </div>
         </div>
 
         {/* MONITOR JORNADA ACTUAL (LIVE) */}
-        <div className="metric-card" style={{padding: '0', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)'}}>
-            <div className="table-header" style={{padding: '20px 32px', borderBottom:'1px solid var(--border-light)', background: 'rgba(99, 102, 241, 0.05)'}}>
-               <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <Activity size={16} className="text-primary" />
-                  <span className="metric-label" style={{margin:0, color: 'var(--text-bright)'}}>Monitor de Jornada Actual (Hoy)</span>
-               </div>
-               <div style={{fontSize:'10px', color:'var(--accent-success)', fontWeight:'bold'}}>AUTOSINCRONIZADO</div>
+        <div className="metric-card" style={{ padding: '0', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)', background: 'rgba(99, 102, 241, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Activity size={16} className="text-primary" />
+              <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Monitor de Jornada Actual (Hoy)</span>
             </div>
-            <div className="table-container" style={{maxHeight:'350px'}}>
-                <table className="history-table admin-table">
-                  <thead>
-                    <tr>
-                      <th style={{textAlign:'left', paddingLeft:'32px'}}>Operador</th>
-                      <th>Gest.</th>
-                      <th>Cerr.</th>
-                      <th>TCO</th>
-                      <th>% Cierre</th>
-                      <th>Acum. Reso</th>
-                      <th>G/h</th>
-                      <th>Última Act.</th>
+            <div style={{ fontSize: '10px', color: 'var(--accent-success)', fontWeight: 'bold' }}>AUTOSINCRONIZADO</div>
+          </div>
+          <div className="table-container" style={{ maxHeight: '350px' }}>
+            <table className="history-table admin-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
+                  <th>Gest.</th>
+                  <th>Cerr.</th>
+                  <th>TCO</th>
+                  <th>% Cierre</th>
+                  <th>Acum. Reso</th>
+                  <th>G/h</th>
+                  <th>Última Act.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metricsToday.length === 0 ? (
+                  <tr><td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-dim)' }}>No hay actividad registrada para hoy.</td></tr>
+                ) : metricsToday.map((item) => {
+                  const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
+                  return (
+                    <tr key={item.id}>
+                      <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{email.split('@')[0]}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{email}</span>
+                        </div>
+                      </td>
+                      <td>{item.cases_managed}</td>
+                      <td>{item.cases_closed}</td>
+                      <td>{item.technicians_sent}</td>
+                      <td className={getStatusClass(item.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{item.efficiency}%</td>
+                      <td className={getStatusClass(item.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
+                      <td className={getStatusClass(item.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{item.cases_per_hour}</td>
+                      <td style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{formatLastUpdated(item.updated_at)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {metricsToday.length === 0 ? (
-                      <tr><td colSpan="8" style={{padding: '30px', textAlign:'center', color:'var(--text-dim)'}}>No hay actividad registrada para hoy.</td></tr>
-                    ) : metricsToday.map((item) => {
-                      const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
-                      return (
-                        <tr key={item.id}>
-                          <td style={{textAlign:'left', paddingLeft:'32px'}}>
-                            <div style={{display:'flex', flexDirection:'column'}}>
-                               <span style={{fontWeight:'700', color:'var(--text-bright)'}}>{email.split('@')[0]}</span>
-                               <span style={{fontSize:'10px', color:'var(--text-dim)'}}>{email}</span>
-                            </div>
-                          </td>
-                          <td>{item.cases_managed}</td>
-                          <td>{item.cases_closed}</td>
-                          <td>{item.technicians_sent}</td>
-                          <td className={getStatusClass(item.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{item.efficiency}%</td>
-                          <td className={getStatusClass(item.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
-                          <td className={getStatusClass(item.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{item.cases_per_hour}</td>
-                          <td style={{fontSize: '11px', color: 'var(--text-dim)'}}>{formatLastUpdated(item.updated_at)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* ANALYTICS ROW */}
-        <div style={{marginBottom:'32px'}}>
-            <div className="metric-card" style={{padding: '24px'}}>
-              <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia Histórica de Gestión</span>
-              <div style={{height: '180px'}}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
-            </div>
+        <div style={{ marginBottom: '32px' }}>
+          <div className="metric-card" style={{ padding: '24px' }}>
+            <span className="metric-label"><TrendingUp size={14} style={{ marginRight: 5 }} /> Tendencia Histórica de Gestión</span>
+            <div style={{ height: '180px' }}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
+          </div>
         </div>
 
         {/* UNIFIED HISTORY TABLE (Drill-down) */}
-        <div className="metric-card" style={{padding: '0'}}>
-            <div className="table-header" style={{padding: '20px 32px', borderBottom:'1px solid var(--border-light)'}}>
-               <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <History size={16} className="text-secondary" />
-                  <span className="metric-label" style={{margin:0, color: 'var(--text-bright)'}}>Historial Unificado de Operadores</span>
-               </div>
-               <div style={{fontSize:'10px', color:'var(--text-dim)'}}>Haz clic en un operador para ver su detalle</div>
+        <div className="metric-card" style={{ padding: '0' }}>
+          <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <History size={16} className="text-secondary" />
+              <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Historial Unificado de Operadores</span>
             </div>
-            <div className="table-container" style={{maxHeight:'500px'}}>
-                <table className="history-table admin-table clickable-rows">
-                  <thead>
-                    <tr>
-                      <th style={{textAlign:'left', paddingLeft:'32px'}}>Operador</th>
-                      <th>Días Reg.</th>
-                      <th>Total Gest.</th>
-                      <th>Total Cerr.</th>
-                      <th>% Cierre Med.</th>
-                      <th>% Reso Med.</th>
-                      <th>G/h Med.</th>
-                      <th>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unifiedHistory.length === 0 ? (
-                      <tr><td colSpan="8" style={{padding:'40px', textAlign:'center', color:'var(--text-dim)'}}>Iniciando base de datos...</td></tr>
-                    ) : unifiedHistory.map((u) => (
-                      <tr key={u.id} onClick={() => setViewingUserDetails(u)} style={{cursor: 'pointer'}}>
-                        <td style={{textAlign:'left', paddingLeft:'32px'}}>
-                            <div style={{display:'flex', flexDirection:'column'}}>
-                               <span style={{fontWeight:'700', color:'var(--text-bright)'}}>{u.email.split('@')[0]}</span>
-                               <span style={{fontSize:'10px', color:'var(--text-dim)'}}>{u.email}</span>
-                            </div>
-                        </td>
-                        <td>{u.recordsCount}</td>
-                        <td style={{fontWeight:'600'}}>{u.totalManaged}</td>
-                        <td style={{fontWeight:'600'}}>{u.totalClosed}</td>
-                        <td className={getStatusClass(u.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{u.efficiency}%</td>
-                        <td className={getStatusClass(u.resolution, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{u.resolution}%</td>
-                        <td className={getStatusClass(u.avgGxh, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{u.avgGxh}</td>
-                        <td style={{color: 'var(--primary)'}}><div style={{display:'flex', alignItems:'center', gap:5, justifyContent:'center'}}>Ver <ChevronRight size={14}/></div></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Haz clic en un operador para ver su detalle</div>
+          </div>
+          <div className="table-container" style={{ maxHeight: '500px' }}>
+            <table className="history-table admin-table clickable-rows">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
+                  <th>Días Reg.</th>
+                  <th>Total Gest.</th>
+                  <th>Total Cerr.</th>
+                  <th>% Cierre Med.</th>
+                  <th>% Reso Med.</th>
+                  <th>G/h Med.</th>
+                  <th>Balance</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unifiedHistory.length === 0 ? (
+                  <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)' }}>Iniciando base de datos...</td></tr>
+                ) : unifiedHistory.map((u) => (
+                  <tr key={u.id} onClick={() => setViewingUserDetails(u)} style={{ cursor: 'pointer' }}>
+                    <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{u.email.split('@')[0]}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{u.email}</span>
+                      </div>
+                    </td>
+                    <td>{u.recordsCount}</td>
+                    <td style={{ fontWeight: '600' }}>{u.totalManaged}</td>
+                    <td style={{ fontWeight: '600' }}>{u.totalClosed}</td>
+                    <td className={getStatusClass(u.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{u.efficiency}%</td>
+                    <td className={getStatusClass(u.resolution, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{u.resolution}%</td>
+                    <td className={getStatusClass(u.avgGxh, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{u.avgGxh}</td>
+                    <td style={{ fontWeight: '700', color: u.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                      {u.closingBalance > 0 ? `+${u.closingBalance}` : u.closingBalance}
+                    </td>
+                    <td style={{ color: 'var(--primary)' }}><div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>Ver <ChevronRight size={14} /></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
 
       {/* DRILL-DOWN MODAL: USER DETAILS */}
       {viewingUserDetails && (
-        <div className="login-overlay drilldown-modal" style={{zIndex: 2000}}>
-           <div className="login-card" style={{maxWidth: '900px', width: '95%', padding: '0', overflow:'hidden'}}>
-              <header style={{padding: '24px 32px', background: 'var(--bg-glass)', borderBottom:'1px solid var(--border-light)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                 <div>
-                    <h2 style={{margin:0, fontSize:'24px', color:'var(--text-bright)'}}>{viewingUserDetails.email.split('@')[0]}</h2>
-                    <p style={{fontSize:'12px', color:'var(--text-muted)', margin:0}}>{viewingUserDetails.email}</p>
-                 </div>
-                 <button className="btn btn-secondary" onClick={() => setViewingUserDetails(null)} style={{padding:'8px'}}><X size={20}/></button>
-              </header>
-              
-              <div style={{padding: '32px', maxHeight: '70vh', overflowY: 'auto'}}>
-                 <div className="grid-secondary" style={{marginBottom: '32px'}}>
-                    <div className="metric-card" style={{background:'rgba(255,255,255,0.02)'}}>
-                        <span className="metric-label">Días de Actividad</span>
-                        <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
-                    </div>
-                    <div className="metric-card" style={{background:'rgba(255,255,255,0.02)'}}>
-                        <span className="metric-label">Promedio G/h</span>
-                        <div className="metric-value small">{viewingUserDetails.avgGxh}</div>
-                    </div>
-                    <div className="metric-card" style={{background:'rgba(255,255,255,0.02)'}}>
-                        <span className="metric-label">Eficiencia Total</span>
-                        <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
-                    </div>
-                 </div>
-
-                 <h3 className="metric-label" style={{marginBottom: '15px'}}><Calendar size={14} style={{marginRight:8}}/> Desglose fecha por fecha</h3>
-                 <table className="history-table admin-table">
-                    <thead>
-                       <tr>
-                          <th>Fecha</th>
-                          <th>T. Conexión</th>
-                          <th>Gest.</th>
-                          <th>Cerr.</th>
-                          <th>TCO</th>
-                          <th>% Cierre</th>
-                          <th>Acum. Reso</th>
-                          <th>G/h</th>
-                       </tr>
-                    </thead>
-                    <tbody>
-                       {viewingUserDetails.rows.map(row => (
-                         <tr key={row.id}>
-                            <td style={{fontWeight:'700'}}>{row.date}</td>
-                            <td>{row.total_time}</td>
-                            <td>{row.cases_managed}</td>
-                            <td>{row.cases_closed}</td>
-                            <td>{row.technicians_sent}</td>
-                            <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
-                            <td className={getStatusClass(row.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{row.resolution_rate}%</td>
-                            <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
-                         </tr>
-                       ))}
-                    </tbody>
-                 </table>
+        <div className="login-overlay drilldown-modal" style={{ zIndex: 2000 }}>
+          <div className="login-card" style={{ maxWidth: '900px', width: '95%', padding: '0', overflow: 'hidden' }}>
+            <header style={{ padding: '24px 32px', background: 'var(--bg-glass)', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--text-bright)' }}>{viewingUserDetails.email.split('@')[0]}</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{viewingUserDetails.email}</p>
               </div>
-              
-              <footer style={{padding: '20px 32px', textAlign: 'right', background:'rgba(0,0,0,0.1)', borderTop:'1px solid var(--border-light)'}}>
-                  <button className="btn btn-primary" onClick={() => setViewingUserDetails(null)}>Cerrar Detalle</button>
-              </footer>
-           </div>
+              <button className="btn btn-secondary" onClick={() => setViewingUserDetails(null)} style={{ padding: '8px' }}><X size={20} /></button>
+            </header>
+
+            <div style={{ padding: '32px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div className="grid-secondary" style={{ marginBottom: '32px' }}>
+                    <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <span className="metric-label">Días de Actividad</span>
+                      <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
+                    </div>
+                    <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <span className="metric-label">Balance Objetivo</span>
+                      <div className={`metric-value small ${viewingUserDetails.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+                        {viewingUserDetails.closingBalance > 0 ? `+${viewingUserDetails.closingBalance}` : viewingUserDetails.closingBalance}
+                      </div>
+                    </div>
+                <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <span className="metric-label">Promedio G/h</span>
+                  <div className="metric-value small">{viewingUserDetails.avgGxh}</div>
+                </div>
+                <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <span className="metric-label"> Cierre Total</span>
+                  <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
+                </div>
+              </div>
+
+              <h3 className="metric-label" style={{ marginBottom: '15px' }}><Calendar size={14} style={{ marginRight: 8 }} /> Desglose fecha por fecha</h3>
+              <table className="history-table admin-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>T. Conexión</th>
+                    <th>Gest.</th>
+                    <th>Cerr.</th>
+                    <th>TCO</th>
+                    <th>% Cierre</th>
+                    <th>Acum. Reso</th>
+                    <th>G/h</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingUserDetails.rows.map(row => (
+                    <tr key={row.id}>
+                      <td style={{ fontWeight: '700' }}>{row.date}</td>
+                      <td>{row.total_time}</td>
+                      <td>{row.cases_managed}</td>
+                      <td>{row.cases_closed}</td>
+                      <td>{row.technicians_sent}</td>
+                      <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
+                      <td className={getStatusClass(row.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{row.resolution_rate}%</td>
+                      <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <footer style={{ padding: '20px 32px', textAlign: 'right', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
+              <button className="btn btn-primary" onClick={() => setViewingUserDetails(null)}>Cerrar Detalle</button>
+            </footer>
+          </div>
         </div>
       )}
-      
+
       <style>{`
         .pulse-dot {
           width: 8px; height: 8px; background: var(--accent-error); border-radius: 50%;

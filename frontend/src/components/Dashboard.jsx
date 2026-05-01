@@ -444,7 +444,8 @@ function Dashboard({ user, profile, setNetworkError }) {
       managedPerHour: managedPerHour.toFixed(1),
       closedPerHour: closedPerHour.toFixed(1),
       tmoCase,
-      tmoManaged
+      tmoManaged,
+      closingBalance: managedCount > 0 ? (closedCount - Math.ceil(managedCount * (STANDARDS.CLOSED_GREEN / 100))) : 0
     };
   }, [closedCount, managedCount, techniciansCount, timerSeconds]);
 
@@ -759,6 +760,14 @@ function Dashboard({ user, profile, setNetworkError }) {
                  parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
               </span>
             </div>
+            {managedCount > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '11px', color: stats.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '8px' }}>
+                <span>Balance Objetivo:</span>
+                <span style={{ fontWeight: '800' }}>
+                  {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance} casos
+                </span>
+              </div>
+            )}
           </div>
           <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: '700' }}>TOTAL HOY:</span>
