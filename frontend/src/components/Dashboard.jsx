@@ -288,8 +288,10 @@ function Dashboard({ user, profile, setNetworkError }) {
       // Diferencia de cierre del día (naturales)
       const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * 0.79)) : 0;
 
-      // Diferencia de cierre acumulada del mes hasta este día
+      // Diferencias acumuladas del mes hasta este día
       const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * 0.79)) : 0;
+      const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * 4.0)) : 0;
+      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * 0.81)) : 0;
 
       return {
         ...item,
@@ -302,7 +304,9 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumGxH,
         accumBonus, // bono según acumulados hasta este día
         closingDiff,
-        accumClosingDiff
+        accumClosingDiff,
+        accumGxhDiff: accumGxhDiff.toFixed(1),
+        accumResoDiff
       };
     });
 
@@ -446,6 +450,11 @@ function Dashboard({ user, profile, setNetworkError }) {
     const tmoCase = closedCount > 0 ? Math.floor(timerSeconds / closedCount) : 0;
     const tmoManaged = managedCount > 0 ? Math.floor(timerSeconds / managedCount) : 0;
 
+    // Diferencias vs Objetivos
+    const closingBalance = managedCount > 0 ? (closedCount - Math.ceil(managedCount * (STANDARDS.CLOSED_GREEN / 100))) : 0;
+    const gxhDiff = totalHours > 0 ? (managedCount - (totalHours * STANDARDS.GXH_GREEN)) : 0;
+    const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
+
     return {
       closeRate: closeRate.toFixed(1),
       resolutionRate: resolutionRate.toFixed(1),
@@ -453,7 +462,9 @@ function Dashboard({ user, profile, setNetworkError }) {
       closedPerHour: closedPerHour.toFixed(1),
       tmoCase,
       tmoManaged,
-      closingBalance: managedCount > 0 ? (closedCount - Math.ceil(managedCount * (STANDARDS.CLOSED_GREEN / 100))) : 0
+      closingBalance,
+      gxhDiff: gxhDiff.toFixed(1),
+      resoDiff
     };
   }, [closedCount, managedCount, techniciansCount, timerSeconds]);
 
@@ -928,6 +939,18 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
+            <span className="metric-label">Dif. GxH (4.0)</span>
+            <div className={`metric-value medium ${parseFloat(stats.gxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
+            </div>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Dif. Reso (81%)</span>
+            <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
+            </div>
+          </div>
+          <div className="metric-card">
             <span className="metric-label">TMO CxH</span>
             <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoCase}s
@@ -1034,6 +1057,8 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Cerr.</th>
                       <th>Dif. Cierre</th>
                       <th>Dif. Acum</th>
+                      <th>Dif. G/h Acum</th>
+                      <th>Dif. Reso Acum</th>
                       <th>TCO</th>
                       <th>Cierre</th>
                       <th>G/h</th>
@@ -1055,6 +1080,12 @@ function Dashboard({ user, profile, setNetworkError }) {
                         </td>
                         <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
                           {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
+                        </td>
+                        <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                          {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
+                        </td>
+                        <td style={{ fontWeight: '700', color: item.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                          {item.accumResoDiff > 0 ? `+${item.accumResoDiff}` : item.accumResoDiff}
                         </td>
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>

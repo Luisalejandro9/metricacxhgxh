@@ -169,18 +169,45 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
       const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
 
-        return {
-          ...u,
-          totalManaged,
-          totalClosed,
-          totalTechs,
-          avgGxh,
-          efficiency,
-          resolution,
-          closingBalance,
-          recordsCount: userRows.length,
-          rows: userRows.sort((a, b) => new Date(b.date) - new Date(a.date)) // Detailed sorted by date descending
-        };
+      // GxH and Reso accumulated differences for Admin
+      const totalSeconds = userRows.reduce((s, m) => {
+        const [h, min, sec] = m.total_time.split(':').map(Number);
+        return s + (h * 3600 + min * 60 + sec);
+      }, 0);
+      const gxhDiff = totalSeconds > 0 ? (totalManaged - ((totalSeconds / 3600) * STANDARDS.GXH_GREEN)) : 0;
+      const resoDiff = totalManaged > 0 ? ((totalManaged - totalTechs) - Math.ceil(totalManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
+
+      return {
+        ...u,
+        totalManaged,
+        totalClosed,
+        totalTechs,
+        avgGxh,
+        efficiency,
+        resolution,
+        closingBalance,
+        gxhDiff: gxhDiff.toFixed(1),
+        resoDiff,
+        recordsCount: userRows.length,
+        rows: userRows.sort((a, b) => new Date(b.date) - new Date(a.date)).map((row, idx, arr) => {
+          // Calculate running totals for each row to show accum diffs in modal
+          const upToNow = arr.slice(idx).reverse(); // arr is desc, so slice and reverse
+          const runManaged = upToNow.reduce((s, r) => s + (r.cases_managed || 0), 0);
+          const runClosed = upToNow.reduce((s, r) => s + (r.cases_closed || 0), 0);
+          const runTechs = upToNow.reduce((s, r) => s + (r.technicians_sent || 0), 0);
+          const runSeconds = upToNow.reduce((s, r) => {
+            const [h, min, sec] = r.total_time.split(':').map(Number);
+            return s + (h * 3600 + min * 60 + sec);
+          }, 0);
+
+          return {
+            ...row,
+            accumClosingDiff: runManaged > 0 ? (runClosed - Math.ceil(runManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0,
+            accumGxhDiff: runSeconds > 0 ? (runManaged - ((runSeconds / 3600) * STANDARDS.GXH_GREEN)).toFixed(1) : "0.0",
+            accumResoDiff: runManaged > 0 ? ((runManaged - runTechs) - Math.ceil(runManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0
+          };
+        })
+      };
     }).filter(Boolean);
   }, [monthFilteredMetrics, users]);
 
@@ -572,8 +599,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                     <th>Gest.</th>
                     <th>Cerr.</th>
                     <th>TCO</th>
-                    <th>% Cierre</th>
-                    <th>Acum. Reso</th>
+                    <th>Dif. Cierre Acum</th>
+                    <th>Dif. G/h Acum</th>
+                    <th>Dif. Reso Acum</th>
                     <th>G/h</th>
                   </tr>
                 </thead>
@@ -586,7 +614,15 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <td>{row.cases_closed}</td>
                       <td>{row.technicians_sent}</td>
                       <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
-                      <td className={getStatusClass(row.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{row.resolution_rate}%</td>
+                      <td style={{ fontWeight: '700', color: row.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                        {row.accumClosingDiff > 0 ? `+${row.accumClosingDiff}` : row.accumClosingDiff}
+                      </td>
+                      <td style={{ fontWeight: '700', color: parseFloat(row.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                        {parseFloat(row.accumGxhDiff) > 0 ? `+${row.accumGxhDiff}` : row.accumGxhDiff}
+                      </td>
+                      <td style={{ fontWeight: '700', color: row.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                        {row.accumResoDiff > 0 ? `+${row.accumResoDiff}` : row.accumResoDiff}
+                      </td>
                       <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
                     </tr>
                   ))}
