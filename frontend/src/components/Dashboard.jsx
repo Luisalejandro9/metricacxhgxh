@@ -256,7 +256,7 @@ function Dashboard({ user, profile, setNetworkError }) {
   const historyWithAccum = useMemo(() => {
     // Filtrar por mes seleccionado primero para separar los datos y que no se mezclen los acumulados
     const monthFiltered = history.filter(item => item.date.startsWith(searchMonth));
-    
+
     // Sort ascending to calculate accumulators correctly
     const sorted = [...monthFiltered].sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -524,7 +524,7 @@ function Dashboard({ user, profile, setNetworkError }) {
   // --- Auto-Save Implementation ---
   const autoSaveToSupabase = async () => {
     if (!user || managedCount === 0 || isSaving) return;
-    
+
     setIsAutoSaving(true);
     const localDate = new Date();
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
@@ -654,14 +654,14 @@ function Dashboard({ user, profile, setNetworkError }) {
               <LogOut size={10} style={{ marginRight: 5 }} /> Salir
             </button>
             {profile?.role === 'admin' && profile?.is_enabled && (
-              <button 
-                className="btn-logout" 
+              <button
+                className="btn-logout"
                 onClick={() => navigate('/admin')}
-                style={{ 
-                  flex: 1, 
-                  background: 'rgba(99, 102, 241, 0.1)', 
-                  color: 'var(--primary-light)', 
-                  borderColor: 'rgba(99, 102, 241, 0.2)' 
+                style={{
+                  flex: 1,
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  color: 'var(--primary-light)',
+                  borderColor: 'rgba(99, 102, 241, 0.2)'
                 }}
               >
                 <ShieldCheck size={10} style={{ marginRight: 5 }} /> Admin
@@ -734,7 +734,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           </h3>
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: '32px', fontWeight: '900', color: accumulatedBonusTotal >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(1)}%
+              {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(1)}%
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Estimado en el Mes</div>
           </div>
@@ -749,7 +749,7 @@ function Dashboard({ user, profile, setNetworkError }) {
               <span style={{
                 fontWeight: '800',
                 color: getGxHBonus(stats.managedPerHour) > 0 ? 'var(--accent-success)' :
-                       getGxHBonus(stats.managedPerHour) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
+                  getGxHBonus(stats.managedPerHour) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
               }}>
                 {getGxHBonus(stats.managedPerHour) > 0 ? '+' : ''}{getGxHBonus(stats.managedPerHour).toFixed(1)}%
               </span>
@@ -762,7 +762,7 @@ function Dashboard({ user, profile, setNetworkError }) {
               <span style={{
                 fontWeight: '800',
                 color: getResolucionBonus(stats.resolutionRate) > 0 ? 'var(--accent-success)' :
-                       getResolucionBonus(stats.resolutionRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
+                  getResolucionBonus(stats.resolutionRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
               }}>
                 {getResolucionBonus(stats.resolutionRate) > 0 ? '+' : ''}{getResolucionBonus(stats.resolutionRate).toFixed(1)}%
               </span>
@@ -773,10 +773,10 @@ function Dashboard({ user, profile, setNetworkError }) {
             <div className="standard-row">
               <span>Actual: {stats.closeRate}%</span>
               <span className={parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? 'stat-meets-standard' :
-                               parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
+                parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
                 style={{ fontWeight: '800', fontSize: '13px' }}>
                 {parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? '✓ OK' :
-                 parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
+                  parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
               </span>
             </div>
             {managedCount > 0 && (
@@ -791,7 +791,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: '700' }}>TOTAL HOY:</span>
             <span style={{ fontSize: '16px', fontWeight: '900', color: calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate).toFixed(1)}%
+              {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate).toFixed(1)}%
             </span>
           </div>
         </section>
@@ -838,12 +838,12 @@ function Dashboard({ user, profile, setNetworkError }) {
                 ) : (
                   <>
                     <div className="metric-value">{closedCount}</div>
-                    <button 
+                    <button
                       onClick={handleEditClosed}
-                      style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        color: 'var(--text-dim)', 
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-dim)',
                         cursor: 'pointer',
                         padding: '5px',
                         display: 'flex',
@@ -895,12 +895,12 @@ function Dashboard({ user, profile, setNetworkError }) {
                 ) : (
                   <>
                     <div className="metric-value">{managedCount}</div>
-                    <button 
+                    <button
                       onClick={handleEditManaged}
-                      style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        color: 'var(--text-dim)', 
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-dim)',
                         cursor: 'pointer',
                         padding: '5px',
                         display: 'flex',
@@ -1004,13 +1004,13 @@ function Dashboard({ user, profile, setNetworkError }) {
           </button>
           {lastSavedAt && (
             <div style={{
-              fontSize: '11px', 
-              color: 'var(--text-dim)', 
-              textAlign: 'center', 
+              fontSize: '11px',
+              color: 'var(--text-dim)',
+              textAlign: 'center',
               marginTop: '10px',
               fontWeight: '500'
             }}>
-               Auto-sincronizado a las {lastSavedAt.toLocaleTimeString()}
+              Auto-sincronizado a las {lastSavedAt.toLocaleTimeString()}
             </div>
           )}
         </div>
@@ -1063,7 +1063,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Acum. Cierre</th>
                       <th>Acum. Reso</th>
                       <th>Acum. GxH</th>
-                      <th>Dif. Acum</th>
+                      <th>Dif-cierre Acum</th>
                       <th>Dif. G/h Acum</th>
                       <th>Dif. Reso Acum</th>
                       <th>Acciones</th>
