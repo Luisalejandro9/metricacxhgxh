@@ -52,8 +52,8 @@ const STANDARDS = {
   GXH_YELLOW: 3.50,
   RESOLUTION_GREEN: 81.0,
   RESOLUTION_YELLOW: 78.2,
-  CLOSED_GREEN: 76.5,
-  CLOSED_YELLOW: 74.8,
+  CLOSED_GREEN: 79.0,
+  CLOSED_YELLOW: 77.0,
 };
 
 function AdminDashboard({ user, profile, setNetworkError }) {

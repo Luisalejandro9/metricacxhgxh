@@ -914,6 +914,12 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
+            <span className="metric-label">Balance Objetivo (79%)</span>
+            <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
+            </div>
+          </div>
+          <div className="metric-card">
             <span className="metric-label">TMO CxH</span>
             <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
               {stats.tmoCase}s
