@@ -72,6 +72,10 @@ function Dashboard({ user, profile, setNetworkError }) {
   const [history, setHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [searchDate, setSearchDate] = useState('');
+  const [searchMonth, setSearchMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // Timer State
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -250,8 +254,11 @@ function Dashboard({ user, profile, setNetworkError }) {
   }, [closedCount, managedCount, techniciansCount]); // Auto-save on count changes
 
   const historyWithAccum = useMemo(() => {
+    // Filtrar por mes seleccionado primero para separar los datos y que no se mezclen los acumulados
+    const monthFiltered = history.filter(item => item.date.startsWith(searchMonth));
+    
     // Sort ascending to calculate accumulators correctly
-    const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sorted = [...monthFiltered].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     let runningManaged = 0;
     let runningClosed = 0;
@@ -293,7 +300,7 @@ function Dashboard({ user, profile, setNetworkError }) {
 
     // Return in ascending order as requested (older first)
     return withAccum;
-  }, [history]);
+  }, [history, searchMonth]);
 
   // --- Bono Mensual Acumulado ---
   // Es el bono que corresponde al ÚLTIMO estado acumulado (Acum. GxH + Acum. Reso actuales)
@@ -967,14 +974,26 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div className="metric-card h-full">
             <div className="table-header">
               <span className="metric-label">Historial de Registros</span>
-              <div className="filter-group">
-                <label>Filtrar por fecha:</label>
-                <input
-                  type="date"
-                  value={searchDate}
-                  onChange={(e) => setSearchDate(e.target.value)}
-                  className="filter-input"
-                />
+              <div className="filter-group" style={{ display: 'flex', gap: '15px' }}>
+                <div>
+                  <label>Seleccionar Mes:</label>
+                  <input
+                    type="month"
+                    value={searchMonth}
+                    onChange={(e) => setSearchMonth(e.target.value)}
+                    className="filter-input"
+                    style={{ width: '150px' }}
+                  />
+                </div>
+                <div>
+                  <label>Filtrar por fecha:</label>
+                  <input
+                    type="date"
+                    value={searchDate}
+                    onChange={(e) => setSearchDate(e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
               </div>
             </div>
 

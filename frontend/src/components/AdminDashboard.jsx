@@ -75,6 +75,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
   const [selectedUserEmail, setSelectedUserEmail] = useState('all');
   const [viewingUserDetails, setViewingUserDetails] = useState(null);
 
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
   const todayStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -130,8 +135,12 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return () => { supabase.removeChannel(channel); };
   }, [setNetworkError]);
 
+  const monthFilteredMetrics = useMemo(() => {
+    return allMetrics.filter(m => m.date.startsWith(selectedMonth));
+  }, [allMetrics, selectedMonth]);
+
   const filteredMetrics = useMemo(() => {
-    let filtered = [...allMetrics];
+    let filtered = [...monthFilteredMetrics];
     if (selectedUserEmail !== 'all') {
       const userObj = users.find(u => u.email === selectedUserEmail);
       if (userObj) filtered = filtered.filter(m => m.user_id === userObj.id);
@@ -141,15 +150,15 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       filtered = filtered.filter(m => users.find(u => u.id === m.user_id)?.email.toLowerCase().includes(term));
     }
     return filtered;
-  }, [allMetrics, selectedUserEmail, users, searchTerm]);
+  }, [monthFilteredMetrics, selectedUserEmail, users, searchTerm]);
 
   // SPLIT METRICS: Today's detailed monitor
   const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
 
-  // UNIFIED USER HISTORY (Accumulated)
+  // UNIFIED USER HISTORY (Accumulated per Month)
   const unifiedHistory = useMemo(() => {
     return users.map(u => {
-        const userRows = allMetrics.filter(m => m.user_id === u.id);
+        const userRows = monthFilteredMetrics.filter(m => m.user_id === u.id);
         if (userRows.length === 0) return null;
         
         const totalManaged = userRows.reduce((s, m) => s + (m.cases_managed || 0), 0);
@@ -171,7 +180,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
             rows: userRows.sort((a,b) => new Date(b.date) - new Date(a.date)) // Detailed sorted by date descending
         };
     }).filter(Boolean);
-  }, [allMetrics, users]);
+  }, [monthFilteredMetrics, users]);
 
   const statsSummary = useMemo(() => {
     if (filteredMetrics.length === 0) return { totalManaged: 0, totalClosed: 0, totalTechs: 0, avgEfficiency: "0.0" };
@@ -367,12 +376,22 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                 <p style={{color: 'var(--text-muted)', marginTop: '8px'}}>Gestionando {users.length} operadores activos</p>
              </div>
              
-             <div style={{display:'flex', gap:'12px', alignItems:'center', width:'100%', maxWidth:'450px'}}>
-                <div style={{position:'relative', flexGrow: 1}}>
-                  <Search size={18} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}} />
-                  <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{width:'100%', paddingLeft:'40px', height:'45px', borderRadius:'12px'}} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+             <div style={{display:'flex', gap:'12px', alignItems:'center', width:'100%', maxWidth:'650px'}}>
+                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                   <span style={{fontSize:'10px', color:'var(--text-dim)', fontWeight:'bold'}}>MES DE CONSULTA</span>
+                   <input type="month" className="filter-input" style={{height:'45px', borderRadius:'12px'}} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
                 </div>
-                <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{height: '45px', width: '45px', padding:0, borderRadius: '12px'}}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
+                <div style={{position:'relative', flexGrow: 1, display:'flex', flexDirection:'column', gap:'4px'}}>
+                   <span style={{fontSize:'10px', color:'var(--text-dim)', fontWeight:'bold'}}>BUSCAR OPERADOR</span>
+                   <div style={{position:'relative'}}>
+                      <Search size={18} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}} />
+                      <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{width:'100%', paddingLeft:'40px', height:'45px', borderRadius:'12px'}} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                   </div>
+                </div>
+                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                   <span style={{fontSize:'10px', color:'transparent'}}>REFRESH</span>
+                   <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{height: '45px', width: '45px', padding:0, borderRadius: '12px'}}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
+                </div>
              </div>
         </div>
 
