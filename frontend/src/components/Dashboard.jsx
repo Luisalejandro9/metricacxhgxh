@@ -288,6 +288,9 @@ function Dashboard({ user, profile, setNetworkError }) {
       // Diferencia de cierre del día (naturales)
       const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * 0.79)) : 0;
 
+      // Diferencia de cierre acumulada del mes hasta este día
+      const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * 0.79)) : 0;
+
       return {
         ...item,
         accumManaged: runningManaged,
@@ -298,7 +301,8 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumResoRate,
         accumGxH,
         accumBonus, // bono según acumulados hasta este día
-        closingDiff
+        closingDiff,
+        accumClosingDiff
       };
     });
 
@@ -1029,6 +1033,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Gest.</th>
                       <th>Cerr.</th>
                       <th>Dif. Cierre</th>
+                      <th>Dif. Acum</th>
                       <th>TCO</th>
                       <th>Cierre</th>
                       <th>G/h</th>
@@ -1047,6 +1052,9 @@ function Dashboard({ user, profile, setNetworkError }) {
                         <td>{item.cases_closed}</td>
                         <td style={{ fontWeight: '700', color: item.closingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                           {item.closingDiff > 0 ? `+${item.closingDiff}` : item.closingDiff}
+                        </td>
+                        <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
+                          {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
                         </td>
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>
