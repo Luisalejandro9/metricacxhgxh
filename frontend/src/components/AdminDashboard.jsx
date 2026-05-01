@@ -191,33 +191,22 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return list.slice(0, 5);
   }, [unifiedHistory]);
 
-  // Obtener los días de trabajo dentro de la última ventana de 7 días calendario para evitar agregación entre semanas
-  const recentWorkDays = useMemo(() => {
-    const dates = [...new Set(filteredMetrics.map(m => m.date))].sort();
-    if (dates.length === 0) return [];
-    
-    const lastDateStr = dates[dates.length - 1];
-    const lastDate = new Date(lastDateStr + 'T00:00:00');
-    const startDate = new Date(lastDate);
-    startDate.setDate(lastDate.getDate() - 6); // Ventana de 7 días exactos
-    
-    return dates.filter(d => {
-      const dDate = new Date(d + 'T00:00:00');
-      return dDate >= startDate && dDate <= lastDate;
-    });
+  // Obtener todos los días de trabajo únicos para el gráfico de tendencia histórica
+  const allWorkDays = useMemo(() => {
+    return [...new Set(filteredMetrics.map(m => m.date))].sort();
   }, [filteredMetrics]);
 
   const trendChartData = useMemo(() => {
-    const managedData = recentWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_managed || 0), 0));
-    const closedData = recentWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_closed || 0), 0));
+    const managedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_managed || 0), 0));
+    const closedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_closed || 0), 0));
     return {
-      labels: recentWorkDays.map(d => d.split('-').slice(1).reverse().join('/')),
+      labels: allWorkDays.map(d => d.split('-').slice(1).reverse().join('/')),
       datasets: [
         { label: 'Gestionados', data: managedData, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', tension: 0.4, fill: true },
         { label: 'Cerrados', data: closedData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true }
       ]
     };
-  }, [filteredMetrics, recentWorkDays]);
+  }, [filteredMetrics, allWorkDays]);
 
 
 
@@ -461,7 +450,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         {/* ANALYTICS ROW */}
         <div style={{marginBottom:'32px'}}>
             <div className="metric-card" style={{padding: '24px'}}>
-              <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia Semanal</span>
+              <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia Histórica de Gestión</span>
               <div style={{height: '180px'}}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
             </div>
         </div>
