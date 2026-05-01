@@ -1056,9 +1056,6 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Gest.</th>
                       <th>Cerr.</th>
                       <th>Dif. Cierre</th>
-                      <th>Dif. Acum</th>
-                      <th>Dif. G/h Acum</th>
-                      <th>Dif. Reso Acum</th>
                       <th>TCO</th>
                       <th>Cierre</th>
                       <th>G/h</th>
@@ -1066,6 +1063,9 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Acum. Cierre</th>
                       <th>Acum. Reso</th>
                       <th>Acum. GxH</th>
+                      <th>Dif. Acum</th>
+                      <th>Dif. G/h Acum</th>
+                      <th>Dif. Reso Acum</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -1077,15 +1077,6 @@ function Dashboard({ user, profile, setNetworkError }) {
                         <td>{item.cases_closed}</td>
                         <td style={{ fontWeight: '700', color: item.closingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                           {item.closingDiff > 0 ? `+${item.closingDiff}` : item.closingDiff}
-                        </td>
-                        <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
-                          {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
-                        </td>
-                        <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                          {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
-                        </td>
-                        <td style={{ fontWeight: '700', color: item.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                          {item.accumResoDiff > 0 ? `+${item.accumResoDiff}` : item.accumResoDiff}
                         </td>
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>
@@ -1099,6 +1090,15 @@ function Dashboard({ user, profile, setNetworkError }) {
                         </td>
                         <td className={getStatusClass(item.accumGxH, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumGxH}
+                        </td>
+                        <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
+                          {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
+                        </td>
+                        <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                          {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
+                        </td>
+                        <td style={{ fontWeight: '700', color: item.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                          {item.accumResoDiff > 0 ? `+${item.accumResoDiff}` : item.accumResoDiff}
                         </td>
                         <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>

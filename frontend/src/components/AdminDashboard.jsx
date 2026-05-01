@@ -599,10 +599,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                     <th>Gest.</th>
                     <th>Cerr.</th>
                     <th>TCO</th>
+                    <th>% Cierre</th>
+                    <th>G/h</th>
                     <th>Dif. Cierre Acum</th>
                     <th>Dif. G/h Acum</th>
                     <th>Dif. Reso Acum</th>
-                    <th>G/h</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -614,6 +615,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <td>{row.cases_closed}</td>
                       <td>{row.technicians_sent}</td>
                       <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
+                      <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
                       <td style={{ fontWeight: '700', color: row.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                         {row.accumClosingDiff > 0 ? `+${row.accumClosingDiff}` : row.accumClosingDiff}
                       </td>
@@ -623,7 +625,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <td style={{ fontWeight: '700', color: row.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                         {row.accumResoDiff > 0 ? `+${row.accumResoDiff}` : row.accumResoDiff}
                       </td>
-                      <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
                     </tr>
                   ))}
                 </tbody>
