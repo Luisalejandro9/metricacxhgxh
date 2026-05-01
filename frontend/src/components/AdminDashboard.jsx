@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   Users, 
-  BarChart3, 
   ArrowLeft, 
   Search, 
   Mail, 
@@ -29,13 +28,12 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
   Filler
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 
 // Register ChartJS modules
 ChartJS.register(
@@ -43,7 +41,6 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -194,35 +191,35 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return list.slice(0, 5);
   }, [unifiedHistory]);
 
+  // Obtener los días de trabajo dentro de la última ventana de 7 días calendario para evitar agregación entre semanas
+  const recentWorkDays = useMemo(() => {
+    const dates = [...new Set(filteredMetrics.map(m => m.date))].sort();
+    if (dates.length === 0) return [];
+    
+    const lastDateStr = dates[dates.length - 1];
+    const lastDate = new Date(lastDateStr + 'T00:00:00');
+    const startDate = new Date(lastDate);
+    startDate.setDate(lastDate.getDate() - 6); // Ventana de 7 días exactos
+    
+    return dates.filter(d => {
+      const dDate = new Date(d + 'T00:00:00');
+      return dDate >= startDate && dDate <= lastDate;
+    });
+  }, [filteredMetrics]);
+
   const trendChartData = useMemo(() => {
-    const dates = [...new Set(filteredMetrics.map(m => m.date))].slice(-7);
-    const managedData = dates.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_managed || 0), 0));
-    const closedData = dates.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_closed || 0), 0));
+    const managedData = recentWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_managed || 0), 0));
+    const closedData = recentWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s,m) => s + (m.cases_closed || 0), 0));
     return {
-      labels: dates.map(d => d.split('-').slice(1).reverse().join('/')),
+      labels: recentWorkDays.map(d => d.split('-').slice(1).reverse().join('/')),
       datasets: [
         { label: 'Gestionados', data: managedData, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', tension: 0.4, fill: true },
         { label: 'Cerrados', data: closedData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true }
       ]
     };
-  }, [filteredMetrics]);
+  }, [filteredMetrics, recentWorkDays]);
 
-  const heatmapData = useMemo(() => {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const distribution = days.map((day, idx) => {
-        const matchingRecords = filteredMetrics.filter(m => new Date(m.date + 'T00:00:00').getDay() === idx);
-        return matchingRecords.reduce((s,m) => s + (m.cases_managed || 0), 0);
-    });
-    return {
-      labels: days,
-      datasets: [{
-        label: 'Cant. Gestión',
-        data: distribution,
-        backgroundColor: 'rgba(99, 102, 241, 0.6)',
-        borderRadius: 8,
-      }]
-    };
-  }, [filteredMetrics]);
+
 
   const formatLastUpdated = (timestamp) => {
     if (!timestamp) return 'N/A';
@@ -462,14 +459,10 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         </div>
 
         {/* ANALYTICS ROW */}
-        <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap:'24px', marginBottom:'32px'}}>
+        <div style={{marginBottom:'32px'}}>
             <div className="metric-card" style={{padding: '24px'}}>
               <span className="metric-label"><TrendingUp size={14} style={{marginRight:5}} /> Tendencia Semanal</span>
               <div style={{height: '180px'}}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
-            </div>
-            <div className="metric-card" style={{padding: '24px'}}>
-              <span className="metric-label"><BarChart3 size={14} style={{marginRight:5}} /> Distribución Semanal</span>
-              <div style={{height: '180px'}}><Bar data={heatmapData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
             </div>
         </div>
 
