@@ -167,9 +167,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       const avgGxh = userRows.length > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.cases_per_hour) || 0), 0) / userRows.length).toFixed(2) : "0.00";
       const efficiency = totalManaged > 0 ? ((totalClosed / totalManaged) * 100).toFixed(1) : "0.0";
       const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
-
-        const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
-        const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
+      const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
 
         return {
           ...u,
