@@ -285,6 +285,9 @@ function Dashboard({ user, profile, setNetworkError }) {
       // Bono del periodo acumulado hasta este día (usa acumulados, NO valores del día)
       const accumBonus = calculateRecordBonus(accumGxH, accumResoRate);
 
+      // Diferencia de cierre del día (naturales)
+      const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * 0.79)) : 0;
+
       return {
         ...item,
         accumManaged: runningManaged,
@@ -295,6 +298,7 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumResoRate,
         accumGxH,
         accumBonus, // bono según acumulados hasta este día
+        closingDiff
       };
     });
 
@@ -762,7 +766,7 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
             {managedCount > 0 && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: stats.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '8px' }}>
-                <span>Balance Objetivo:</span>
+                <span>Diferencia cierre (79%):</span>
                 <span style={{ fontWeight: '800' }}>
                   {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance} casos
                 </span>
@@ -914,7 +918,7 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Balance Objetivo (79%)</span>
+            <span className="metric-label">Diferencia cierre (79%)</span>
             <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
             </div>
@@ -1024,6 +1028,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Fecha</th>
                       <th>Gest.</th>
                       <th>Cerr.</th>
+                      <th>Dif. Cierre</th>
                       <th>TCO</th>
                       <th>Cierre</th>
                       <th>G/h</th>
@@ -1040,6 +1045,9 @@ function Dashboard({ user, profile, setNetworkError }) {
                         <td>{item.date}</td>
                         <td>{item.cases_managed}</td>
                         <td>{item.cases_closed}</td>
+                        <td style={{ fontWeight: '700', color: item.closingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                          {item.closingDiff > 0 ? `+${item.closingDiff}` : item.closingDiff}
+                        </td>
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>
                         <td>{item.cases_per_hour}</td>

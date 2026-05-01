@@ -496,7 +496,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                   <th>% Cierre Med.</th>
                   <th>% Reso Med.</th>
                   <th>G/h Med.</th>
-                  <th>Balance</th>
+                  <th>Dif. Cierre</th>
                   <th>Acción</th>
                 </tr>
               </thead>
@@ -548,7 +548,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
                     </div>
                     <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="metric-label">Balance Objetivo</span>
+                      <span className="metric-label">Diferencia cierre (79%)</span>
                       <div className={`metric-value small ${viewingUserDetails.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
                         {viewingUserDetails.closingBalance > 0 ? `+${viewingUserDetails.closingBalance}` : viewingUserDetails.closingBalance}
                       </div>
