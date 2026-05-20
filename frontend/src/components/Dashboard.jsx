@@ -24,8 +24,8 @@ const STANDARDS = {
   GXH_YELLOW: 3.50,
 
   // % Resolución Neta (bonifica)
-  RESOLUTION_GREEN: 81.0,
-  RESOLUTION_YELLOW: 78.2,
+  RESOLUTION_GREEN: 81.5,
+  RESOLUTION_YELLOW: 78.6,
 
   // Cierre — solo objetivo, NO bonifica
   CLOSED_GREEN: 79.0,
@@ -48,11 +48,11 @@ const getGxHBonus = (value) => {
 
 const getResolucionBonus = (value) => {
   const val = parseFloat(value);
-  if (val >= 81.0) return 3.0;
-  if (val >= 79.6) return 2.0;
-  if (val >= 78.2) return 1.0;
-  if (val >= 76.8) return 0.0;
-  if (val >= 75.4) return -1.0;
+  if (val >= 81.5) return 3.0;
+  if (val >= 80.1) return 2.0;
+  if (val >= 78.6) return 1.0;
+  if (val >= 77.2) return 0.0;
+  if (val >= 75.8) return -1.0;
   return -2.0;
 };
 
@@ -945,7 +945,7 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Dif. Reso (81%)</span>
+            <span className="metric-label">Dif. Reso (81.5%)</span>
             <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
             </div>
