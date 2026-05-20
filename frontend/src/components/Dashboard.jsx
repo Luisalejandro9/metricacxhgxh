@@ -61,6 +61,14 @@ const calculateRecordBonus = (managedPerHour, resolutionRate) => {
   return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate);
 };
 
+// Formatear segundos de TMO a minutos amigables (ej: 950s -> 15:50 min)
+const formatTmoMin = (seconds) => {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')} min`;
+};
+
 function Dashboard({ user, profile, setNetworkError }) {
   const navigate = useNavigate();
   // Metrics State
@@ -723,7 +731,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           <h3>Metricas Requeridos</h3>
           <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {STANDARDS.GXH_GREEN}</span></div>
           <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
-          <div className="standard-row"><span>TMO (máx seg)</span> <span>{STANDARDS.TIME_PER_CASE}s</span></div>
+          <div className="standard-row"><span>TMO (máx)</span> <span>{formatTmoMin(STANDARDS.TIME_PER_CASE)} ({STANDARDS.TIME_PER_CASE}s)</span></div>
           <div className="standard-row"><span>% Resolución</span> <span>≥ {STANDARDS.RESOLUTION_GREEN}%</span></div>
           <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
         </section>
@@ -952,14 +960,16 @@ function Dashboard({ user, profile, setNetworkError }) {
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO CxH</span>
-            <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
-              {stats.tmoCase}s
+            <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`} style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+              <span>{formatTmoMin(stats.tmoCase)}</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 'normal' }}>({stats.tmoCase}s)</span>
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO GxH</span>
-            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > STANDARDS.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`}>
-              {stats.tmoManaged}s
+            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > STANDARDS.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`} style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+              <span>{formatTmoMin(stats.tmoManaged)}</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 'normal' }}>({stats.tmoManaged}s)</span>
             </div>
           </div>
           <div className="metric-card">
@@ -1081,7 +1091,12 @@ function Dashboard({ user, profile, setNetworkError }) {
                         <td>{item.technicians_sent}</td>
                         <td>{item.efficiency}%</td>
                         <td>{item.cases_per_hour}</td>
-                        <td>{item.tmo_managed}s</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <span style={{ fontWeight: '600' }}>{formatTmoMin(item.tmo_managed)}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.tmo_managed}s)</span>
+                          </div>
+                        </td>
                         <td className={getStatusClass(item.accumCloseRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumCloseRate}%
                         </td>
