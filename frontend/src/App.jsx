@@ -27,6 +27,31 @@ function App() {
       if (!result.error && result.data) {
         setProfile(result.data);
       } else {
+        // PROFILE IS MISSING - Check if there is an active session to auto-create
+        console.warn('Perfil no encontrado, intentando auto-crear perfil por defecto...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (!sessionError && session && session.user && session.user.id === userId) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: userId, 
+                email: session.user.email, 
+                role: 'operator', 
+                is_enabled: true 
+              }
+            ])
+            .select()
+            .single();
+
+          if (!createError && newProfile) {
+            console.log('Perfil auto-creado con éxito:', newProfile);
+            setProfile(newProfile);
+            return;
+          } else {
+            console.error('Error al auto-crear perfil:', createError);
+          }
+        }
         setProfile(null);
       }
     } catch (err) {
