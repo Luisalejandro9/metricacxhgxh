@@ -60,6 +60,26 @@ function App() {
     }
   };
 
+  // --- Check if Supabase DNS is Reachable ---
+  const checkSupabaseConnection = async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      // We try to fetch the Supabase URL. Even with no-cors, if it resolves, the DNS block is lifted!
+      await fetch(import.meta.env.VITE_SUPABASE_URL, { 
+        method: 'GET', 
+        mode: 'no-cors',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -102,6 +122,40 @@ function App() {
     };
   }, []);
 
+  // --- Background Connection Recovery Loop ---
+  useEffect(() => {
+    let intervalId = null;
+
+    if (networkError && !user) {
+      console.log('DNS/Network block active. Starting background connection recovery check...');
+      intervalId = setInterval(async () => {
+        const isReachable = await checkSupabaseConnection();
+        if (isReachable) {
+          console.log('Supabase connection restored! Re-checking session...');
+          clearInterval(intervalId);
+          setNetworkError(false);
+          setLoading(true);
+          
+          try {
+            const { data, error } = await supabase.auth.getSession();
+            if (!error && data?.session) {
+              setUser(data.session.user);
+              await syncProfile(data.session.user.id);
+            }
+          } catch (err) {
+            console.error('Session retry failed:', err);
+          } finally {
+            setLoading(false);
+          }
+        }
+      }, 4000); // Check every 4 seconds
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [networkError, user]);
+
   // --- Force Logout on Disabled/Deleted Profile ---
   useEffect(() => {
     if (user && profile !== undefined) {
@@ -137,9 +191,126 @@ function App() {
 
   const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (loading) return (
-    <div className="loading" style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',fontSize:24, background:'#f5f5f7'}}>
-      Cargando sesión...
+  // Render standby / DNS blocked recovery screen
+  if (networkError && !user) return (
+    <div className="login-overlay active" style={{ background: 'radial-gradient(circle at center, #181111 0%, #080505 100%)' }}>
+      <div className="login-bg">
+        <div className="bg-shape bg-shape-1" style={{ background: 'var(--accent-error)' }}></div>
+        <div className="bg-shape bg-shape-2" style={{ background: 'var(--accent-warning)' }}></div>
+      </div>
+      <div className="login-card" style={{ maxWidth: '480px', border: '1px solid rgba(239, 68, 68, 0.15)', boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.1)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+          
+          <div style={{ position: 'relative', width: 'fit-content' }}>
+            <div className="pulse-circle" style={{ 
+              position: 'absolute', 
+              inset: '-12px', 
+              background: 'rgba(245, 158, 11, 0.15)', 
+              borderRadius: '50%', 
+              animation: 'ping-warning 2.5s infinite' 
+            }}></div>
+            <div style={{ 
+              width: '64px', 
+              height: '64px', 
+              borderRadius: '50%', 
+              background: 'rgba(245, 158, 11, 0.1)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              border: '1px solid rgba(245, 158, 11, 0.2)',
+              color: 'var(--accent-warning)',
+              position: 'relative'
+            }}>
+              <RefreshCw size={28} className="spinning" />
+            </div>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '24px', color: 'var(--text-bright)', marginBottom: '10px' }}>Bloqueo Temporal de Red</h1>
+            <div style={{ 
+              fontSize: '11px', 
+              background: 'rgba(245, 158, 11, 0.1)', 
+              color: 'var(--accent-warning)', 
+              padding: '4px 12px', 
+              borderRadius: '20px', 
+              fontWeight: '800',
+              display: 'inline-block',
+              marginBottom: '15px',
+              border: '1px solid rgba(245, 158, 11, 0.2)'
+            }}>
+              DNS DE LA EMPRESA INACCESIBLE
+            </div>
+            <p style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 20px 0' }}>
+              Hemos detectado que la red o la DNS de la empresa está bloqueando la conexión con los servicios de datos momentáneamente.
+            </p>
+            <div style={{ 
+              background: 'rgba(255,255,255,0.02)', 
+              padding: '16px', 
+              borderRadius: '12px', 
+              border: '1px solid var(--border-light)',
+              textAlign: 'left',
+              fontSize: '13px',
+              color: 'var(--text-muted)'
+            }}>
+              <strong>💡 ¿Qué debes hacer?</strong>
+              <ul style={{ margin: '8px 0 0 16px', padding: 0, listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <li><strong>No cierres esta ventana.</strong> El sistema está reintentando conectar en segundo plano automáticamente.</li>
+                <li>Este bloqueo suele ser muy breve. En cuanto la red de la empresa se restablezca, <strong>ingresarás de forma automática.</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <button 
+            className="btn btn-primary" 
+            onClick={async () => {
+              setLoading(true);
+              const isReachable = await checkSupabaseConnection();
+              if (isReachable) {
+                setNetworkError(false);
+                try {
+                  const { data, error } = await supabase.auth.getSession();
+                  if (!error && data?.session) {
+                    setUser(data.session.user);
+                    await syncProfile(data.session.user.id);
+                  }
+                } catch (err) {
+                  console.error(err);
+                }
+              } else {
+                alert('La red de la empresa sigue bloqueada. Reintentando en segundo plano...');
+              }
+              setLoading(false);
+            }} 
+            style={{ width: '100%', background: 'var(--accent-warning)', boxShadow: '0 4px 14px rgba(245, 158, 11, 0.2)' }}
+          >
+            <RefreshCw size={16} /> Reintentar Conexión Ahora
+          </button>
+        </div>
+        <style>{`
+          @keyframes ping-warning {
+            0% { transform: scale(1); opacity: 1; }
+            70%, 100% { transform: scale(1.6); opacity: 0; }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+
+  // Render modern high-fidelity loading screen
+  if (loading && !networkError) return (
+    <div className="login-overlay active">
+      <div className="login-bg">
+        <div className="bg-shape bg-shape-1"></div>
+        <div className="bg-shape bg-shape-2"></div>
+        <div className="bg-shape bg-shape-3"></div>
+      </div>
+      <div className="login-card" style={{ maxWidth: '400px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div className="spinner" style={{ width: '50px', height: '50px', border: '4px solid rgba(99, 102, 241, 0.1)', borderTopColor: 'var(--primary-light)' }}></div>
+          <h2 style={{ fontSize: '20px', color: 'var(--text-bright)' }}>Sincronizando sesión...</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>Cargando tus credenciales y preparando tu espacio de trabajo.</p>
+        </div>
+      </div>
     </div>
   );
 
