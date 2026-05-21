@@ -515,7 +515,6 @@ function Dashboard({ user, profile, setNetworkError }) {
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 
     const payload = {
-      id: user.isDemo ? "demo-" + Date.now() : undefined,
       user_id: user.id,
       date: dateStr,
       total_time: formatTime(timerSeconds),
@@ -531,6 +530,7 @@ function Dashboard({ user, profile, setNetworkError }) {
     };
 
     if (user.isDemo) {
+      payload.id = "demo-" + Date.now();
       const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
       let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
       const existingIndex = demoList.findIndex(item => item.date === dateStr);
@@ -573,7 +573,6 @@ function Dashboard({ user, profile, setNetworkError }) {
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 
     const payload = {
-      id: user.isDemo ? "demo-" + Date.now() : undefined,
       user_id: user.id,
       date: dateStr,
       total_time: formatTime(timerSeconds),
@@ -589,6 +588,7 @@ function Dashboard({ user, profile, setNetworkError }) {
     };
 
     if (user.isDemo) {
+      payload.id = "demo-" + Date.now();
       const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
       let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
       const existingIndex = demoList.findIndex(item => item.date === dateStr);
