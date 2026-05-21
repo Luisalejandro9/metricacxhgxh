@@ -19,7 +19,9 @@ import {
   History,
   ExternalLink,
   X,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  LogOut
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -79,6 +81,50 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+    show: false,
+    targetUser: null
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [message, setMessage] = useState({ type: null, text: '' });
+
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: null, text: '' }), 4000);
+  };
+
+  const handleDeleteUserData = async (targetUser) => {
+    if (!targetUser) return;
+    setIsDeleting(true);
+    try {
+      // 1. Delete all records from daily_metrics
+      const { error: metricsError } = await supabase
+        .from('daily_metrics')
+        .delete()
+        .eq('user_id', targetUser.id);
+
+      if (metricsError) throw metricsError;
+
+      // 2. Delete the profile from profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', targetUser.id);
+
+      if (profileError) throw profileError;
+
+      showMessage('success', `Datos de ${targetUser.email} borrados e inicio denegado con éxito.`);
+      setDeleteConfirmModal({ show: false, targetUser: null });
+      setViewingUserDetails(null); // Close drill-down modal if open
+      await fetchData(true); // Refresh all data
+    } catch (error) {
+      console.error('Error deleting user data:', error.message);
+      showMessage('error', `Error al borrar datos: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -328,6 +374,15 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
   return (
     <div className="app-layout">
+      {/* MESSAGES */}
+      {message.text && (
+        <div className={`mensaje activo mensaje-${message.type}`} style={{ zIndex: 4000 }}>
+          {message.type === 'success' && <CheckCircle2 size={18} style={{ marginRight: 10, verticalAlign: 'middle' }} />}
+          {message.type === 'error' && <AlertCircle size={18} style={{ marginRight: 10, verticalAlign: 'middle' }} />}
+          {message.text}
+        </div>
+      )}
+
       {/* SIDEBAR */}
       <aside className="sidebar">
         <header className="sidebar-header">
@@ -378,7 +433,32 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                   }}
                 >
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
+                  {u.role !== 'admin' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmModal({ show: true, targetUser: u });
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'rgba(239, 68, 68, 0.6)',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
+                      title="Eliminar operador y cerrar sesión"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
               <div onClick={() => setSelectedUserEmail('all')} style={{
@@ -631,9 +711,95 @@ function AdminDashboard({ user, profile, setNetworkError }) {
               </table>
             </div>
 
-            <footer style={{ padding: '20px 32px', textAlign: 'right', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
+            <footer style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
+              {viewingUserDetails.role !== 'admin' ? (
+                <button 
+                  className="btn" 
+                  style={{ 
+                    backgroundColor: 'var(--accent-error)', 
+                    color: 'white', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    fontWeight: '600',
+                    padding: '8px 16px',
+                    borderRadius: '8px'
+                  }} 
+                  onClick={() => setDeleteConfirmModal({ show: true, targetUser: viewingUserDetails })}
+                >
+                  <Trash2 size={16} />
+                  <span>Eliminar y Cerrar Sesión</span>
+                </button>
+              ) : (
+                <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>CUENTA DE ADMINISTRADOR PROTEGIDA</div>
+              )}
               <button className="btn btn-primary" onClick={() => setViewingUserDetails(null)}>Cerrar Detalle</button>
             </footer>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE USER DATA AND LOGOUT CONFIRMATION DIALOG */}
+      {deleteConfirmModal.show && deleteConfirmModal.targetUser && (
+        <div className="login-overlay drilldown-modal" style={{ zIndex: 3000 }}>
+          <div className="modal" style={{ maxWidth: '450px', textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '16px', border: '1px solid var(--border-light)', padding: '30px' }}>
+            <div className="modal-header" style={{ justifyContent: 'center', marginBottom: '15px' }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 10px',
+                color: 'var(--accent-error)'
+              }}>
+                <AlertCircle size={32} />
+              </div>
+            </div>
+            <h2 style={{
+              fontSize: '22px',
+              marginBottom: '12px',
+              color: 'var(--text-bright)'
+            }}>
+              ¿Eliminar Operador e Historial?
+            </h2>
+            <p style={{
+              marginBottom: '20px',
+              fontSize: '14px',
+              color: 'var(--text-muted)',
+              lineHeight: '1.6'
+            }}>
+              Estás a punto de eliminar de forma permanente todo el historial de métricas y el perfil de <strong>{deleteConfirmModal.targetUser.email}</strong>.
+            </p>
+            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px', fontSize: '12px', color: 'var(--accent-error)', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+              <LogOut size={16} />
+              <span>Esto cerrará su sesión de forma remota e inmediata.</span>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteConfirmModal({ show: false, targetUser: null })} disabled={isDeleting}>
+                Cancelar
+              </button>
+              <button
+                className="btn"
+                style={{
+                  flex: 1,
+                  backgroundColor: 'var(--accent-error)',
+                  color: 'white',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+                onClick={() => handleDeleteUserData(deleteConfirmModal.targetUser)}
+                disabled={isDeleting}
+              >
+                <Trash2 size={16} />
+                {isDeleting ? 'Eliminando...' : 'Eliminar y Cerrar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

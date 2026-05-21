@@ -77,6 +77,16 @@ function App() {
     };
   }, []);
 
+  // --- Force Logout on Disabled/Deleted Profile ---
+  useEffect(() => {
+    if (user && profile !== undefined) {
+      if (profile === null || profile.is_enabled === false) {
+        console.warn('Perfil deshabilitado o eliminado. Forzando cierre de sesión...');
+        supabase.auth.signOut();
+      }
+    }
+  }, [user, profile]);
+
   // --- Authentication Handler ---
   // Triggers the Google OAuth flow and handles specific network/auth errors
   const handleGoogleLogin = async () => {
