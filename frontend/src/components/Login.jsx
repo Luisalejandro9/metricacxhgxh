@@ -1,6 +1,7 @@
 import React from 'react';
+import { ShieldCheck } from 'lucide-react';
 
-function Login({ handleGoogleLogin, envsMissing, authError, setNetworkError }) {
+function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError }) {
   if (envsMissing) {
     return (
       <div className="login-overlay active">
@@ -41,9 +42,48 @@ function Login({ handleGoogleLogin, envsMissing, authError, setNetworkError }) {
           <img src="https://www.google.com/favicon.ico" alt="Google" />
           Logear con Google
         </button>
+
+        {/* --- Spectator Login Divider & Button --- */}
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px 0', width: '100%' }}>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }}></div>
+          <span style={{ padding: '0 12px', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>o prueba el sistema</span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }}></div>
+        </div>
+
+        <button 
+          className="btn-google" 
+          onClick={handleSpectatorLogin}
+          style={{
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12))',
+            color: 'var(--text-bright)',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.05)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(168, 85, 247, 0.22))';
+            e.currentTarget.style.border = '1px solid rgba(139, 92, 246, 0.45)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.15)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12))';
+            e.currentTarget.style.border = '1px solid rgba(139, 92, 246, 0.25)';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.05)';
+          }}
+        >
+          <ShieldCheck size={18} style={{ color: 'var(--primary-light)' }} />
+          Ingresar como Espectador (Demo)
+        </button>
       </div>
     </div>
   );
 }
 
 export default Login;
+

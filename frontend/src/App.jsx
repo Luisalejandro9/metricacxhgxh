@@ -7,6 +7,18 @@ import AdminDashboard from './components/AdminDashboard';
 import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import './App.css';
 
+// --- Email Domain Restriction Helper ---
+// Restricts authentications to @konecta.com and approved administrators
+const isEmailAllowed = (email) => {
+  if (!email) return false;
+  const emailLower = email.toLowerCase();
+  return (
+    emailLower.endsWith('@konecta.com') ||
+    emailLower === 'lacosta.develop@gmail.com' ||
+    emailLower === 'lacosta151999@gmail.com'
+  );
+};
+
 function App() {
   // --- Global State ---
   const [user, setUser] = useState(null); // Current authenticated user
@@ -85,12 +97,34 @@ function App() {
 
     const checkSession = async () => {
       try {
+        // --- 1. Check if there is an active local Demo Session ---
+        const demoSessionStr = sessionStorage.getItem('demo_session');
+        if (demoSessionStr) {
+          const demoSession = JSON.parse(demoSessionStr);
+          if (mounted) {
+            setUser(demoSession.user);
+            setProfile(demoSession.profile);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // --- 2. Standard Supabase Session Check ---
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
         if (mounted && data?.session) {
-          setUser(data.session.user);
-          await syncProfile(data.session.user.id);
+          const email = data.session.user.email;
+          if (isEmailAllowed(email)) {
+            setUser(data.session.user);
+            await syncProfile(data.session.user.id);
+          } else {
+            console.warn('Acceso denegado: Email no corporativo ni admin autorizado.');
+            setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+          }
         }
       } catch (err) {
         console.error('Session check failed:', err);
@@ -104,11 +138,29 @@ function App() {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
+        // Keep demo sessions active even if Supabase triggers onAuthStateChange (e.g. on background syncs)
+        const demoSessionStr = sessionStorage.getItem('demo_session');
+        if (demoSessionStr) {
+          const demoSession = JSON.parse(demoSessionStr);
+          setUser(demoSession.user);
+          setProfile(demoSession.profile);
+          return;
+        }
+
         if (session) {
-          setUser(session.user);
-          syncProfile(session.user.id);
+          const email = session.user.email;
+          if (isEmailAllowed(email)) {
+            setUser(session.user);
+            await syncProfile(session.user.id);
+          } else {
+            console.warn('Acceso denegado en cambio de estado: Email no corporativo.');
+            setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+          }
         } else {
           setUser(null);
           setProfile(null);
@@ -159,6 +211,7 @@ function App() {
   // --- Force Logout on Disabled/Deleted Profile ---
   useEffect(() => {
     if (user && profile !== undefined) {
+      if (user.isDemo) return; // Skip forced logout checks for local demo sessions
       if (profile === null || profile.is_enabled === false) {
         console.warn('Perfil deshabilitado o eliminado. Forzando cierre de sesión...');
         supabase.auth.signOut();
@@ -187,6 +240,30 @@ function App() {
       }
       setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');
     }
+  };
+
+  // --- Spectator Demo Authentication Handler ---
+  // Sets up simulated spectator credentials in sessionStorage
+  const handleSpectatorLogin = () => {
+    const demoUser = {
+      id: 'demo-spectator-id',
+      email: 'espectador@demo.local',
+      isDemo: true
+    };
+    const demoProfile = {
+      id: 'demo-spectator-id',
+      email: 'espectador@demo.local',
+      role: 'operator',
+      is_enabled: true
+    };
+    
+    // Save to sessionStorage so it persists page reloads
+    sessionStorage.setItem('demo_session', JSON.stringify({ user: demoUser, profile: demoProfile }));
+    
+    setUser(demoUser);
+    setProfile(demoProfile);
+    setAuthError(null);
+    setNetworkError(false);
   };
 
   const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -365,7 +442,7 @@ function App() {
         <Route 
           path="/" 
           element={
-            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} envsMissing={envsMissing} authError={authError} setNetworkError={setNetworkError} />
+            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} handleSpectatorLogin={handleSpectatorLogin} envsMissing={envsMissing} authError={authError} setNetworkError={setNetworkError} />
           } 
         />
 

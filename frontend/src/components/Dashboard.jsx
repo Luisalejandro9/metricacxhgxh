@@ -161,6 +161,11 @@ function Dashboard({ user, profile, setNetworkError }) {
 
   // --- Auth Handlers ---
   const handleLogout = async () => {
+    if (user?.isDemo) {
+      sessionStorage.removeItem('demo_session');
+      window.location.reload();
+      return;
+    }
     await supabase.auth.signOut();
   };
 
@@ -168,6 +173,14 @@ function Dashboard({ user, profile, setNetworkError }) {
   const fetchHistory = async () => {
     if (!user) return;
     setIsLoadingHistory(true);
+
+    if (user.isDemo) {
+      const demoData = localStorage.getItem(`demo_metrics_${user.id}`);
+      setHistory(demoData ? JSON.parse(demoData) : []);
+      setIsLoadingHistory(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('daily_metrics')
       .select('*')
@@ -502,6 +515,7 @@ function Dashboard({ user, profile, setNetworkError }) {
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 
     const payload = {
+      id: user.isDemo ? "demo-" + Date.now() : undefined,
       user_id: user.id,
       date: dateStr,
       total_time: formatTime(timerSeconds),
@@ -515,6 +529,27 @@ function Dashboard({ user, profile, setNetworkError }) {
       technicians_sent: techniciansCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
+
+    if (user.isDemo) {
+      const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
+      let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
+      const existingIndex = demoList.findIndex(item => item.date === dateStr);
+      if (existingIndex !== -1) {
+        payload.id = demoList[existingIndex].id;
+        demoList[existingIndex] = payload;
+      } else {
+        demoList.unshift(payload);
+      }
+      localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+      
+      setTimeout(() => {
+        showMessage('success', '¡Métricas de espectador guardadas localmente!');
+        setLastSavedAt(new Date());
+        setHistory(demoList);
+        setIsSaving(false);
+      }, 500);
+      return;
+    }
 
     const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
 
@@ -538,6 +573,7 @@ function Dashboard({ user, profile, setNetworkError }) {
     const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 
     const payload = {
+      id: user.isDemo ? "demo-" + Date.now() : undefined,
       user_id: user.id,
       date: dateStr,
       total_time: formatTime(timerSeconds),
@@ -551,6 +587,23 @@ function Dashboard({ user, profile, setNetworkError }) {
       technicians_sent: techniciansCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
+
+    if (user.isDemo) {
+      const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
+      let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
+      const existingIndex = demoList.findIndex(item => item.date === dateStr);
+      if (existingIndex !== -1) {
+        payload.id = demoList[existingIndex].id;
+        demoList[existingIndex] = payload;
+      } else {
+        demoList.unshift(payload);
+      }
+      localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+      setLastSavedAt(new Date());
+      setHistory(demoList);
+      setIsAutoSaving(false);
+      return;
+    }
 
     const { error } = await supabase.from('daily_metrics').upsert([payload], { onConflict: 'user_id,date' });
 
@@ -575,6 +628,17 @@ function Dashboard({ user, profile, setNetworkError }) {
       '¿Eliminar Registro?',
       '¿Seguro deseas borrar este registro? No podrás recuperarlo...',
       async () => {
+        if (user.isDemo) {
+          const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
+          let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
+          demoList = demoList.filter(item => item.id !== id);
+          localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+          
+          showMessage('success', 'Registro demo eliminado correctamente.');
+          setHistory(demoList);
+          return;
+        }
+
         const { error } = await supabase.from('daily_metrics').delete().eq('id', id);
         if (error) {
           handleSupabaseError(error, 'Error al eliminar');
@@ -617,6 +681,8 @@ function Dashboard({ user, profile, setNetworkError }) {
     const tmoManaged = recordEditData.managed > 0 ? Math.floor(totalSeconds / recordEditData.managed) : 0;
 
     const payload = {
+      id: editingRecord.id,
+      user_id: user.id,
       date: recordEditData.date,
       total_time: formatTime(totalSeconds),
       cases_closed: recordEditData.closed,
@@ -629,6 +695,19 @@ function Dashboard({ user, profile, setNetworkError }) {
       technicians_sent: recordEditData.technicians,
       resolution_rate: parseFloat(resolutionRate.toFixed(1))
     };
+
+    if (user.isDemo) {
+      const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
+      let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
+      demoList = demoList.map(item => item.id === editingRecord.id ? payload : item);
+      localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+      
+      showMessage('success', 'Registro demo actualizado correctamente.');
+      setShowEditRecordModal(false);
+      setHistory(demoList);
+      setIsSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from('daily_metrics')
