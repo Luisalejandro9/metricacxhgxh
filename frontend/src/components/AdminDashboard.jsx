@@ -98,36 +98,20 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     if (!targetUser) return;
     setIsDeleting(true);
     try {
-      // 1. Delete all records from daily_metrics
-      const { data: metricsDeleted, error: metricsError } = await supabase
-        .from('daily_metrics')
-        .delete()
-        .eq('user_id', targetUser.id)
-        .select();
+      // Invocar la función RPC en Supabase que borra las métricas y las sesiones en una transacción segura
+      const { data, error } = await supabase.rpc('clear_user_data_and_sessions', {
+        target_user_id: targetUser.id
+      });
 
-      if (metricsError) throw metricsError;
+      if (error) throw error;
 
-      // 2. Delete the profile from profiles
-      const { data: profileDeleted, error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', targetUser.id)
-        .select();
-
-      if (profileError) throw profileError;
-
-      // Check if deletion actually took place (if RLS blocked it, profileDeleted is empty and rows affected is 0)
-      if (!profileDeleted || profileDeleted.length === 0) {
-        throw new Error('Permiso denegado por políticas RLS en Supabase. Asegúrate de ejecutar el script SQL de políticas de administrador.');
-      }
-
-      showMessage('success', `Datos de ${targetUser.email} borrados e inicio denegado con éxito.`);
+      showMessage('success', `Datos de ${targetUser.email} limpiados y sesión cerrada de forma remota.`);
       setDeleteConfirmModal({ show: false, targetUser: null });
       setViewingUserDetails(null); // Close drill-down modal if open
       await fetchData(true); // Refresh all data
     } catch (error) {
-      console.error('Error deleting user data:', error.message);
-      showMessage('error', `Error al borrar datos: ${error.message}`);
+      console.error('Error resetting user data:', error.message);
+      showMessage('error', `Error al limpiar datos: ${error.message}`);
     } finally {
       setIsDeleting(false);
     }
@@ -461,7 +445,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       }}
                       onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
                       onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
-                      title="Eliminar operador y cerrar sesión"
+                      title="Limpiar datos e historial y cerrar sesión"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -735,7 +719,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                   onClick={() => setDeleteConfirmModal({ show: true, targetUser: viewingUserDetails })}
                 >
                   <Trash2 size={16} />
-                  <span>Eliminar y Cerrar Sesión</span>
+                  <span>Limpiar Datos y Cerrar Sesión</span>
                 </button>
               ) : (
                 <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>CUENTA DE ADMINISTRADOR PROTEGIDA</div>
@@ -770,7 +754,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
               marginBottom: '12px',
               color: 'var(--text-bright)'
             }}>
-              ¿Eliminar Operador e Historial?
+              ¿Limpiar Métricas y Cerrar Sesión?
             </h2>
             <p style={{
               marginBottom: '20px',
@@ -778,11 +762,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
               color: 'var(--text-muted)',
               lineHeight: '1.6'
             }}>
-              Estás a punto de eliminar de forma permanente todo el historial de métricas y el perfil de <strong>{deleteConfirmModal.targetUser.email}</strong>.
+              Estás a punto de eliminar de forma permanente todo el historial de métricas de <strong>{deleteConfirmModal.targetUser.email}</strong>. Su cuenta de acceso seguirá activa para que pueda ingresar en el futuro.
             </p>
             <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px', fontSize: '12px', color: 'var(--accent-error)', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
               <LogOut size={16} />
-              <span>Esto cerrará su sesión de forma remota e inmediata.</span>
+              <span>Esto cerrará su sesión de forma remota en todos sus dispositivos.</span>
             </div>
             <div className="modal-footer" style={{ display: 'flex', gap: '12px' }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteConfirmModal({ show: false, targetUser: null })} disabled={isDeleting}>
@@ -804,7 +788,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                 disabled={isDeleting}
               >
                 <Trash2 size={16} />
-                {isDeleting ? 'Eliminando...' : 'Eliminar y Cerrar'}
+                {isDeleting ? 'Limpiando...' : 'Limpiar y Cerrar'}
               </button>
             </div>
           </div>
