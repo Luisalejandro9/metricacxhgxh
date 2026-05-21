@@ -99,20 +99,27 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     setIsDeleting(true);
     try {
       // 1. Delete all records from daily_metrics
-      const { error: metricsError } = await supabase
+      const { data: metricsDeleted, error: metricsError } = await supabase
         .from('daily_metrics')
         .delete()
-        .eq('user_id', targetUser.id);
+        .eq('user_id', targetUser.id)
+        .select();
 
       if (metricsError) throw metricsError;
 
       // 2. Delete the profile from profiles
-      const { error: profileError } = await supabase
+      const { data: profileDeleted, error: profileError } = await supabase
         .from('profiles')
         .delete()
-        .eq('id', targetUser.id);
+        .eq('id', targetUser.id)
+        .select();
 
       if (profileError) throw profileError;
+
+      // Check if deletion actually took place (if RLS blocked it, profileDeleted is empty and rows affected is 0)
+      if (!profileDeleted || profileDeleted.length === 0) {
+        throw new Error('Permiso denegado por políticas RLS en Supabase. Asegúrate de ejecutar el script SQL de políticas de administrador.');
+      }
 
       showMessage('success', `Datos de ${targetUser.email} borrados e inicio denegado con éxito.`);
       setDeleteConfirmModal({ show: false, targetUser: null });
