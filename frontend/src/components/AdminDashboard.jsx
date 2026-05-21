@@ -110,8 +110,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       setViewingUserDetails(null); // Close drill-down modal if open
       await fetchData(true); // Refresh all data
     } catch (error) {
-      console.error('Error resetting user data:', error.message);
-      showMessage('error', `Error al limpiar datos: ${error.message}`);
+      console.error('Error resetting user data:', error);
+      const detailStr = error.details ? ` | Detalles: ${error.details}` : '';
+      const hintStr = error.hint ? ` | Sugerencia: ${error.hint}` : '';
+      const codeStr = error.code ? ` (Código: ${error.code})` : '';
+      showMessage('error', `Error al limpiar datos: ${error.message || error}${detailStr}${hintStr}${codeStr}`);
     } finally {
       setIsDeleting(false);
     }
