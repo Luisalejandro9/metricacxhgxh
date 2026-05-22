@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import Login from './components/Login';
@@ -26,6 +26,19 @@ function App() {
   const [loading, setLoading] = useState(true); // Loading state for initial session check
   const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
   const [authError, setAuthError] = useState(null); // Standard auth failures
+
+  // Refs to avoid stale closures and redundant renders in auth listeners
+  const userRef = useRef(user);
+  const profileRef = useRef(profile);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
   // --- Profile Sync ---
   const syncProfile = async (userId) => {
     if (!userId) { setProfile(null); return; }
@@ -139,6 +152,12 @@ function App() {
           }
         }
 
+        // Avoid duplicate check if already handled by onAuthStateChange
+        if (userRef.current) {
+          if (mounted) setLoading(false);
+          return;
+        }
+
         // --- 2. Standard Supabase Session Check ---
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
@@ -146,8 +165,13 @@ function App() {
         if (mounted && data?.session) {
           const email = data.session.user.email;
           if (isEmailAllowed(email)) {
-            setUser(data.session.user);
-            await syncProfile(data.session.user.id);
+            // Guard with ref checks
+            if (!userRef.current) {
+              setUser(data.session.user);
+            }
+            if (profileRef.current === undefined) {
+              await syncProfile(data.session.user.id);
+            }
           } else {
             console.warn('Acceso denegado: Email no corporativo ni admin autorizado.');
             setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
@@ -182,8 +206,14 @@ function App() {
         if (session) {
           const email = session.user.email;
           if (isEmailAllowed(email)) {
-            setUser(session.user);
-            await syncProfile(session.user.id);
+            // Only set user if the user object changed/is empty
+            if (!userRef.current || userRef.current.id !== session.user.id || userRef.current.email !== session.user.email) {
+              setUser(session.user);
+            }
+            // Only sync profile if it's not already loaded for this user
+            if (profileRef.current === undefined || profileRef.current === null || profileRef.current.id !== session.user.id) {
+              await syncProfile(session.user.id);
+            }
           } else {
             console.warn('Acceso denegado en cambio de estado: Email no corporativo.');
             setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
@@ -192,6 +222,13 @@ function App() {
             setProfile(null);
           }
         } else {
+          // If there was no active user anyway, just clear and return
+          if (!userRef.current) {
+            setUser(null);
+            setProfile(null);
+            return;
+          }
+
           // If the event is explicitly SIGNED_OUT, then clear session
           if (event === 'SIGNED_OUT') {
             setUser(null);
