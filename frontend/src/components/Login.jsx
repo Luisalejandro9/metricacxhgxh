@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, RefreshCw } from 'lucide-react';
 
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError }) {
   if (envsMissing) {
@@ -32,16 +32,98 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
         <p>Control diario.</p>
  
         {/* Displays connection or credential errors during login */}
-        {authError && (
+        {authError && authError !== 'bloqueo_dns' && (
           <div className="auth-error-notice" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '13px' }}>
             {authError}
           </div>
         )}
  
-        <button className="btn-google" onClick={handleGoogleLogin}>
-          <img src="https://www.google.com/favicon.ico" alt="Google" />
-          Logear con Google
-        </button>
+        {authError === 'bloqueo_dns' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', marginBottom: '10px' }}>
+            <div className="dns-block-alert" style={{
+              background: 'rgba(245, 158, 11, 0.08)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center',
+              boxShadow: '0 8px 32px 0 rgba(245, 158, 11, 0.08)',
+              backdropFilter: 'blur(4px)',
+            }}>
+              <div style={{ 
+                color: 'var(--accent-warning)', 
+                fontSize: '13px', 
+                fontWeight: '800', 
+                marginBottom: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                <span className="pulse-dot" style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-warning)',
+                  boxShadow: '0 0 10px var(--accent-warning)',
+                  animation: 'dns-pulse 1.5s infinite'
+                }}></span>
+                Bloqueo DNS Detectado
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-bright)', lineHeight: '1.5', fontWeight: '500' }}>
+                bloqueo DNS activo volve a intentar ne unos minutos
+              </p>
+            </div>
+            
+            <button 
+              className="btn-google" 
+              onClick={handleGoogleLogin} 
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-warning) 0%, #d97706 100%)',
+                color: 'var(--background-card)',
+                border: 'none',
+                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.filter = 'brightness(1.1)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.filter = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <RefreshCw size={18} className="spinning-slow" />
+              Re-logeo
+            </button>
+            
+            <style>{`
+              @keyframes dns-pulse {
+                0% { transform: scale(0.95); opacity: 0.5; }
+                50% { transform: scale(1.05); opacity: 1; }
+                100% { transform: scale(0.95); opacity: 0.5; }
+              }
+              .spinning-slow {
+                animation: spin 3s linear infinite;
+              }
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : (
+          <button className="btn-google" onClick={handleGoogleLogin}>
+            <img src="https://www.google.com/favicon.ico" alt="Google" />
+            Logear con Google
+          </button>
+        )}
 
         {/* --- Spectator Login Divider & Button --- */}
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px 0', width: '100%' }}>

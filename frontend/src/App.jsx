@@ -38,7 +38,23 @@ function App() {
       
       if (!result.error && result.data) {
         setProfile(result.data);
+        setNetworkError(false);
       } else {
+        const error = result.error;
+        console.warn('Profile sync warning or error:', error);
+        
+        // If it's a network/fetch error or timeout, do NOT set profile to null
+        const isNetworkErr = error?.message?.toLowerCase().includes('fetch') || 
+                             error?.message?.toLowerCase().includes('network') ||
+                             error?.message?.toLowerCase().includes('timeout') ||
+                             error?.status === 0;
+        
+        if (isNetworkErr) {
+          setNetworkError(true);
+          console.warn('Network error during profile sync. Retaining existing profile state.');
+          return;
+        }
+
         // PROFILE IS MISSING - Check if there is an active session to auto-create
         console.warn('Perfil no encontrado, intentando auto-crear perfil por defecto...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -59,16 +75,30 @@ function App() {
           if (!createError && newProfile) {
             console.log('Perfil auto-creado con éxito:', newProfile);
             setProfile(newProfile);
+            setNetworkError(false);
             return;
           } else {
             console.error('Error al auto-crear perfil:', createError);
+            const isCreateNetworkErr = createError?.message?.toLowerCase().includes('fetch') ||
+                                       createError?.message?.toLowerCase().includes('timeout');
+            if (isCreateNetworkErr) {
+              setNetworkError(true);
+              return;
+            }
           }
         }
         setProfile(null);
       }
     } catch (err) {
       console.error('Profile sync error:', err);
-      setProfile(null);
+      const isNetworkErr = err.message?.toLowerCase().includes('fetch') || 
+                           err.message?.toLowerCase().includes('timeout') || 
+                           err.message?.toLowerCase().includes('network');
+      if (isNetworkErr) {
+        setNetworkError(true);
+      } else {
+        setProfile(null);
+      }
     }
   };
 
@@ -162,8 +192,21 @@ function App() {
             setProfile(null);
           }
         } else {
-          setUser(null);
-          setProfile(null);
+          // If the event is explicitly SIGNED_OUT, then clear session
+          if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setProfile(null);
+          } else {
+            // Check if connection is active before clearing the user/session
+            const isReachable = await checkSupabaseConnection();
+            if (!isReachable) {
+              console.warn('onAuthStateChange: Supabase is unreachable. Retaining current session.');
+              setNetworkError(true);
+              return;
+            }
+            setUser(null);
+            setProfile(null);
+          }
         }
       }
     });
@@ -225,6 +268,15 @@ function App() {
     try {
       setAuthError(null);
       setNetworkError(false);
+      
+      // Check if Supabase is reachable before trying to redirect to auth
+      const isReachable = await checkSupabaseConnection();
+      if (!isReachable) {
+        console.warn('Conexión con Supabase fallida antes del redireccionamiento OAuth.');
+        setAuthError('bloqueo_dns');
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
@@ -235,10 +287,11 @@ function App() {
     } catch (err) {
       console.error('Error al iniciar sesión:', err.message);
       // If Supabase is blocked during login, show the network banner
-      if (err.message.toLowerCase().includes('fetch')) {
-        setNetworkError(true);
+      if (err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network')) {
+        setAuthError('bloqueo_dns');
+      } else {
+        setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');
       }
-      setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');
     }
   };
 
@@ -268,110 +321,7 @@ function App() {
 
   const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // Render standby / DNS blocked recovery screen
-  if (networkError && !user) return (
-    <div className="login-overlay active" style={{ background: 'radial-gradient(circle at center, #181111 0%, #080505 100%)' }}>
-      <div className="login-bg">
-        <div className="bg-shape bg-shape-1" style={{ background: 'var(--accent-error)' }}></div>
-        <div className="bg-shape bg-shape-2" style={{ background: 'var(--accent-warning)' }}></div>
-      </div>
-      <div className="login-card" style={{ maxWidth: '480px', border: '1px solid rgba(239, 68, 68, 0.15)', boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.1)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-          
-          <div style={{ position: 'relative', width: 'fit-content' }}>
-            <div className="pulse-circle" style={{ 
-              position: 'absolute', 
-              inset: '-12px', 
-              background: 'rgba(245, 158, 11, 0.15)', 
-              borderRadius: '50%', 
-              animation: 'ping-warning 2.5s infinite' 
-            }}></div>
-            <div style={{ 
-              width: '64px', 
-              height: '64px', 
-              borderRadius: '50%', 
-              background: 'rgba(245, 158, 11, 0.1)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
-              color: 'var(--accent-warning)',
-              position: 'relative'
-            }}>
-              <RefreshCw size={28} className="spinning" />
-            </div>
-          </div>
-
-          <div>
-            <h1 style={{ fontSize: '24px', color: 'var(--text-bright)', marginBottom: '10px' }}>Bloqueo Temporal de Red</h1>
-            <div style={{ 
-              fontSize: '11px', 
-              background: 'rgba(245, 158, 11, 0.1)', 
-              color: 'var(--accent-warning)', 
-              padding: '4px 12px', 
-              borderRadius: '20px', 
-              fontWeight: '800',
-              display: 'inline-block',
-              marginBottom: '15px',
-              border: '1px solid rgba(245, 158, 11, 0.2)'
-            }}>
-              DNS DE LA EMPRESA INACCESIBLE
-            </div>
-            <p style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 20px 0' }}>
-              Hemos detectado que la red o la DNS de la empresa está bloqueando la conexión con los servicios de datos momentáneamente.
-            </p>
-            <div style={{ 
-              background: 'rgba(255,255,255,0.02)', 
-              padding: '16px', 
-              borderRadius: '12px', 
-              border: '1px solid var(--border-light)',
-              textAlign: 'left',
-              fontSize: '13px',
-              color: 'var(--text-muted)'
-            }}>
-              <strong>💡 ¿Qué debes hacer?</strong>
-              <ul style={{ margin: '8px 0 0 16px', padding: 0, listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <li><strong>No cierres esta ventana.</strong> El sistema está reintentando conectar en segundo plano automáticamente.</li>
-                <li>Este bloqueo suele ser muy breve. En cuanto la red de la empresa se restablezca, <strong>ingresarás de forma automática.</strong></li>
-              </ul>
-            </div>
-          </div>
-
-          <button 
-            className="btn btn-primary" 
-            onClick={async () => {
-              setLoading(true);
-              const isReachable = await checkSupabaseConnection();
-              if (isReachable) {
-                setNetworkError(false);
-                try {
-                  const { data, error } = await supabase.auth.getSession();
-                  if (!error && data?.session) {
-                    setUser(data.session.user);
-                    await syncProfile(data.session.user.id);
-                  }
-                } catch (err) {
-                  console.error(err);
-                }
-              } else {
-                alert('La red de la empresa sigue bloqueada. Reintentando en segundo plano...');
-              }
-              setLoading(false);
-            }} 
-            style={{ width: '100%', background: 'var(--accent-warning)', boxShadow: '0 4px 14px rgba(245, 158, 11, 0.2)' }}
-          >
-            <RefreshCw size={16} /> Reintentar Conexión Ahora
-          </button>
-        </div>
-        <style>{`
-          @keyframes ping-warning {
-            0% { transform: scale(1); opacity: 1; }
-            70%, 100% { transform: scale(1.6); opacity: 0; }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
+  // Removed standby / DNS blocked full-screen recovery screen to allow normal rendering of Login screen with custom alerts
 
   // Render modern high-fidelity loading screen
   if (loading && !networkError) return (
