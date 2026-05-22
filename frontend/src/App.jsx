@@ -234,15 +234,16 @@ function App() {
             setUser(null);
             setProfile(null);
           } else {
-            // Check if connection is active before clearing the user/session
+            // If the event is not SIGNED_OUT, it's a transient check (like token refresh or tab focus).
+            // Do NOT clear the user or profile here to prevent unmounting the dashboard and slow reloads.
+            // Instead, do a quick connection check to update the network error status.
             const isReachable = await checkSupabaseConnection();
             if (!isReachable) {
-              console.warn('onAuthStateChange: Supabase is unreachable. Retaining current session.');
+              console.warn('onAuthStateChange: Supabase is unreachable during transient state.');
               setNetworkError(true);
-              return;
+            } else {
+              setNetworkError(false);
             }
-            setUser(null);
-            setProfile(null);
           }
         }
       }
