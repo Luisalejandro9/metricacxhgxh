@@ -319,9 +319,9 @@ function Dashboard({ user, profile, setNetworkError }) {
       const totalHours = runningSeconds / 3600;
 
       // Compute accumulated metrics first
-      const accumCloseRate = runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(1) : "0.0";
-      const accumResoRate = runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(1) : "0.0";
-      const accumGxH = totalHours > 0 ? (runningManaged / totalHours).toFixed(1) : "0.0";
+      const accumCloseRate = runningManaged > 0 ? ((runningClosed / runningManaged) * 100).toFixed(2) : "0.00";
+      const accumResoRate = runningManaged > 0 ? (((runningManaged - runningTechnicians) / runningManaged) * 100).toFixed(2) : "0.00";
+      const accumGxH = totalHours > 0 ? (runningManaged / totalHours).toFixed(2) : "0.00";
 
       // Bono del periodo acumulado hasta este día (usa acumulados, NO valores del día)
       const accumBonus = calculateRecordBonus(accumGxH, accumResoRate);
@@ -347,7 +347,7 @@ function Dashboard({ user, profile, setNetworkError }) {
         accumBonus, // bono según acumulados hasta este día
         closingDiff,
         accumClosingDiff,
-        accumGxhDiff: accumGxhDiff.toFixed(1),
+        accumGxhDiff: accumGxhDiff.toFixed(2),
         accumResoDiff,
         accumTmoManaged
       };
@@ -499,14 +499,14 @@ function Dashboard({ user, profile, setNetworkError }) {
     const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
 
     return {
-      closeRate: closeRate.toFixed(1),
-      resolutionRate: resolutionRate.toFixed(1),
-      managedPerHour: managedPerHour.toFixed(1),
-      closedPerHour: closedPerHour.toFixed(1),
+      closeRate: closeRate.toFixed(2),
+      resolutionRate: resolutionRate.toFixed(2),
+      managedPerHour: managedPerHour.toFixed(2),
+      closedPerHour: closedPerHour.toFixed(2),
       tmoCase,
       tmoManaged,
       closingBalance,
-      gxhDiff: gxhDiff.toFixed(1),
+      gxhDiff: gxhDiff.toFixed(2),
       resoDiff
     };
   }, [closedCount, managedCount, techniciansCount, timerSeconds]);
@@ -533,7 +533,7 @@ function Dashboard({ user, profile, setNetworkError }) {
         },
         {
           label: 'TMO Gest. (min)',
-          data: sorted.map(d => parseFloat((d.tmo_managed / 60).toFixed(1))),
+          data: sorted.map(d => parseFloat((d.tmo_managed / 60).toFixed(2))),
           borderColor: 'rgba(16, 185, 129, 1)',
           backgroundColor: 'rgba(16, 185, 129, 0.2)',
           yAxisID: 'y1',
@@ -786,13 +786,13 @@ function Dashboard({ user, profile, setNetworkError }) {
       total_time: formatTime(totalSeconds),
       cases_closed: recordEditData.closed,
       cases_managed: recordEditData.managed,
-      efficiency: parseFloat(closeRate.toFixed(1)),
-      cases_per_hour: parseFloat(managedPerHour.toFixed(1)),
-      avg_closed_per_hour: parseFloat(closedPerHour.toFixed(1)),
+      efficiency: parseFloat(closeRate.toFixed(2)),
+      cases_per_hour: parseFloat(managedPerHour.toFixed(2)),
+      avg_closed_per_hour: parseFloat(closedPerHour.toFixed(2)),
       tmo_case: tmoCase,
       tmo_managed: tmoManaged,
       technicians_sent: recordEditData.technicians,
-      resolution_rate: parseFloat(resolutionRate.toFixed(1))
+      resolution_rate: parseFloat(resolutionRate.toFixed(2))
     };
 
     if (user.isDemo) {
@@ -920,7 +920,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           </h3>
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: '32px', fontWeight: '900', color: accumulatedBonusTotal >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-              {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(1)}%
+              {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(2)}%
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Estimado en el Mes</div>
           </div>
@@ -937,7 +937,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                 color: getGxHBonus(stats.managedPerHour) > 0 ? 'var(--accent-success)' :
                   getGxHBonus(stats.managedPerHour) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
               }}>
-                {getGxHBonus(stats.managedPerHour) > 0 ? '+' : ''}{getGxHBonus(stats.managedPerHour).toFixed(1)}%
+                {getGxHBonus(stats.managedPerHour) > 0 ? '+' : ''}{getGxHBonus(stats.managedPerHour).toFixed(2)}%
               </span>
             </div>
           </div>
@@ -950,7 +950,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                 color: getResolucionBonus(stats.resolutionRate) > 0 ? 'var(--accent-success)' :
                   getResolucionBonus(stats.resolutionRate) < 0 ? 'var(--accent-error)' : 'var(--text-dim)'
               }}>
-                {getResolucionBonus(stats.resolutionRate) > 0 ? '+' : ''}{getResolucionBonus(stats.resolutionRate).toFixed(1)}%
+                {getResolucionBonus(stats.resolutionRate) > 0 ? '+' : ''}{getResolucionBonus(stats.resolutionRate).toFixed(2)}%
               </span>
             </div>
           </div>
@@ -977,7 +977,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: '700' }}>TOTAL HOY:</span>
             <span style={{ fontSize: '16px', fontWeight: '900', color: calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-              {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate).toFixed(1)}%
+              {calculateRecordBonus(stats.managedPerHour, stats.resolutionRate) > 0 ? '+' : ''}{calculateRecordBonus(stats.managedPerHour, stats.resolutionRate).toFixed(2)}%
             </span>
           </div>
         </section>
@@ -1162,17 +1162,6 @@ function Dashboard({ user, profile, setNetworkError }) {
           </div>
         </div>
 
-        <div style={{ marginTop: '20px', padding: '20px', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-bright)', fontSize: '16px' }}>Tendencia del Mes (GxH vs TMO)</h3>
-          <div style={{ height: '300px', width: '100%' }}>
-            {filteredHistory.length > 0 ? (
-              <Line data={chartData} options={chartOptions} />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>No hay datos suficientes para graficar</div>
-            )}
-          </div>
-        </div>
-
         <div className="save-container" style={{ margin: '30px auto', width: '100%', maxWidth: '600px', padding: '0 20px' }}>
           <button
             className="btn btn-save"
@@ -1353,6 +1342,17 @@ function Dashboard({ user, profile, setNetworkError }) {
                 </table>
               )}
             </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', padding: '20px', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-bright)', fontSize: '16px' }}>Tendencia del Mes (GxH vs TMO)</h3>
+          <div style={{ height: '300px', width: '100%' }}>
+            {filteredHistory.length > 0 ? (
+              <Line data={chartData} options={chartOptions} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>No hay datos suficientes para graficar</div>
+            )}
           </div>
         </div>
       </main>
