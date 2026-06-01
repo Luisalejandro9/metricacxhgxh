@@ -589,6 +589,84 @@ function Dashboard({ user, profile, setNetworkError }) {
     },
   };
 
+  const chartDataReso = useMemo(() => {
+    const sorted = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+    return {
+      labels: sorted.map(d => {
+        const parts = d.date.split('-');
+        return `${parts[2]}/${parts[1]}`;
+      }),
+      datasets: [
+        {
+          label: '% Resolución',
+          data: sorted.map(d => parseFloat(d.resolution_rate)),
+          borderColor: 'rgba(236, 72, 153, 1)',
+          backgroundColor: 'rgba(236, 72, 153, 0.2)',
+          yAxisID: 'y',
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(236, 72, 153, 1)'
+        },
+        {
+          label: 'Técnicos Enviados',
+          data: sorted.map(d => parseInt(d.technicians_sent)),
+          borderColor: 'rgba(234, 179, 8, 1)',
+          backgroundColor: 'rgba(234, 179, 8, 0.2)',
+          yAxisID: 'y1',
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(234, 179, 8, 1)'
+        }
+      ]
+    };
+  }, [filteredHistory]);
+
+  const chartOptionsReso = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12, weight: '500' } }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#94a3b8' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y: {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        ticks: { color: 'rgba(236, 72, 153, 1)' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        title: { display: true, text: '% Resolución', color: '#94a3b8' }
+      },
+      y1: {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        ticks: { color: 'rgba(234, 179, 8, 1)' },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'Técnicos', color: '#94a3b8' },
+        min: 0,
+        suggestedMax: 10
+      },
+    },
+  };
+
   // --- Handlers ---
   const addManaged = () => {
     setManagedCount(prev => prev + 1);
@@ -1350,6 +1428,17 @@ function Dashboard({ user, profile, setNetworkError }) {
           <div style={{ height: '300px', width: '100%' }}>
             {filteredHistory.length > 0 ? (
               <Line data={chartData} options={chartOptions} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>No hay datos suficientes para graficar</div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', padding: '20px', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-bright)', fontSize: '16px' }}>Tendencia Resolución vs Técnicos</h3>
+          <div style={{ height: '300px', width: '100%' }}>
+            {filteredHistory.length > 0 ? (
+              <Line data={chartDataReso} options={chartOptionsReso} />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>No hay datos suficientes para graficar</div>
             )}
