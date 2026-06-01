@@ -313,6 +313,7 @@ function Dashboard({ user, profile, setNetworkError }) {
       const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * 0.79)) : 0;
       const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * 4.0)) : 0;
       const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * 0.81)) : 0;
+      const accumTmoManaged = runningManaged > 0 ? Math.floor(runningSeconds / runningManaged) : 0;
 
       return {
         ...item,
@@ -327,7 +328,8 @@ function Dashboard({ user, profile, setNetworkError }) {
         closingDiff,
         accumClosingDiff,
         accumGxhDiff: accumGxhDiff.toFixed(1),
-        accumResoDiff
+        accumResoDiff,
+        accumTmoManaged
       };
     });
 
@@ -1149,12 +1151,6 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <th>Cierre</th>
                       <th>G/h</th>
                       <th>TMO Gest.</th>
-                      <th>Acum. Cierre</th>
-                      <th>Acum. Reso</th>
-                      <th>Acum. GxH</th>
-                      <th>Dif-cierre Acum</th>
-                      <th>Dif. G/h Acum</th>
-                      <th>Dif. Reso Acum</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -1176,6 +1172,49 @@ function Dashboard({ user, profile, setNetworkError }) {
                             <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.tmo_managed}s)</span>
                           </div>
                         </td>
+                        <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
+                            <Edit3 size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteRecord(item.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div className="metric-card h-full" style={{ marginTop: '20px' }}>
+            <div className="table-header">
+              <span className="metric-label">Historial de Acumulados</span>
+            </div>
+            <div className="table-container">
+              {isLoadingHistory ? (
+                <div className="loading-state">Cargando historial...</div>
+              ) : filteredHistory.length === 0 ? (
+                <div className="empty-state">No hay nada que mostrar aún...</div>
+              ) : (
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Acum. Cierre</th>
+                      <th>Acum. Reso</th>
+                      <th>Acum. GxH</th>
+                      <th>Dif-cierre Acum</th>
+                      <th>Dif. G/h Acum</th>
+                      <th>Dif. Reso Acum</th>
+                      <th>TMO Promedio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHistory.map((item) => (
+                      <tr key={item.id + '-accum'}>
+                        <td>{item.date}</td>
                         <td className={getStatusClass(item.accumCloseRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumCloseRate}%
                         </td>
@@ -1194,13 +1233,11 @@ function Dashboard({ user, profile, setNetworkError }) {
                         <td style={{ fontWeight: '700', color: item.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                           {item.accumResoDiff > 0 ? `+${item.accumResoDiff}` : item.accumResoDiff}
                         </td>
-                        <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
-                            <Edit3 size={16} />
-                          </button>
-                          <button onClick={() => handleDeleteRecord(item.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer' }}>
-                            <Trash2 size={16} />
-                          </button>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <span style={{ fontWeight: '600' }}>{formatTmoMin(item.accumTmoManaged)}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.accumTmoManaged}s)</span>
+                          </div>
                         </td>
                       </tr>
                     ))}
