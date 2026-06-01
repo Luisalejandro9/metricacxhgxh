@@ -17,7 +17,27 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 const STANDARDS = {
   // GxH Working
   GXH_GREEN: 4.00,
@@ -491,6 +511,83 @@ function Dashboard({ user, profile, setNetworkError }) {
     };
   }, [closedCount, managedCount, techniciansCount, timerSeconds]);
 
+  // --- Chart Data ---
+  const chartData = useMemo(() => {
+    // Sort chronological (oldest to newest) for the chart
+    const sorted = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+    return {
+      labels: sorted.map(d => {
+        const parts = d.date.split('-');
+        return `${parts[2]}/${parts[1]}`; // DD/MM
+      }),
+      datasets: [
+        {
+          label: 'GxH (Gest/Hora)',
+          data: sorted.map(d => parseFloat(d.cases_per_hour)),
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+          yAxisID: 'y',
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(99, 102, 241, 1)'
+        },
+        {
+          label: 'TMO Gest. (min)',
+          data: sorted.map(d => parseFloat((d.tmo_managed / 60).toFixed(1))),
+          borderColor: 'rgba(16, 185, 129, 1)',
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          yAxisID: 'y1',
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(16, 185, 129, 1)'
+        }
+      ]
+    };
+  }, [filteredHistory]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12, weight: '500' } }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#94a3b8' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y: {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        ticks: { color: 'rgba(99, 102, 241, 1)' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        title: { display: true, text: 'GxH', color: '#94a3b8' }
+      },
+      y1: {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        ticks: { color: 'rgba(16, 185, 129, 1)' },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'TMO (min)', color: '#94a3b8' }
+      },
+    },
+  };
 
   // --- Handlers ---
   const addManaged = () => {
@@ -1062,6 +1159,17 @@ function Dashboard({ user, profile, setNetworkError }) {
             <div className={`metric-value medium ${getStatusClass(stats.resolutionRate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}`}>
               {stats.resolutionRate}%
             </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', padding: '20px', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-bright)', fontSize: '16px' }}>Tendencia del Mes (GxH vs TMO)</h3>
+          <div style={{ height: '300px', width: '100%' }}>
+            {filteredHistory.length > 0 ? (
+              <Line data={chartData} options={chartOptions} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>No hay datos suficientes para graficar</div>
+            )}
           </div>
         </div>
 
