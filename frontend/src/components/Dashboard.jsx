@@ -45,12 +45,12 @@ const STANDARDS = {
   GXH_YELLOW: 3.50,
 
   // % Resolución Neta (bonifica)
-  RESOLUTION_GREEN: 81.5,
-  RESOLUTION_YELLOW: 78.6,
+  RESOLUTION_GREEN: 84.0,
+  RESOLUTION_YELLOW: 81.0,
 
   // Cierre — solo objetivo, NO bonifica
-  CLOSED_GREEN: 79.0,
-  CLOSED_YELLOW: 77.0,
+  CLOSED_GREEN: 78.8,
+  CLOSED_YELLOW: 76.8,
 
   // Tiempos
   TIME_PER_CASE: 950,
@@ -69,11 +69,11 @@ const getGxHBonus = (value) => {
 
 const getResolucionBonus = (value) => {
   const val = parseFloat(value);
-  if (val >= 81.5) return 3.0;
-  if (val >= 80.1) return 2.0;
-  if (val >= 78.6) return 1.0;
-  if (val >= 77.2) return 0.0;
-  if (val >= 75.8) return -1.0;
+  if (val >= 84.0) return 3.0;
+  if (val >= 83.0) return 2.0;
+  if (val >= 82.0) return 1.0;
+  if (val >= 81.0) return 0.0;
+  if (val >= 80.0) return -1.0;
   return -2.0;
 };
 
@@ -329,12 +329,12 @@ function Dashboard({ user, profile, setNetworkError }) {
       const accumBonus = calculateRecordBonus(accumGxH, accumResoRate);
 
       // Diferencia de cierre del día (naturales)
-      const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * 0.79)) : 0;
+      const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * (STANDARDS.CLOSED_GREEN / 100))) : 0;
 
       // Diferencias acumuladas del mes hasta este día
-      const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * 0.79)) : 0;
-      const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * 4.0)) : 0;
-      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * 0.81)) : 0;
+      const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
+      const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * STANDARDS.GXH_GREEN)) : 0;
+      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
       const accumTmoManaged = runningManaged > 0 ? Math.floor(runningSeconds / runningManaged) : 0;
 
       return {
@@ -1129,7 +1129,7 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
             {managedCount > 0 && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: stats.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '8px' }}>
-                <span>Diferencia cierre (79%):</span>
+                <span>Diferencia cierre ({STANDARDS.CLOSED_GREEN}%):</span>
                 <span style={{ fontWeight: '800' }}>
                   {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance} casos
                 </span>
@@ -1300,19 +1300,19 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Diferencia cierre (79%)</span>
+            <span className="metric-label">Diferencia cierre ({STANDARDS.CLOSED_GREEN}%)</span>
             <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Dif. GxH (4.0)</span>
+            <span className="metric-label">Dif. GxH ({STANDARDS.GXH_GREEN.toFixed(1)})</span>
             <div className={`metric-value medium ${parseFloat(stats.gxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Dif. Reso (81.5%)</span>
+            <span className="metric-label">Dif. Reso ({STANDARDS.RESOLUTION_GREEN}%)</span>
             <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
             </div>

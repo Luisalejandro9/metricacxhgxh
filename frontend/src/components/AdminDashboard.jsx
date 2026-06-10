@@ -52,10 +52,10 @@ ChartJS.register(
 const STANDARDS = {
   GXH_GREEN: 4.00,
   GXH_YELLOW: 3.50,
-  RESOLUTION_GREEN: 81.5,
-  RESOLUTION_YELLOW: 78.6,
-  CLOSED_GREEN: 79.0,
-  CLOSED_YELLOW: 77.0,
+  RESOLUTION_GREEN: 84.0,
+  RESOLUTION_YELLOW: 81.0,
+  CLOSED_GREEN: 78.8,
+  CLOSED_YELLOW: 76.8,
 };
 
 function AdminDashboard({ user, profile, setNetworkError }) {
@@ -649,7 +649,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
                     </div>
                     <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="metric-label">Diferencia cierre (79%)</span>
+                      <span className="metric-label">Diferencia cierre ({STANDARDS.CLOSED_GREEN}%)</span>
                       <div className={`metric-value small ${viewingUserDetails.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
                         {viewingUserDetails.closingBalance > 0 ? `+${viewingUserDetails.closingBalance}` : viewingUserDetails.closingBalance}
                       </div>
