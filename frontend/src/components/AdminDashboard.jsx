@@ -49,17 +49,47 @@ ChartJS.register(
   Filler
 );
 
-const STANDARDS = {
-  GXH_GREEN: 4.00,
-  GXH_YELLOW: 3.50,
-  RESOLUTION_GREEN: 84.0,
-  RESOLUTION_YELLOW: 81.0,
-  CLOSED_GREEN: 78.8,
-  CLOSED_YELLOW: 76.8,
-};
+const DEFAULT_GXH_TIERS = [
+  { min: 4.50, bonus: 2.0 },
+  { min: 4.00, bonus: 1.0 },
+  { min: 3.50, bonus: 0.0 },
+  { min: 3.00, bonus: -1.0 },
+  { min: 0.00, bonus: -2.0 }
+];
+
+const DEFAULT_RESOLUTION_TIERS = [
+  { min: 84.00, bonus: 3.0 },
+  { min: 83.00, bonus: 2.0 },
+  { min: 82.00, bonus: 1.0 },
+  { min: 81.00, bonus: 0.0 },
+  { min: 80.00, bonus: -1.0 },
+  { min: 0.00, bonus: -2.0 }
+];
 
 function AdminDashboard({ user, profile, setNetworkError }) {
   const navigate = useNavigate();
+
+  // Navigation Tab State
+  const [activeTab, setActiveTab] = useState('monitor'); // 'monitor' or 'config'
+
+  // Dynamic Standards State
+  const [standards, setStandards] = useState({
+    GXH_GREEN: 4.00,
+    GXH_YELLOW: 3.50,
+    RESOLUTION_GREEN: 84.0,
+    RESOLUTION_YELLOW: 81.0,
+    CLOSED_GREEN: 78.8,
+    CLOSED_YELLOW: 76.8,
+    TIME_PER_CASE: 950,
+    TIME_PER_MANAGED: 950,
+    gxh_bonus_tiers: DEFAULT_GXH_TIERS,
+    resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
+  });
+  const [isLoadingStandards, setIsLoadingStandards] = useState(true);
+
+  // Form State for configuration editing
+  const [formConfig, setFormConfig] = useState(null);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Helper for traffic light colors
   const getStatusClass = (value, greenTarget, yellowTarget) => {
@@ -68,6 +98,86 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     if (val >= yellowTarget) return 'stat-warning-standard';
     return 'stat-below-standard';
   };
+
+  // Fetch standards from db
+  useEffect(() => {
+    const fetchStandards = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('*')
+          .eq('key', 'current')
+          .maybeSingle();
+
+        if (error) {
+          console.warn('Error loading app_config (falling back to default standards):', error.message);
+        } else if (data) {
+          setStandards({
+            GXH_GREEN: parseFloat(data.gxh_green),
+            GXH_YELLOW: parseFloat(data.gxh_yellow),
+            RESOLUTION_GREEN: parseFloat(data.resolution_green),
+            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
+            CLOSED_GREEN: parseFloat(data.closed_green),
+            CLOSED_YELLOW: parseFloat(data.closed_yellow),
+            TIME_PER_CASE: parseInt(data.time_per_case),
+            TIME_PER_MANAGED: parseInt(data.time_per_managed),
+            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
+            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load standards:', e);
+      } finally {
+        setIsLoadingStandards(false);
+      }
+    };
+
+    fetchStandards();
+
+    // Subscribe to config changes in real time
+    const channel = supabase
+      .channel('admin_app_config_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload) => {
+        if (payload.new && payload.new.key === 'current') {
+          const data = payload.new;
+          setStandards({
+            GXH_GREEN: parseFloat(data.gxh_green),
+            GXH_YELLOW: parseFloat(data.gxh_yellow),
+            RESOLUTION_GREEN: parseFloat(data.resolution_green),
+            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
+            CLOSED_GREEN: parseFloat(data.closed_green),
+            CLOSED_YELLOW: parseFloat(data.closed_yellow),
+            TIME_PER_CASE: parseInt(data.time_per_case),
+            TIME_PER_MANAGED: parseInt(data.time_per_managed),
+            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
+            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Initialize form configuration state
+  useEffect(() => {
+    if (standards) {
+      setFormConfig({
+        gxh_green: standards.GXH_GREEN,
+        gxh_yellow: standards.GXH_YELLOW,
+        resolution_green: standards.RESOLUTION_GREEN,
+        resolution_yellow: standards.RESOLUTION_YELLOW,
+        closed_green: standards.CLOSED_GREEN,
+        closed_yellow: standards.CLOSED_YELLOW,
+        time_per_case: standards.TIME_PER_CASE,
+        time_per_managed: standards.TIME_PER_MANAGED,
+        gxh_bonus_tiers: [...standards.gxh_bonus_tiers],
+        resolution_bonus_tiers: [...standards.resolution_bonus_tiers]
+      });
+    }
+  }, [standards]);
 
   const [users, setUsers] = useState([]);
   const [allMetrics, setAllMetrics] = useState([]);
@@ -207,15 +317,15 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       const avgGxh = userRows.length > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.cases_per_hour) || 0), 0) / userRows.length).toFixed(2) : "0.00";
       const efficiency = totalManaged > 0 ? ((totalClosed / totalManaged) * 100).toFixed(1) : "0.0";
       const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
-      const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
+      const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (standards.CLOSED_GREEN / 100))) : 0;
 
       // GxH and Reso accumulated differences for Admin
       const totalSeconds = userRows.reduce((s, m) => {
         const [h, min, sec] = m.total_time.split(':').map(Number);
         return s + (h * 3600 + min * 60 + sec);
       }, 0);
-      const gxhDiff = totalSeconds > 0 ? (totalManaged - ((totalSeconds / 3600) * STANDARDS.GXH_GREEN)) : 0;
-      const resoDiff = totalManaged > 0 ? ((totalManaged - totalTechs) - Math.ceil(totalManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
+      const gxhDiff = totalSeconds > 0 ? (totalManaged - ((totalSeconds / 3600) * standards.GXH_GREEN)) : 0;
+      const resoDiff = totalManaged > 0 ? ((totalManaged - totalTechs) - Math.ceil(totalManaged * (standards.RESOLUTION_GREEN / 100))) : 0;
 
       return {
         ...u,
@@ -242,14 +352,14 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
           return {
             ...row,
-            accumClosingDiff: runManaged > 0 ? (runClosed - Math.ceil(runManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0,
-            accumGxhDiff: runSeconds > 0 ? (runManaged - ((runSeconds / 3600) * STANDARDS.GXH_GREEN)).toFixed(1) : "0.0",
-            accumResoDiff: runManaged > 0 ? ((runManaged - runTechs) - Math.ceil(runManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0
+            accumClosingDiff: runManaged > 0 ? (runClosed - Math.ceil(runManaged * (standards.CLOSED_GREEN / 100))) : 0,
+            accumGxhDiff: runSeconds > 0 ? (runManaged - ((runSeconds / 3600) * standards.GXH_GREEN)).toFixed(1) : "0.0",
+            accumResoDiff: runManaged > 0 ? ((runManaged - runTechs) - Math.ceil(runManaged * (standards.RESOLUTION_GREEN / 100))) : 0
           };
         })
       };
     }).filter(Boolean);
-  }, [monthFilteredMetrics, users]);
+  }, [monthFilteredMetrics, users, standards]);
 
   const statsSummary = useMemo(() => {
     if (filteredMetrics.length === 0) return { totalManaged: 0, totalClosed: 0, totalTechs: 0, avgEfficiency: "0.0" };
@@ -320,6 +430,297 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       return () => clearInterval(timer);
     }
   }, [isProfileLoaded, isAdmin, navigate]);
+
+  const handleConfigChange = (field, value) => {
+    setFormConfig(prev => ({
+      ...prev,
+      [field]: parseFloat(value) || 0
+    }));
+  };
+
+  const handleTierChange = (type, index, field, value) => {
+    setFormConfig(prev => {
+      const tiers = [...prev[type]];
+      tiers[index] = {
+        ...tiers[index],
+        [field]: parseFloat(value) || 0
+      };
+      return {
+        ...prev,
+        [type]: tiers
+      };
+    });
+  };
+
+  const addTier = (type) => {
+    setFormConfig(prev => ({
+      ...prev,
+      [type]: [...prev[type], { min: 0, bonus: 0 }]
+    }));
+  };
+
+  const deleteTier = (type, index) => {
+    setFormConfig(prev => ({
+      ...prev,
+      [type]: prev[type].filter((_, i) => i !== index)
+    }));
+  };
+
+  const saveConfig = async () => {
+    if (!formConfig) return;
+    setIsSavingConfig(true);
+    try {
+      const payload = {
+        key: 'current',
+        gxh_green: formConfig.gxh_green,
+        gxh_yellow: formConfig.gxh_yellow,
+        resolution_green: formConfig.resolution_green,
+        resolution_yellow: formConfig.resolution_yellow,
+        closed_green: formConfig.closed_green,
+        closed_yellow: formConfig.closed_yellow,
+        time_per_case: parseInt(formConfig.time_per_case) || 950,
+        time_per_managed: parseInt(formConfig.time_per_managed) || 950,
+        gxh_bonus_tiers: formConfig.gxh_bonus_tiers,
+        resolution_bonus_tiers: formConfig.resolution_bonus_tiers,
+        updated_at: new Date().toISOString(),
+        updated_by: user.id
+      };
+
+      if (user.isDemo) {
+        localStorage.setItem(`demo_app_standards_${user.id}`, JSON.stringify({
+          GXH_GREEN: payload.gxh_green,
+          GXH_YELLOW: payload.gxh_yellow,
+          RESOLUTION_GREEN: payload.resolution_green,
+          RESOLUTION_YELLOW: payload.resolution_yellow,
+          CLOSED_GREEN: payload.closed_green,
+          CLOSED_YELLOW: payload.closed_yellow,
+          TIME_PER_CASE: payload.time_per_case,
+          TIME_PER_MANAGED: payload.time_per_managed,
+          gxh_bonus_tiers: payload.gxh_bonus_tiers,
+          resolution_bonus_tiers: payload.resolution_bonus_tiers
+        }));
+        setStandards({
+          GXH_GREEN: payload.gxh_green,
+          GXH_YELLOW: payload.gxh_yellow,
+          RESOLUTION_GREEN: payload.resolution_green,
+          RESOLUTION_YELLOW: payload.resolution_yellow,
+          CLOSED_GREEN: payload.closed_green,
+          CLOSED_YELLOW: payload.closed_yellow,
+          TIME_PER_CASE: payload.time_per_case,
+          TIME_PER_MANAGED: payload.time_per_managed,
+          gxh_bonus_tiers: payload.gxh_bonus_tiers,
+          resolution_bonus_tiers: payload.resolution_bonus_tiers
+        });
+        showMessage('success', '¡Configuración de espectador guardada localmente!');
+        setIsSavingConfig(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('app_config')
+        .upsert([payload], { onConflict: 'key' });
+
+      if (error) throw error;
+
+      showMessage('success', '¡Configuración actualizada correctamente!');
+      setStandards({
+        GXH_GREEN: payload.gxh_green,
+        GXH_YELLOW: payload.gxh_yellow,
+        RESOLUTION_GREEN: payload.resolution_green,
+        RESOLUTION_YELLOW: payload.resolution_yellow,
+        CLOSED_GREEN: payload.closed_green,
+        CLOSED_YELLOW: payload.closed_yellow,
+        TIME_PER_CASE: payload.time_per_case,
+        TIME_PER_MANAGED: payload.time_per_managed,
+        gxh_bonus_tiers: payload.gxh_bonus_tiers,
+        resolution_bonus_tiers: payload.resolution_bonus_tiers
+      });
+    } catch (err) {
+      console.error('Error saving config:', err);
+      showMessage('error', `Error al guardar: ${err.message}`);
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const resetConfigToDefault = () => {
+    if (window.confirm('¿Estás seguro de restablecer todos los valores a los predeterminados de fábrica?')) {
+      setFormConfig({
+        gxh_green: 4.00,
+        gxh_yellow: 3.50,
+        resolution_green: 84.0,
+        resolution_yellow: 81.0,
+        closed_green: 78.8,
+        closed_yellow: 76.8,
+        time_per_case: 950,
+        time_per_managed: 950,
+        gxh_bonus_tiers: [...DEFAULT_GXH_TIERS],
+        resolution_bonus_tiers: [...DEFAULT_RESOLUTION_TIERS]
+      });
+      showMessage('info', 'Valores restablecidos a predeterminados. Haz clic en Guardar para aplicar.');
+    }
+  };
+
+  const renderConfigPanel = () => {
+    if (!formConfig) return <div className="loading-state">Cargando formulario...</div>;
+    return (
+      <div style={{ padding: '0 10px 40px 10px' }}>
+        <div className="admin-header" style={{ marginBottom: '30px' }}>
+          <div>
+            <h2 style={{ fontSize: '32px', margin: 0 }}>Ajustes de Métricas</h2>
+            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Configura los estándares operativos y las tablas de bonificación</p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className="btn btn-secondary" onClick={resetConfigToDefault}>
+              Restablecer Valores
+            </button>
+            <button className="btn btn-primary" onClick={saveConfig} disabled={isSavingConfig}>
+              {isSavingConfig ? 'Guardando...' : 'Guardar Configuración'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid-primary" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }}>
+          {/* SECCIÓN 1: ESTÁNDARES */}
+          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
+            <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '20px' }}>
+              🎯 Objetivos y Estándares Operativos
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>GxH Verde (Objetivo)</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.gxh_green} onChange={e => handleConfigChange('gxh_green', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>GxH Amarillo (Mínimo)</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.gxh_yellow} onChange={e => handleConfigChange('gxh_yellow', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Resolución Verde</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.resolution_green} onChange={e => handleConfigChange('resolution_green', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Resolución Amarillo</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.resolution_yellow} onChange={e => handleConfigChange('resolution_yellow', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Cierre Verde</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.closed_green} onChange={e => handleConfigChange('closed_green', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Cierre Amarillo</label>
+                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.closed_yellow} onChange={e => handleConfigChange('closed_yellow', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>TMO Casos (segundos)</label>
+                <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.time_per_case} onChange={e => handleConfigChange('time_per_case', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>TMO Gestionados (segundos)</label>
+                <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+                  value={formConfig.time_per_managed} onChange={e => handleConfigChange('time_per_managed', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: TABLA BONIFICACIÓN GXH */}
+          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+              <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', margin: 0 }}>
+                📈 Tabla de Bonificaciones por GxH
+              </h3>
+              <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => addTier('gxh_bonus_tiers')}>
+                + Agregar Rango
+              </button>
+            </div>
+            
+            <div className="table-container">
+              <table className="history-table admin-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>GxH Mínimo para Calificar</th>
+                    <th style={{ textAlign: 'left' }}>Porcentaje de Bono (%)</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formConfig.gxh_bonus_tiers.map((tier, idx) => (
+                    <tr key={`gxh-tier-${idx}`}>
+                      <td style={{ textAlign: 'left' }}>
+                        <input type="number" step="0.01" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
+                          value={tier.min} onChange={e => handleTierChange('gxh_bonus_tiers', idx, 'min', e.target.value)} />
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <input type="number" step="0.1" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
+                          value={tier.bonus} onChange={e => handleTierChange('gxh_bonus_tiers', idx, 'bonus', e.target.value)} />
+                      </td>
+                      <td>
+                        <button className="btn btn-logout" style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                          onClick={() => deleteTier('gxh_bonus_tiers', idx)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* SECCIÓN 3: TABLA BONIFICACIÓN RESOLUCIÓN */}
+          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+              <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', margin: 0 }}>
+                ⚡ Tabla de Bonificaciones por % Resolución
+              </h3>
+              <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => addTier('resolution_bonus_tiers')}>
+                + Agregar Rango
+              </button>
+            </div>
+            
+            <div className="table-container">
+              <table className="history-table admin-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>% Resolución Mínimo</th>
+                    <th style={{ textAlign: 'left' }}>Porcentaje de Bono (%)</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formConfig.resolution_bonus_tiers.map((tier, idx) => (
+                    <tr key={`reso-tier-${idx}`}>
+                      <td style={{ textAlign: 'left' }}>
+                        <input type="number" step="0.01" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
+                          value={tier.min} onChange={e => handleTierChange('resolution_bonus_tiers', idx, 'min', e.target.value)} />
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <input type="number" step="0.1" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
+                          value={tier.bonus} onChange={e => handleTierChange('resolution_bonus_tiers', idx, 'bonus', e.target.value)} />
+                      </td>
+                      <td>
+                        <button className="btn btn-logout" style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                          onClick={() => deleteTier('resolution_bonus_tiers', idx)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Still waiting for profile from App.jsx
   if (!isProfileLoaded) {
@@ -395,6 +796,23 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
           <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '10px' }} onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Panel Usuario</button>
 
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+            <button 
+              className={`btn ${activeTab === 'monitor' ? 'btn-primary' : 'btn-secondary'}`} 
+              style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
+              onClick={() => setActiveTab('monitor')}
+            >
+              📊 Monitorear
+            </button>
+            <button 
+              className={`btn ${activeTab === 'config' ? 'btn-primary' : 'btn-secondary'}`} 
+              style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
+              onClick={() => setActiveTab('config')}
+            >
+              ⚙️ Configurar
+            </button>
+          </div>
+
           <div>
             <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}><Trophy size={11} style={{ marginRight: 5 }} /> Ranking Top Eficiencia</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
@@ -467,7 +885,11 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
       {/* MAIN CONTENT */}
       <main className="main-content">
-        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+        {activeTab === 'config' ? (
+          renderConfigPanel()
+        ) : (
+          <>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <h2 style={{ fontSize: '32px', margin: 0 }}>Admin Panel</h2>
@@ -514,7 +936,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
           </div>
           <div className="metric-card">
             <span className="metric-label">Cierre Promedio</span>
-            <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{statsSummary.avgEfficiency}%</div>
+            <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}`}>{statsSummary.avgEfficiency}%</div>
           </div>
         </div>
 
@@ -557,9 +979,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <td>{item.cases_managed}</td>
                       <td>{item.cases_closed}</td>
                       <td>{item.technicians_sent}</td>
-                      <td className={getStatusClass(item.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{item.efficiency}%</td>
-                      <td className={getStatusClass(item.resolution_rate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
-                      <td className={getStatusClass(item.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{item.cases_per_hour}</td>
+                      <td className={getStatusClass(item.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{item.efficiency}%</td>
+                      <td className={getStatusClass(item.resolution_rate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
+                      <td className={getStatusClass(item.cases_per_hour, standards.GXH_GREEN, standards.GXH_YELLOW)}>{item.cases_per_hour}</td>
                       <td style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{formatLastUpdated(item.updated_at)}</td>
                     </tr>
                   );
@@ -615,9 +1037,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                     <td>{u.recordsCount}</td>
                     <td style={{ fontWeight: '600' }}>{u.totalManaged}</td>
                     <td style={{ fontWeight: '600' }}>{u.totalClosed}</td>
-                    <td className={getStatusClass(u.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{u.efficiency}%</td>
-                    <td className={getStatusClass(u.resolution, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}>{u.resolution}%</td>
-                    <td className={getStatusClass(u.avgGxh, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{u.avgGxh}</td>
+                    <td className={getStatusClass(u.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{u.efficiency}%</td>
+                    <td className={getStatusClass(u.resolution, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}>{u.resolution}%</td>
+                    <td className={getStatusClass(u.avgGxh, standards.GXH_GREEN, standards.GXH_YELLOW)}>{u.avgGxh}</td>
                     <td style={{ fontWeight: '700', color: u.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                       {u.closingBalance > 0 ? `+${u.closingBalance}` : u.closingBalance}
                     </td>
@@ -628,6 +1050,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
             </table>
           </div>
         </div>
+          </>
+        )}
       </main>
 
       {/* DRILL-DOWN MODAL: USER DETAILS */}
@@ -649,7 +1073,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
                     </div>
                     <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="metric-label">Diferencia cierre ({STANDARDS.CLOSED_GREEN}%)</span>
+                      <span className="metric-label">Diferencia cierre ({standards.CLOSED_GREEN}%)</span>
                       <div className={`metric-value small ${viewingUserDetails.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
                         {viewingUserDetails.closingBalance > 0 ? `+${viewingUserDetails.closingBalance}` : viewingUserDetails.closingBalance}
                       </div>
@@ -660,7 +1084,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                 </div>
                 <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
                   <span className="metric-label"> Cierre Total</span>
-                  <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
+                  <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
                 </div>
               </div>
 
@@ -688,8 +1112,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                       <td>{row.cases_managed}</td>
                       <td>{row.cases_closed}</td>
                       <td>{row.technicians_sent}</td>
-                      <td className={getStatusClass(row.efficiency, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}>{row.efficiency}%</td>
-                      <td className={getStatusClass(row.cases_per_hour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}>{row.cases_per_hour}</td>
+                      <td className={getStatusClass(row.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{row.efficiency}%</td>
+                      <td className={getStatusClass(row.cases_per_hour, standards.GXH_GREEN, standards.GXH_YELLOW)}>{row.cases_per_hour}</td>
                       <td style={{ fontWeight: '700', color: row.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                         {row.accumClosingDiff > 0 ? `+${row.accumClosingDiff}` : row.accumClosingDiff}
                       </td>

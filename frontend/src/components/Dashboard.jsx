@@ -57,30 +57,22 @@ const STANDARDS = {
   TIME_PER_MANAGED: 950,
 };
 
-// --- Funciones de Bonificación (solo GxH y Resolución) ---
-const getGxHBonus = (value) => {
-  const val = parseFloat(value);
-  if (val >= 4.50) return 2.0;
-  if (val >= 4.00) return 1.0;
-  if (val >= 3.50) return 0.0;
-  if (val >= 3.00) return -1.0;
-  return -2.0;
-};
+const DEFAULT_GXH_TIERS = [
+  { min: 4.50, bonus: 2.0 },
+  { min: 4.00, bonus: 1.0 },
+  { min: 3.50, bonus: 0.0 },
+  { min: 3.00, bonus: -1.0 },
+  { min: 0.00, bonus: -2.0 }
+];
 
-const getResolucionBonus = (value) => {
-  const val = parseFloat(value);
-  if (val >= 84.0) return 3.0;
-  if (val >= 83.0) return 2.0;
-  if (val >= 82.0) return 1.0;
-  if (val >= 81.0) return 0.0;
-  if (val >= 80.0) return -1.0;
-  return -2.0;
-};
-
-// Bono diario = GxH + Resolución (Cierre NO bonifica, solo es objetivo)
-const calculateRecordBonus = (managedPerHour, resolutionRate) => {
-  return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate);
-};
+const DEFAULT_RESOLUTION_TIERS = [
+  { min: 84.00, bonus: 3.0 },
+  { min: 83.00, bonus: 2.0 },
+  { min: 82.00, bonus: 1.0 },
+  { min: 81.00, bonus: 0.0 },
+  { min: 80.00, bonus: -1.0 },
+  { min: 0.00, bonus: -2.0 }
+];
 
 // Formatear segundos de TMO a minutos amigables (ej: 950s -> 15:50 min)
 const formatTmoMin = (seconds) => {
@@ -92,6 +84,120 @@ const formatTmoMin = (seconds) => {
 
 function Dashboard({ user, profile, setNetworkError }) {
   const navigate = useNavigate();
+
+  // Dynamic Standards State
+  const [standards, setStandards] = useState(() => {
+    if (user?.isDemo) {
+      const local = localStorage.getItem(`demo_app_standards_${user.id}`);
+      if (local) {
+        try {
+          return JSON.parse(local);
+        } catch (e) {
+          console.error('Error loading demo standards', e);
+        }
+      }
+    }
+    return {
+      ...STANDARDS,
+      gxh_bonus_tiers: DEFAULT_GXH_TIERS,
+      resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
+    };
+  });
+  const [isLoadingStandards, setIsLoadingStandards] = useState(true);
+
+  // Dynamic Bonus Calculators using useCallback
+  const getGxHBonus = useCallback((value) => {
+    const val = parseFloat(value);
+    const tiers = standards.gxh_bonus_tiers || DEFAULT_GXH_TIERS;
+    const sorted = [...tiers].sort((a, b) => b.min - a.min);
+    for (const t of sorted) {
+      if (val >= t.min) return parseFloat(t.bonus);
+    }
+    return parseFloat(sorted[sorted.length - 1]?.bonus || -2.0);
+  }, [standards.gxh_bonus_tiers]);
+
+  const getResolucionBonus = useCallback((value) => {
+    const val = parseFloat(value);
+    const tiers = standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS;
+    const sorted = [...tiers].sort((a, b) => b.min - a.min);
+    for (const t of sorted) {
+      if (val >= t.min) return parseFloat(t.bonus);
+    }
+    return parseFloat(sorted[sorted.length - 1]?.bonus || -2.0);
+  }, [standards.resolution_bonus_tiers]);
+
+  const calculateRecordBonus = useCallback((managedPerHour, resolutionRate) => {
+    return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate);
+  }, [getGxHBonus, getResolucionBonus]);
+
+  // Fetch standards from db on mount and subscribe to live changes
+  useEffect(() => {
+    const fetchStandards = async () => {
+      if (!user) return;
+      try {
+        if (user.isDemo) {
+          setIsLoadingStandards(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('*')
+          .eq('key', 'current')
+          .maybeSingle();
+
+        if (error) {
+          console.warn('Error fetching app_config (falling back to default standards):', error.message);
+        } else if (data) {
+          setStandards({
+            GXH_GREEN: parseFloat(data.gxh_green),
+            GXH_YELLOW: parseFloat(data.gxh_yellow),
+            RESOLUTION_GREEN: parseFloat(data.resolution_green),
+            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
+            CLOSED_GREEN: parseFloat(data.closed_green),
+            CLOSED_YELLOW: parseFloat(data.closed_yellow),
+            TIME_PER_CASE: parseInt(data.time_per_case),
+            TIME_PER_MANAGED: parseInt(data.time_per_managed),
+            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
+            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load standards:', err);
+      } finally {
+        setIsLoadingStandards(false);
+      }
+    };
+
+    fetchStandards();
+
+    // Subscribe to configuration changes in real time
+    if (!user?.isDemo) {
+      const channel = supabase
+        .channel('app_config_live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload) => {
+          if (payload.new && payload.new.key === 'current') {
+            const data = payload.new;
+            setStandards({
+              GXH_GREEN: parseFloat(data.gxh_green),
+              GXH_YELLOW: parseFloat(data.gxh_yellow),
+              RESOLUTION_GREEN: parseFloat(data.resolution_green),
+              RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
+              CLOSED_GREEN: parseFloat(data.closed_green),
+              CLOSED_YELLOW: parseFloat(data.closed_yellow),
+              TIME_PER_CASE: parseInt(data.time_per_case),
+              TIME_PER_MANAGED: parseInt(data.time_per_managed),
+              gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
+              resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
+            });
+          }
+        })
+        .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
   // Metrics State
   const [closedCount, setClosedCount] = useState(0);
   const [managedCount, setManagedCount] = useState(0);
@@ -329,12 +435,12 @@ function Dashboard({ user, profile, setNetworkError }) {
       const accumBonus = calculateRecordBonus(accumGxH, accumResoRate);
 
       // Diferencia de cierre del día (naturales)
-      const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * (STANDARDS.CLOSED_GREEN / 100))) : 0;
+      const closingDiff = item.cases_managed > 0 ? (item.cases_closed - Math.ceil(item.cases_managed * (standards.CLOSED_GREEN / 100))) : 0;
 
       // Diferencias acumuladas del mes hasta este día
-      const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * (STANDARDS.CLOSED_GREEN / 100))) : 0;
-      const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * STANDARDS.GXH_GREEN)) : 0;
-      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
+      const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * (standards.CLOSED_GREEN / 100))) : 0;
+      const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * standards.GXH_GREEN)) : 0;
+      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * (standards.RESOLUTION_GREEN / 100))) : 0;
       const accumTmoManaged = runningManaged > 0 ? Math.floor(runningSeconds / runningManaged) : 0;
 
       return {
@@ -357,7 +463,7 @@ function Dashboard({ user, profile, setNetworkError }) {
 
     // Return in ascending order as requested (older first)
     return withAccum;
-  }, [history, searchMonth]);
+  }, [history, searchMonth, calculateRecordBonus, standards]);
 
   // --- Bono Mensual Acumulado ---
   // Es el bono que corresponde al ÚLTIMO estado acumulado (Acum. GxH + Acum. Reso actuales)
@@ -501,9 +607,9 @@ function Dashboard({ user, profile, setNetworkError }) {
     const tmoManaged = managedCount > 0 ? Math.floor(timerSeconds / managedCount) : 0;
 
     // Diferencias vs Objetivos
-    const closingBalance = managedCount > 0 ? (closedCount - Math.ceil(managedCount * (STANDARDS.CLOSED_GREEN / 100))) : 0;
-    const gxhDiff = totalHours > 0 ? (managedCount - (totalHours * STANDARDS.GXH_GREEN)) : 0;
-    const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (STANDARDS.RESOLUTION_GREEN / 100))) : 0;
+    const closingBalance = managedCount > 0 ? (closedCount - Math.ceil(managedCount * (standards.CLOSED_GREEN / 100))) : 0;
+    const gxhDiff = totalHours > 0 ? (managedCount - (totalHours * standards.GXH_GREEN)) : 0;
+    const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (standards.RESOLUTION_GREEN / 100))) : 0;
 
     return {
       closeRate: closeRate.toFixed(2),
@@ -516,7 +622,7 @@ function Dashboard({ user, profile, setNetworkError }) {
       gxhDiff: gxhDiff.toFixed(2),
       resoDiff
     };
-  }, [closedCount, managedCount, techniciansCount, timerSeconds]);
+  }, [closedCount, managedCount, techniciansCount, timerSeconds, standards]);
 
   // --- Chart Data ---
   const chartData = useMemo(() => {
@@ -1069,11 +1175,11 @@ function Dashboard({ user, profile, setNetworkError }) {
 
         <section className="standards-section">
           <h3>Metricas Requeridos</h3>
-          <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {STANDARDS.GXH_GREEN}</span></div>
-          <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {STANDARDS.GXH_YELLOW}</span></div>
-          <div className="standard-row"><span>TMO (máx)</span> <span>{formatTmoMin(STANDARDS.TIME_PER_CASE)} ({STANDARDS.TIME_PER_CASE}s)</span></div>
-          <div className="standard-row"><span>% Resolución</span> <span>≥ {STANDARDS.RESOLUTION_GREEN}%</span></div>
-          <div className="standard-row"><span>% Cierre</span> <span>≥ {STANDARDS.CLOSED_GREEN}%</span></div>
+          <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {standards.GXH_GREEN}</span></div>
+          <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {standards.GXH_YELLOW}</span></div>
+          <div className="standard-row"><span>TMO (máx)</span> <span>{formatTmoMin(standards.TIME_PER_CASE)} ({standards.TIME_PER_CASE}s)</span></div>
+          <div className="standard-row"><span>% Resolución</span> <span>≥ {standards.RESOLUTION_GREEN}%</span></div>
+          <div className="standard-row"><span>% Cierre</span> <span>≥ {standards.CLOSED_GREEN}%</span></div>
         </section>
 
         <section className="standards-section" style={{ marginTop: '12px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
@@ -1117,19 +1223,19 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div style={{ marginBottom: '10px' }}>
-            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-dim)' }}>% Cierre (objetivo ≥{STANDARDS.CLOSED_GREEN}%)</div>
+            <div className="metric-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-dim)' }}>% Cierre (objetivo ≥{standards.CLOSED_GREEN}%)</div>
             <div className="standard-row">
               <span>Actual: {stats.closeRate}%</span>
-              <span className={parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? 'stat-meets-standard' :
-                parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
+              <span className={parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? 'stat-meets-standard' :
+                parseFloat(stats.closeRate) >= standards.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
                 style={{ fontWeight: '800', fontSize: '13px' }}>
-                {parseFloat(stats.closeRate) >= STANDARDS.CLOSED_GREEN ? '✓ OK' :
-                  parseFloat(stats.closeRate) >= STANDARDS.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
+                {parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? '✓ OK' :
+                  parseFloat(stats.closeRate) >= standards.CLOSED_YELLOW ? '⚠ Riesgo' : '✗ Bajo'}
               </span>
             </div>
             {managedCount > 0 && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: stats.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '8px' }}>
-                <span>Diferencia cierre ({STANDARDS.CLOSED_GREEN}%):</span>
+                <span>Diferencia cierre ({standards.CLOSED_GREEN}%):</span>
                 <span style={{ fontWeight: '800' }}>
                   {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance} casos
                 </span>
@@ -1227,11 +1333,11 @@ function Dashboard({ user, profile, setNetworkError }) {
                 )}
               </div>
             </div>
-            <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'standard-meets' :
-              parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'standard-warning' : 'standard-below'
+            <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? 'standard-meets' :
+              parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? 'standard-warning' : 'standard-below'
               }`}>
-              {parseFloat(stats.closedPerHour) >= STANDARDS.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' :
-                parseFloat(stats.closedPerHour) >= STANDARDS.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
+              {parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' :
+                parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
             </div>
           </div>
 
@@ -1289,37 +1395,37 @@ function Dashboard({ user, profile, setNetworkError }) {
         <div className="grid-secondary">
           <div className="metric-card">
             <span className="metric-label">Gestionado por Hora</span>
-            <div className={`metric-value medium ${getStatusClass(stats.managedPerHour, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)}`}>
+            <div className={`metric-value medium ${getStatusClass(stats.managedPerHour, standards.GXH_GREEN, standards.GXH_YELLOW)}`}>
               {stats.managedPerHour}
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">Cierre Real (Cerr/Gest)</span>
-            <div className={`metric-value medium ${getStatusClass(stats.closeRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)}`}>
+            <div className={`metric-value medium ${getStatusClass(stats.closeRate, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}`}>
               {stats.closeRate}%
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Diferencia cierre ({STANDARDS.CLOSED_GREEN}%)</span>
+            <span className="metric-label">Diferencia cierre ({standards.CLOSED_GREEN}%)</span>
             <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Dif. GxH ({STANDARDS.GXH_GREEN.toFixed(1)})</span>
+            <span className="metric-label">Dif. GxH ({standards.GXH_GREEN.toFixed(1)})</span>
             <div className={`metric-value medium ${parseFloat(stats.gxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Dif. Reso ({STANDARDS.RESOLUTION_GREEN}%)</span>
+            <span className="metric-label">Dif. Reso ({standards.RESOLUTION_GREEN}%)</span>
             <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
               {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
             </div>
           </div>
           <div className="metric-card">
             <span className="metric-label">TMO GxH</span>
-            <div className={`metric-value medium ${stats.tmoManaged > STANDARDS.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > STANDARDS.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`} style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+            <div className={`metric-value medium ${stats.tmoManaged > standards.TIME_PER_MANAGED ? 'stat-below-standard' : stats.tmoManaged > standards.TIME_PER_MANAGED - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`} style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
               <span>{formatTmoMin(stats.tmoManaged)}</span>
               <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 'normal' }}>({stats.tmoManaged}s)</span>
             </div>
@@ -1330,7 +1436,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           </div>
           <div className="metric-card">
             <span className="metric-label">% Resolución Real</span>
-            <div className={`metric-value medium ${getStatusClass(stats.resolutionRate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)}`}>
+            <div className={`metric-value medium ${getStatusClass(stats.resolutionRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}`}>
               {stats.resolutionRate}%
             </div>
           </div>
@@ -1510,13 +1616,13 @@ function Dashboard({ user, profile, setNetworkError }) {
                       <tr key={item.id + '-accum'}>
                         <td>{item.date}</td>
                         <td style={{ fontWeight: 'bold' }}>{item.accumManaged}</td>
-                        <td className={getStatusClass(item.accumCloseRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        <td className={getStatusClass(item.accumCloseRate, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumCloseRate}%
                         </td>
-                        <td className={getStatusClass(item.accumResoRate, STANDARDS.RESOLUTION_GREEN, STANDARDS.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        <td className={getStatusClass(item.accumResoRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumResoRate}%
                         </td>
-                        <td className={getStatusClass(item.accumGxH, STANDARDS.GXH_GREEN, STANDARDS.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        <td className={getStatusClass(item.accumGxH, standards.GXH_GREEN, standards.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumGxH}
                         </td>
                         <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
