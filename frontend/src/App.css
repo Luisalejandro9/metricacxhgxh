@@ -336,9 +336,22 @@
 
 .grid-secondary {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
   margin-bottom: 24px;
+}
+
+.grid-secondary .metric-card {
+  padding: 16px;
+}
+
+.grid-secondary .metric-label {
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.grid-secondary .metric-value.medium {
+  font-size: 26px;
 }
 
 .stat-below-standard { color: var(--accent-error); }

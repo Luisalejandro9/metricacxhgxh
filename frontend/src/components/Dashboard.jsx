@@ -365,6 +365,11 @@ function Dashboard({ user, profile, setNetworkError }) {
     return lastItem.accumBonus || 0;
   }, [historyWithAccum]);
 
+  const currentAccum = useMemo(() => {
+    if (historyWithAccum.length === 0) return null;
+    return historyWithAccum[historyWithAccum.length - 1];
+  }, [historyWithAccum]);
+
   // --- Filtered History ---
   const filteredHistory = useMemo(() => {
     if (!searchDate) return historyWithAccum;
@@ -1215,10 +1220,21 @@ function Dashboard({ user, profile, setNetworkError }) {
             </div>
           </div>
           <div className="metric-card">
-            <span className="metric-label">TMO CxH</span>
-            <div className={`metric-value medium ${stats.tmoCase > STANDARDS.TIME_PER_CASE ? 'stat-below-standard' : stats.tmoCase > STANDARDS.TIME_PER_CASE - 100 ? 'stat-warning-standard' : 'stat-meets-standard'}`} style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
-              <span>{formatTmoMin(stats.tmoCase)}</span>
-              <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 'normal' }}>({stats.tmoCase}s)</span>
+            <span className="metric-label">Dif. Cierre Acum</span>
+            <div className={`metric-value medium ${currentAccum && currentAccum.accumClosingDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {currentAccum ? (currentAccum.accumClosingDiff > 0 ? `+${currentAccum.accumClosingDiff}` : currentAccum.accumClosingDiff) : 0}
+            </div>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Dif. GxH Acum</span>
+            <div className={`metric-value medium ${currentAccum && parseFloat(currentAccum.accumGxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {currentAccum ? (parseFloat(currentAccum.accumGxhDiff) > 0 ? `+${currentAccum.accumGxhDiff}` : currentAccum.accumGxhDiff) : 0}
+            </div>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Dif. Reso Acum</span>
+            <div className={`metric-value medium ${currentAccum && currentAccum.accumResoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
+              {currentAccum ? (currentAccum.accumResoDiff > 0 ? `+${currentAccum.accumResoDiff}` : currentAccum.accumResoDiff) : 0}
             </div>
           </div>
           <div className="metric-card">
@@ -1377,6 +1393,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                   <thead>
                     <tr>
                       <th>Fecha</th>
+                      <th>Acum. Casos</th>
                       <th>Acum. Cierre</th>
                       <th>Acum. Reso</th>
                       <th>Acum. GxH</th>
@@ -1390,6 +1407,7 @@ function Dashboard({ user, profile, setNetworkError }) {
                     {filteredHistory.map((item) => (
                       <tr key={item.id + '-accum'}>
                         <td>{item.date}</td>
+                        <td style={{ fontWeight: 'bold' }}>{item.accumManaged}</td>
                         <td className={getStatusClass(item.accumCloseRate, STANDARDS.CLOSED_GREEN, STANDARDS.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
                           {item.accumCloseRate}%
                         </td>
