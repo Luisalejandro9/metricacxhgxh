@@ -354,6 +354,40 @@
   font-size: 26px;
 }
 
+/* --- ACCUMULATED METRICS SECTION --- */
+.accum-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.accum-card {
+  padding: 16px 20px;
+  min-width: 160px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.02) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.08);
+}
+
+.accum-card:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.15);
+  transform: translateY(-2px);
+}
+
+.accum-card .accum-label {
+  color: #fcd34d !important;
+  font-size: 11px;
+  margin-bottom: 8px;
+  opacity: 1;
+}
+
+.accum-card .metric-value {
+  font-size: 26px;
+}
+
 .stat-below-standard { color: var(--accent-error); }
 .stat-warning-standard { color: var(--accent-warning); }
 .stat-meets-standard { color: var(--accent-success); }
