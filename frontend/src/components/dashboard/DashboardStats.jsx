@@ -15,6 +15,7 @@ function DashboardStats({
   setIsEditingManaged,
   closedCount,
   managedCount,
+  techniciansCount,
   manualCountInput,
   setManualCountInput,
   saveManualClosed,

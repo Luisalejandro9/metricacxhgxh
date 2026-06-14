@@ -1010,6 +1010,7 @@ function Dashboard({ user, profile, setNetworkError }) {
           setIsEditingManaged={setIsEditingManaged}
           closedCount={closedCount}
           managedCount={managedCount}
+          techniciansCount={techniciansCount}
           manualCountInput={manualCountInput}
           setManualCountInput={setManualCountInput}
           saveManualClosed={saveManualClosed}
