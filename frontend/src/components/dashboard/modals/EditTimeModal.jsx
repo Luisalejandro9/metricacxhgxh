@@ -11,7 +11,8 @@ function EditTimeModal({ show, onClose, timerSeconds, onSave }) {
       const s = timerSeconds % 60;
       setLocalTime({ h, m, s });
     }
-  }, [show, timerSeconds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
 
   if (!show) return null;
 
