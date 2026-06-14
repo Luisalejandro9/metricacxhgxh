@@ -1,53 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  Users,
-  ArrowLeft,
-  Search,
-  Mail,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Database,
-  RefreshCw,
+  ArrowLeft,
   Trophy,
-  TrendingUp,
-  Flame,
-  Calendar,
   Zap,
-  Activity,
-  History,
-  ExternalLink,
-  X,
-  ChevronRight,
+  Mail,
   Trash2,
-  LogOut
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import '../App.css';
 
-// Register ChartJS modules
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+// Subcomponents
+import ConfigPanel from './admin/ConfigPanel';
+import MonitorPanel from './admin/MonitorPanel';
+import UserDetailsModal from './admin/modals/UserDetailsModal';
+import DeleteConfirmModal from './admin/modals/DeleteConfirmModal';
 
 const DEFAULT_GXH_TIERS = [
   { min: 4.50, bonus: 2.0 },
@@ -208,7 +178,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     if (!targetUser) return;
     setIsDeleting(true);
     try {
-      // Invocar la función RPC en Supabase que borra las métricas y las sesiones en una transacción segura
       const { data, error } = await supabase.rpc('clear_user_data_and_sessions', {
         target_user_id: targetUser.id
       });
@@ -217,8 +186,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
 
       showMessage('success', `Datos de ${targetUser.email} limpiados y sesión cerrada de forma remota.`);
       setDeleteConfirmModal({ show: false, targetUser: null });
-      setViewingUserDetails(null); // Close drill-down modal if open
-      await fetchData(true); // Refresh all data
+      setViewingUserDetails(null);
+      await fetchData(true);
     } catch (error) {
       console.error('Error resetting user data:', error);
       const detailStr = error.details ? ` | Detalles: ${error.details}` : '';
@@ -275,7 +244,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
           if (payload.eventType === 'INSERT') return [...currentMetrics, payload.new].sort((a, b) => new Date(a.date) - new Date(b.date));
           if (payload.eventType === 'UPDATE') return currentMetrics.map(m => m.id === payload.new.id ? payload.new : m);
           if (payload.eventType === 'DELETE') {
-            // BUG FIX: Must return elements that are NOT the deleted one
             return currentMetrics.filter(m => m.id !== payload.old.id);
           }
           return currentMetrics;
@@ -302,10 +270,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return filtered;
   }, [monthFilteredMetrics, selectedUserEmail, users, searchTerm]);
 
-  // SPLIT METRICS: Today's detailed monitor
   const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
 
-  // UNIFIED USER HISTORY (Accumulated per Month)
   const unifiedHistory = useMemo(() => {
     return users.map(u => {
       const userRows = monthFilteredMetrics.filter(m => m.user_id === u.id);
@@ -319,7 +285,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       const resolution = totalManaged > 0 ? (userRows.reduce((s, m) => s + (parseFloat(m.resolution_rate) || 0), 0) / userRows.length).toFixed(1) : "0.0";
       const closingBalance = totalManaged > 0 ? (totalClosed - Math.ceil(totalManaged * (standards.CLOSED_GREEN / 100))) : 0;
 
-      // GxH and Reso accumulated differences for Admin
       const totalSeconds = userRows.reduce((s, m) => {
         const [h, min, sec] = m.total_time.split(':').map(Number);
         return s + (h * 3600 + min * 60 + sec);
@@ -340,8 +305,7 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         resoDiff,
         recordsCount: userRows.length,
         rows: userRows.sort((a, b) => new Date(b.date) - new Date(a.date)).map((row, idx, arr) => {
-          // Calculate running totals for each row to show accum diffs in modal
-          const upToNow = arr.slice(idx).reverse(); // arr is desc, so slice and reverse
+          const upToNow = arr.slice(idx).reverse();
           const runManaged = upToNow.reduce((s, r) => s + (r.cases_managed || 0), 0);
           const runClosed = upToNow.reduce((s, r) => s + (r.cases_closed || 0), 0);
           const runTechs = upToNow.reduce((s, r) => s + (r.technicians_sent || 0), 0);
@@ -379,7 +343,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     return list.slice(0, 5);
   }, [unifiedHistory]);
 
-  // Obtener todos los días de trabajo únicos para el gráfico de tendencia histórica
   const allWorkDays = useMemo(() => {
     return [...new Set(filteredMetrics.map(m => m.date))].sort();
   }, [filteredMetrics]);
@@ -396,8 +359,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     };
   }, [filteredMetrics, allWorkDays]);
 
-
-
   const formatLastUpdated = (timestamp) => {
     if (!timestamp) return 'N/A';
     try {
@@ -408,10 +369,8 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     }
   };
 
-  // ACCESS DENIED VIEW WITH REDIRECT
   const [countdown, setCountdown] = useState(15);
 
-  // Profile permission check — independent of data loading
   const isProfileLoaded = profile !== undefined;
   const isAdmin = isProfileLoaded && profile && profile.role === 'admin' && profile.is_enabled;
 
@@ -561,168 +520,6 @@ function AdminDashboard({ user, profile, setNetworkError }) {
     }
   };
 
-  const renderConfigPanel = () => {
-    if (!formConfig) return <div className="loading-state">Cargando formulario...</div>;
-    return (
-      <div style={{ padding: '0 10px 40px 10px' }}>
-        <div className="admin-header" style={{ marginBottom: '30px' }}>
-          <div>
-            <h2 style={{ fontSize: '32px', margin: 0 }}>Ajustes de Métricas</h2>
-            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Configura los estándares operativos y las tablas de bonificación</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-secondary" onClick={resetConfigToDefault}>
-              Restablecer Valores
-            </button>
-            <button className="btn btn-primary" onClick={saveConfig} disabled={isSavingConfig}>
-              {isSavingConfig ? 'Guardando...' : 'Guardar Configuración'}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid-primary" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }}>
-          {/* SECCIÓN 1: ESTÁNDARES */}
-          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
-            <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '20px' }}>
-              🎯 Objetivos y Estándares Operativos
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>GxH Verde (Objetivo)</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.gxh_green} onChange={e => handleConfigChange('gxh_green', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>GxH Amarillo (Mínimo)</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.gxh_yellow} onChange={e => handleConfigChange('gxh_yellow', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Resolución Verde</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.resolution_green} onChange={e => handleConfigChange('resolution_green', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Resolución Amarillo</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.resolution_yellow} onChange={e => handleConfigChange('resolution_yellow', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Cierre Verde</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.closed_green} onChange={e => handleConfigChange('closed_green', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>% Cierre Amarillo</label>
-                <input type="number" step="0.1" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.closed_yellow} onChange={e => handleConfigChange('closed_yellow', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>TMO Casos (segundos)</label>
-                <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.time_per_case} onChange={e => handleConfigChange('time_per_case', e.target.value)} />
-              </div>
-              <div className="input-group">
-                <label style={{ fontSize: '12px', color: 'var(--text-dim)' }}>TMO Gestionados (segundos)</label>
-                <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-                  value={formConfig.time_per_managed} onChange={e => handleConfigChange('time_per_managed', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 2: TABLA BONIFICACIÓN GXH */}
-          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-              <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', margin: 0 }}>
-                📈 Tabla de Bonificaciones por GxH
-              </h3>
-              <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => addTier('gxh_bonus_tiers')}>
-                + Agregar Rango
-              </button>
-            </div>
-            
-            <div className="table-container">
-              <table className="history-table admin-table" style={{ width: '100%' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left' }}>GxH Mínimo para Calificar</th>
-                    <th style={{ textAlign: 'left' }}>Porcentaje de Bono (%)</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formConfig.gxh_bonus_tiers.map((tier, idx) => (
-                    <tr key={`gxh-tier-${idx}`}>
-                      <td style={{ textAlign: 'left' }}>
-                        <input type="number" step="0.01" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
-                          value={tier.min} onChange={e => handleTierChange('gxh_bonus_tiers', idx, 'min', e.target.value)} />
-                      </td>
-                      <td style={{ textAlign: 'left' }}>
-                        <input type="number" step="0.1" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
-                          value={tier.bonus} onChange={e => handleTierChange('gxh_bonus_tiers', idx, 'bonus', e.target.value)} />
-                      </td>
-                      <td>
-                        <button className="btn btn-logout" style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                          onClick={() => deleteTier('gxh_bonus_tiers', idx)}>
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* SECCIÓN 3: TABLA BONIFICACIÓN RESOLUCIÓN */}
-          <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-              <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', margin: 0 }}>
-                ⚡ Tabla de Bonificaciones por % Resolución
-              </h3>
-              <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => addTier('resolution_bonus_tiers')}>
-                + Agregar Rango
-              </button>
-            </div>
-            
-            <div className="table-container">
-              <table className="history-table admin-table" style={{ width: '100%' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left' }}>% Resolución Mínimo</th>
-                    <th style={{ textAlign: 'left' }}>Porcentaje de Bono (%)</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formConfig.resolution_bonus_tiers.map((tier, idx) => (
-                    <tr key={`reso-tier-${idx}`}>
-                      <td style={{ textAlign: 'left' }}>
-                        <input type="number" step="0.01" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
-                          value={tier.min} onChange={e => handleTierChange('resolution_bonus_tiers', idx, 'min', e.target.value)} />
-                      </td>
-                      <td style={{ textAlign: 'left' }}>
-                        <input type="number" step="0.1" className="filter-input" style={{ width: '90%', padding: '6px 12px' }}
-                          value={tier.bonus} onChange={e => handleTierChange('resolution_bonus_tiers', idx, 'bonus', e.target.value)} />
-                      </td>
-                      <td>
-                        <button className="btn btn-logout" style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                          onClick={() => deleteTier('resolution_bonus_tiers', idx)}>
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Still waiting for profile from App.jsx
   if (!isProfileLoaded) {
     return (
       <div className="login-overlay">
@@ -794,7 +591,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
         </section>
 
         <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
-          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '10px' }} onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Panel Usuario</button>
+          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '10px' }} onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={16} /> Panel Usuario
+          </button>
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             <button 
@@ -814,7 +613,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
           </div>
 
           <div>
-            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}><Trophy size={11} style={{ marginRight: 5 }} /> Ranking Top Eficiencia</h3>
+            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}>
+              <Trophy size={11} style={{ marginRight: 5 }} /> Ranking Top Eficiencia
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
               {leaderboard.map((u, i) => (
                 <div key={u.id} style={{
@@ -825,7 +626,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                   <div style={{ width: 20, height: 20, borderRadius: '50%', background: i === 0 ? 'var(--accent-warning)' : 'var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 'bold' }}>
                     {i === 0 ? <Zap size={10} color="white" /> : i + 1}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: '600', color: i === 0 ? 'var(--accent-warning)' : 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email.split('@')[0]}</span>
+                  <span style={{ fontSize: 11, fontWeight: '600', color: i === 0 ? 'var(--accent-warning)' : 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>
+                    {u.email.split('@')[0]}
+                  </span>
                   <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{u.efficiency}%</span>
                 </div>
               ))}
@@ -833,7 +636,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
           </div>
 
           <div>
-            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}><Mail size={11} style={{ marginRight: 5 }} /> Directorio</h3>
+            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}>
+              <Mail size={11} style={{ marginRight: 5 }} /> Directorio
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {users.map(u => (
                 <div key={u.id} className={`user-list-item ${selectedUserEmail === u.email ? 'active' : ''}`} onClick={() => setSelectedUserEmail(u.email)}
@@ -877,7 +682,9 @@ function AdminDashboard({ user, profile, setNetworkError }) {
                 padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', textAlign: 'center', marginTop: '5px',
                 background: selectedUserEmail === 'all' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)',
                 border: '1px solid', borderColor: selectedUserEmail === 'all' ? 'var(--primary-light)' : 'var(--border-light)'
-              }}>Mostrar Global</div>
+              }}>
+                Mostrar Global
+              </div>
             </div>
           </div>
         </nav>
@@ -886,341 +693,52 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       {/* MAIN CONTENT */}
       <main className="main-content">
         {activeTab === 'config' ? (
-          renderConfigPanel()
+          <ConfigPanel
+            formConfig={formConfig}
+            isSavingConfig={isSavingConfig}
+            resetConfigToDefault={resetConfigToDefault}
+            saveConfig={saveConfig}
+            handleConfigChange={handleConfigChange}
+            handleTierChange={handleTierChange}
+            addTier={addTier}
+            deleteTier={deleteTier}
+          />
         ) : (
-          <>
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <h2 style={{ fontSize: '32px', margin: 0 }}>Admin Panel</h2>
-              <div className="live-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239, 68, 68, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <div className="pulse-dot"></div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--accent-error)', letterSpacing: '0.1em' }}>EN VIVO</span>
-              </div>
-            </div>
-            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Gestionando {users.length} operadores activos</p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', maxWidth: '650px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>MES DE CONSULTA</span>
-              <input type="month" className="filter-input" style={{ height: '45px', borderRadius: '12px' }} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-            </div>
-            <div style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>BUSCAR OPERADOR</span>
-              <div style={{ position: 'relative' }}>
-                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{ width: '100%', paddingLeft: '40px', height: '45px', borderRadius: '12px' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'transparent' }}>REFRESH</span>
-              <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{ height: '45px', width: '45px', padding: 0, borderRadius: '12px' }}><RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} /></button>
-            </div>
-          </div>
-        </div>
-
-        {/* SUMMARY CARDS */}
-        <div className="grid-secondary" style={{ marginBottom: '30px' }}>
-          <div className="metric-card">
-            <span className="metric-label">Gestionados Acum.</span>
-            <div className="metric-value medium">{statsSummary.totalManaged}</div>
-          </div>
-          <div className="metric-card">
-            <span className="metric-label">Cerrados Acum.</span>
-            <div className="metric-value medium">{statsSummary.totalClosed}</div>
-          </div>
-          <div className="metric-card">
-            <span className="metric-label">TCO Acum.</span>
-            <div className="metric-value medium">{statsSummary.totalTechs}</div>
-          </div>
-          <div className="metric-card">
-            <span className="metric-label">Cierre Promedio</span>
-            <div className={`metric-value medium ${getStatusClass(statsSummary.avgEfficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}`}>{statsSummary.avgEfficiency}%</div>
-          </div>
-        </div>
-
-        {/* MONITOR JORNADA ACTUAL (LIVE) */}
-        <div className="metric-card" style={{ padding: '0', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)', background: 'rgba(99, 102, 241, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Activity size={16} className="text-primary" />
-              <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Monitor de Jornada Actual (Hoy)</span>
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--accent-success)', fontWeight: 'bold' }}>AUTOSINCRONIZADO</div>
-          </div>
-          <div className="table-container" style={{ maxHeight: '350px' }}>
-            <table className="history-table admin-table">
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
-                  <th>Gest.</th>
-                  <th>Cerr.</th>
-                  <th>TCO</th>
-                  <th>% Cierre</th>
-                  <th>Acum. Reso</th>
-                  <th>G/h</th>
-                  <th>Última Act.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metricsToday.length === 0 ? (
-                  <tr><td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-dim)' }}>No hay actividad registrada para hoy.</td></tr>
-                ) : metricsToday.map((item) => {
-                  const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
-                  return (
-                    <tr key={item.id}>
-                      <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{email.split('@')[0]}</span>
-                          <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{email}</span>
-                        </div>
-                      </td>
-                      <td>{item.cases_managed}</td>
-                      <td>{item.cases_closed}</td>
-                      <td>{item.technicians_sent}</td>
-                      <td className={getStatusClass(item.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{item.efficiency}%</td>
-                      <td className={getStatusClass(item.resolution_rate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}>{item.resolution_rate}%</td>
-                      <td className={getStatusClass(item.cases_per_hour, standards.GXH_GREEN, standards.GXH_YELLOW)}>{item.cases_per_hour}</td>
-                      <td style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{formatLastUpdated(item.updated_at)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ANALYTICS ROW */}
-        <div style={{ marginBottom: '32px' }}>
-          <div className="metric-card" style={{ padding: '24px' }}>
-            <span className="metric-label"><TrendingUp size={14} style={{ marginRight: 5 }} /> Tendencia Histórica de Gestión</span>
-            <div style={{ height: '180px' }}><Line data={trendChartData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }} /></div>
-          </div>
-        </div>
-
-        {/* UNIFIED HISTORY TABLE (Drill-down) */}
-        <div className="metric-card" style={{ padding: '0' }}>
-          <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <History size={16} className="text-secondary" />
-              <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Historial Unificado de Operadores</span>
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Haz clic en un operador para ver su detalle</div>
-          </div>
-          <div className="table-container" style={{ maxHeight: '500px' }}>
-            <table className="history-table admin-table clickable-rows">
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
-                  <th>Días Reg.</th>
-                  <th>Total Gest.</th>
-                  <th>Total Cerr.</th>
-                  <th>% Cierre Med.</th>
-                  <th>% Reso Med.</th>
-                  <th>G/h Med.</th>
-                  <th>Dif. Cierre</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unifiedHistory.length === 0 ? (
-                  <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)' }}>Iniciando base de datos...</td></tr>
-                ) : unifiedHistory.map((u) => (
-                  <tr key={u.id} onClick={() => setViewingUserDetails(u)} style={{ cursor: 'pointer' }}>
-                    <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{u.email.split('@')[0]}</span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{u.email}</span>
-                      </div>
-                    </td>
-                    <td>{u.recordsCount}</td>
-                    <td style={{ fontWeight: '600' }}>{u.totalManaged}</td>
-                    <td style={{ fontWeight: '600' }}>{u.totalClosed}</td>
-                    <td className={getStatusClass(u.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{u.efficiency}%</td>
-                    <td className={getStatusClass(u.resolution, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}>{u.resolution}%</td>
-                    <td className={getStatusClass(u.avgGxh, standards.GXH_GREEN, standards.GXH_YELLOW)}>{u.avgGxh}</td>
-                    <td style={{ fontWeight: '700', color: u.closingBalance >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                      {u.closingBalance > 0 ? `+${u.closingBalance}` : u.closingBalance}
-                    </td>
-                    <td style={{ color: 'var(--primary)' }}><div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>Ver <ChevronRight size={14} /></div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-          </>
+          <MonitorPanel
+            users={users}
+            statsSummary={statsSummary}
+            standards={standards}
+            metricsToday={metricsToday}
+            trendChartData={trendChartData}
+            unifiedHistory={unifiedHistory}
+            setViewingUserDetails={setViewingUserDetails}
+            isRefreshing={isRefreshing}
+            fetchData={fetchData}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            formatLastUpdated={formatLastUpdated}
+            getStatusClass={getStatusClass}
+          />
         )}
       </main>
 
-      {/* DRILL-DOWN MODAL: USER DETAILS */}
-      {viewingUserDetails && (
-        <div className="login-overlay drilldown-modal" style={{ zIndex: 2000 }}>
-          <div className="login-card" style={{ maxWidth: '900px', width: '95%', padding: '0', overflow: 'hidden' }}>
-            <header style={{ padding: '24px 32px', background: 'var(--bg-glass)', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--text-bright)' }}>{viewingUserDetails.email.split('@')[0]}</h2>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{viewingUserDetails.email}</p>
-              </div>
-              <button className="btn btn-secondary" onClick={() => setViewingUserDetails(null)} style={{ padding: '8px' }}><X size={20} /></button>
-            </header>
+      <UserDetailsModal
+        viewingUserDetails={viewingUserDetails}
+        onClose={() => setViewingUserDetails(null)}
+        standards={standards}
+        getStatusClass={getStatusClass}
+        onDeleteClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u })}
+      />
 
-            <div style={{ padding: '32px', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div className="grid-secondary" style={{ marginBottom: '32px' }}>
-                    <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="metric-label">Días de Actividad</span>
-                      <div className="metric-value small">{viewingUserDetails.recordsCount}</div>
-                    </div>
-                    <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <span className="metric-label">Diferencia cierre ({standards.CLOSED_GREEN}%)</span>
-                      <div className={`metric-value small ${viewingUserDetails.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
-                        {viewingUserDetails.closingBalance > 0 ? `+${viewingUserDetails.closingBalance}` : viewingUserDetails.closingBalance}
-                      </div>
-                    </div>
-                <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <span className="metric-label">Promedio G/h</span>
-                  <div className="metric-value small">{viewingUserDetails.avgGxh}</div>
-                </div>
-                <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <span className="metric-label"> Cierre Total</span>
-                  <div className={`metric-value small ${getStatusClass(viewingUserDetails.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}`}>{viewingUserDetails.efficiency}%</div>
-                </div>
-              </div>
-
-              <h3 className="metric-label" style={{ marginBottom: '15px' }}><Calendar size={14} style={{ marginRight: 8 }} /> Desglose fecha por fecha</h3>
-              <table className="history-table admin-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>T. Conexión</th>
-                    <th>Gest.</th>
-                    <th>Cerr.</th>
-                    <th>TCO</th>
-                    <th>% Cierre</th>
-                    <th>G/h</th>
-                    <th>Dif. Cierre Acum</th>
-                    <th>Dif. G/h Acum</th>
-                    <th>Dif. Reso Acum</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {viewingUserDetails.rows.map(row => (
-                    <tr key={row.id}>
-                      <td style={{ fontWeight: '700' }}>{row.date}</td>
-                      <td>{row.total_time}</td>
-                      <td>{row.cases_managed}</td>
-                      <td>{row.cases_closed}</td>
-                      <td>{row.technicians_sent}</td>
-                      <td className={getStatusClass(row.efficiency, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)}>{row.efficiency}%</td>
-                      <td className={getStatusClass(row.cases_per_hour, standards.GXH_GREEN, standards.GXH_YELLOW)}>{row.cases_per_hour}</td>
-                      <td style={{ fontWeight: '700', color: row.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                        {row.accumClosingDiff > 0 ? `+${row.accumClosingDiff}` : row.accumClosingDiff}
-                      </td>
-                      <td style={{ fontWeight: '700', color: parseFloat(row.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                        {parseFloat(row.accumGxhDiff) > 0 ? `+${row.accumGxhDiff}` : row.accumGxhDiff}
-                      </td>
-                      <td style={{ fontWeight: '700', color: row.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                        {row.accumResoDiff > 0 ? `+${row.accumResoDiff}` : row.accumResoDiff}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <footer style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
-              {viewingUserDetails.role !== 'admin' ? (
-                <button 
-                  className="btn" 
-                  style={{ 
-                    backgroundColor: 'var(--accent-error)', 
-                    color: 'white', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    fontWeight: '600',
-                    padding: '8px 16px',
-                    borderRadius: '8px'
-                  }} 
-                  onClick={() => setDeleteConfirmModal({ show: true, targetUser: viewingUserDetails })}
-                >
-                  <Trash2 size={16} />
-                  <span>Limpiar Datos y Cerrar Sesión</span>
-                </button>
-              ) : (
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>CUENTA DE ADMINISTRADOR PROTEGIDA</div>
-              )}
-              <button className="btn btn-primary" onClick={() => setViewingUserDetails(null)}>Cerrar Detalle</button>
-            </footer>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE USER DATA AND LOGOUT CONFIRMATION DIALOG */}
-      {deleteConfirmModal.show && deleteConfirmModal.targetUser && (
-        <div className="login-overlay drilldown-modal" style={{ zIndex: 3000 }}>
-          <div className="modal" style={{ maxWidth: '450px', textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '16px', border: '1px solid var(--border-light)', padding: '30px' }}>
-            <div className="modal-header" style={{ justifyContent: 'center', marginBottom: '15px' }}>
-              <div style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 10px',
-                color: 'var(--accent-error)'
-              }}>
-                <AlertCircle size={32} />
-              </div>
-            </div>
-            <h2 style={{
-              fontSize: '22px',
-              marginBottom: '12px',
-              color: 'var(--text-bright)'
-            }}>
-              ¿Limpiar Métricas y Cerrar Sesión?
-            </h2>
-            <p style={{
-              marginBottom: '20px',
-              fontSize: '14px',
-              color: 'var(--text-muted)',
-              lineHeight: '1.6'
-            }}>
-              Estás a punto de eliminar de forma permanente todo el historial de métricas de <strong>{deleteConfirmModal.targetUser.email}</strong>. Su cuenta de acceso seguirá activa para que pueda ingresar en el futuro.
-            </p>
-            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px', fontSize: '12px', color: 'var(--accent-error)', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-              <LogOut size={16} />
-              <span>Esto cerrará su sesión de forma remota en todos sus dispositivos.</span>
-            </div>
-            <div className="modal-footer" style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteConfirmModal({ show: false, targetUser: null })} disabled={isDeleting}>
-                Cancelar
-              </button>
-              <button
-                className="btn"
-                style={{
-                  flex: 1,
-                  backgroundColor: 'var(--accent-error)',
-                  color: 'white',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-                onClick={() => handleDeleteUserData(deleteConfirmModal.targetUser)}
-                disabled={isDeleting}
-              >
-                <Trash2 size={16} />
-                {isDeleting ? 'Limpiando...' : 'Limpiar y Cerrar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        show={deleteConfirmModal.show}
+        targetUser={deleteConfirmModal.targetUser}
+        isDeleting={isDeleting}
+        onCancel={() => setDeleteConfirmModal({ show: false, targetUser: null })}
+        onConfirm={() => handleDeleteUserData(deleteConfirmModal.targetUser)}
+      />
 
       <style>{`
         .pulse-dot {
