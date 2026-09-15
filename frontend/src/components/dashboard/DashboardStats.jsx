@@ -349,10 +349,11 @@ function DashboardStats({
             {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
           </div>
           {(() => {
-            const needed = getCasesNeededToFixGxH(managedCount, timerSeconds / 3600, standards.GXH_GREEN);
+            const isNegative = parseFloat(stats.gxhDiff) < 0;
+            const targetTmoSecs = Math.round(3600 / standards.GXH_GREEN);
             return (
-              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: parseFloat(stats.gxhDiff) >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {parseFloat(stats.gxhDiff) < 0 ? `Para 0: Gestiona ${needed} caso(s)` : '✓ En objetivo (0 pend.)'}
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: !isNegative ? '#22c55e' : 'var(--accent-warning)' }}>
+                {isNegative ? `TMO objetivo: ≤ ${formatTmoMin(targetTmoSecs)}/caso` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -413,10 +414,10 @@ function DashboardStats({
           </div>
           {(() => {
             const val = currentAccum ? parseFloat(currentAccum.accumGxhDiff) : 0;
-            const needed = currentAccum ? getCasesNeededToFixGxH(currentAccum.accumManaged, currentAccum.accumSeconds / 3600, standards.GXH_GREEN) : 0;
+            const targetTmoSecs = Math.round(3600 / standards.GXH_GREEN);
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Para 0: Gestiona ${needed} caso(s)` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `TMO objetivo: ≤ ${formatTmoMin(targetTmoSecs)}/caso` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
