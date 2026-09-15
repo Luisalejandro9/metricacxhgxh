@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit3, Save } from 'lucide-react';
+import { SquarePen, Save, Zap, Check, AlertTriangle, X, Download } from 'lucide-react';
 
 const formatTmoMin = (seconds) => {
   if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
@@ -8,7 +8,17 @@ const formatTmoMin = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')} min`;
 };
 
+const formatTime = (totalSeconds) => {
+  if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+};
+
 function DashboardStats({
+  user,
+  timerSeconds = 0,
   isEditingClosed,
   setIsEditingClosed,
   isEditingManaged,
@@ -28,11 +38,82 @@ function DashboardStats({
   isSaving,
   isAutoSaving,
   lastSavedAt,
-  getStatusClass
+  getStatusClass,
+  accumulatedBonusTotal = 0,
+  getGxHBonus = () => 0,
+  getResolucionBonus = () => 0,
+  calculateRecordBonus = () => 0
 }) {
+  const totalTodayBonus = calculateRecordBonus(stats.managedPerHour, stats.resolutionRate);
+  const gxhBonus = getGxHBonus(stats.managedPerHour);
+  const resoBonus = getResolucionBonus(stats.resolutionRate);
+
+  // --- CSV Download Handler ---
+  const handleDownloadCSV = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const timeStr = formatTime(timerSeconds);
+    const bonusTodayStr = totalTodayBonus.toFixed(2);
+    const bonusMonthStr = accumulatedBonusTotal.toFixed(2);
+
+    const headers = [
+      'Fecha',
+      'Usuario',
+      'Tiempo Total',
+      'Casos Cerrados',
+      'Casos Gestionados',
+      'Técnicos Enviados',
+      'Gestionados por Hora (GxH)',
+      'Cierre Real %',
+      'Diferencia Cierre',
+      'Diferencia GxH',
+      'Diferencia Resolución',
+      'TMO GxH (seg)',
+      'Resolución Real %',
+      'Bonificación Hoy %',
+      'Bono Acumulado Mes %'
+    ];
+
+    const row = [
+      `"${dateStr}"`,
+      `"${user?.email || 'Demo/Usuario'}"`,
+      `"${timeStr}"`,
+      closedCount,
+      managedCount,
+      techniciansCount,
+      stats.managedPerHour,
+      `"${stats.closeRate}%"`,
+      stats.closingBalance,
+      stats.gxhDiff,
+      stats.resoDiff,
+      stats.tmoManaged,
+      `"${stats.resolutionRate}%"`,
+      `"${bonusTodayStr}%"`,
+      `"${bonusMonthStr}%"`
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" +
+      headers.join(',') + "\n" +
+      row.join(',');
+
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const fileName = `${day}-${month}-${year}.csv`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <div className="grid-primary">
+        {/* --- 1. CASOS CERRADOS --- */}
         <div className="metric-card large-card">
           <div style={{ position: 'relative' }}>
             <span className="metric-label">Casos Cerrados Hoy</span>
@@ -47,13 +128,13 @@ function DashboardStats({
                   onKeyDown={(e) => handleManualInputKeyDown(e, 'closed')}
                   autoFocus
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--bg-main)',
                     border: '1px solid var(--primary)',
                     color: 'var(--text-bright)',
-                    fontSize: '32px',
+                    fontSize: '36px',
+                    fontFamily: 'var(--font-mono)',
                     fontWeight: '800',
-                    width: '100px',
-                    borderRadius: '8px',
+                    width: '110px',
                     padding: '4px 10px'
                   }}
                 />
@@ -73,13 +154,11 @@ function DashboardStats({
                       padding: '5px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'color 0.2s'
+                      justifyContent: 'center'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
-                    onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-dim)'}
+                    title="Editar manualmente"
                   >
-                    <Edit3 size={18} />
+                    <SquarePen size={16} strokeWidth={2} />
                   </button>
                 </>
               )}
@@ -88,11 +167,17 @@ function DashboardStats({
           <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? 'standard-meets' :
             parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? 'standard-warning' : 'standard-below'
             }`}>
-            {parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? 'CUMPLE CON LA MÉTRICA' :
-              parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? 'MÉTRICA EN RIESGO' : 'NO CUMPLE LA MÉTRICA'}
+            {parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? (
+              <><Check size={12} strokeWidth={2.5} style={{ marginRight: 4 }} /> CUMPLE CON LA MÉTRICA</>
+            ) : parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? (
+              <><AlertTriangle size={12} strokeWidth={2} style={{ marginRight: 4 }} /> MÉTRICA EN RIESGO</>
+            ) : (
+              <><X size={12} strokeWidth={2.5} style={{ marginRight: 4 }} /> NO CUMPLE LA MÉTRICA</>
+            )}
           </div>
         </div>
 
+        {/* --- 2. CASOS GESTIONADOS --- */}
         <div className="metric-card large-card">
           <div style={{ position: 'relative' }}>
             <span className="metric-label">Casos Gestionados</span>
@@ -107,13 +192,13 @@ function DashboardStats({
                   onKeyDown={(e) => handleManualInputKeyDown(e, 'managed')}
                   autoFocus
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--bg-main)',
                     border: '1px solid var(--primary)',
                     color: 'var(--text-bright)',
-                    fontSize: '32px',
+                    fontSize: '36px',
+                    fontFamily: 'var(--font-mono)',
                     fontWeight: '800',
-                    width: '100px',
-                    borderRadius: '8px',
+                    width: '110px',
                     padding: '4px 10px'
                   }}
                 />
@@ -133,21 +218,75 @@ function DashboardStats({
                       padding: '5px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'color 0.2s'
+                      justifyContent: 'center'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
-                    onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-dim)'}
+                    title="Editar manualmente"
                   >
-                    <Edit3 size={18} />
+                    <SquarePen size={16} strokeWidth={2} />
                   </button>
                 </>
               )}
             </div>
           </div>
+          <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: 'auto', paddingTop: '12px' }}>
+            TOTAL CASOS GESTIONADOS EN SESIÓN
+          </div>
+        </div>
+
+        {/* --- 3. SECCIÓN DE BONIFICACIONES (TOP ROW) --- */}
+        <div className="metric-card large-card bonus-card-top" style={{ border: '1px solid var(--primary)' }}>
+          <div className="swiss-section-header" style={{ marginBottom: '8px', borderBottomColor: 'var(--primary)' }}>
+            <Zap size={14} strokeWidth={2} /> BONIFICACIONES DIARIAS Y MES
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-strong)', padding: '6px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                TOTAL HOY
+              </div>
+              <div style={{ fontSize: '20px', fontFamily: 'var(--font-mono)', fontWeight: '900', letterSpacing: '0.08em', color: totalTodayBonus >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                {totalTodayBonus > 0 ? '+' : ''}{totalTodayBonus.toFixed(2)}%
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--primary)', padding: '6px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                BONO ACUM. MES
+              </div>
+              <div style={{ fontSize: '20px', fontFamily: 'var(--font-mono)', fontWeight: '900', letterSpacing: '0.08em', color: accumulatedBonusTotal >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                {accumulatedBonusTotal > 0 ? '+' : ''}{accumulatedBonusTotal.toFixed(2)}%
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+            <div className="standard-row" style={{ margin: 0 }}>
+              <span style={{ color: 'var(--text-muted)' }}>GxH Working:</span>
+              <span style={{ fontWeight: '800', color: gxhBonus > 0 ? 'var(--accent-success)' : gxhBonus < 0 ? 'var(--accent-error)' : 'var(--text-dim)' }}>
+                {gxhBonus > 0 ? '+' : ''}{gxhBonus.toFixed(2)}%
+              </span>
+            </div>
+
+            <div className="standard-row" style={{ margin: 0 }}>
+              <span style={{ color: 'var(--text-muted)' }}>% Reso Neta:</span>
+              <span style={{ fontWeight: '800', color: resoBonus > 0 ? 'var(--accent-success)' : resoBonus < 0 ? 'var(--accent-error)' : 'var(--text-dim)' }}>
+                {resoBonus > 0 ? '+' : ''}{resoBonus.toFixed(2)}%
+              </span>
+            </div>
+
+            <div className="standard-row" style={{ margin: 0 }}>
+              <span style={{ color: 'var(--text-muted)' }}>% Cierre (≥{standards.CLOSED_GREEN}%):</span>
+              <span className={parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? 'stat-meets-standard' :
+                parseFloat(stats.closeRate) >= standards.CLOSED_YELLOW ? 'stat-warning-standard' : 'stat-below-standard'}
+                style={{ fontWeight: '800' }}>
+                {stats.closeRate}% {parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? '✓ OK' : '✗ Bajo'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* --- REJILLA SECUNDARIA DE KPIs --- */}
       <div className="grid-secondary">
         <div className="metric-card">
           <span className="metric-label">Gestionado por Hora</span>
@@ -219,46 +358,69 @@ function DashboardStats({
         </div>
       </div>
 
-      <div className="save-container" style={{ margin: '30px auto', width: '100%', maxWidth: '600px', padding: '0 20px' }}>
+      {/* --- BOTONES GUARDAR Y DESCARGAR CSV SIDE-BY-SIDE --- */}
+      <div className="save-container" style={{ margin: '24px auto', width: '100%', maxWidth: '750px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button
-          className="btn btn-save"
+          className="btn btn-primary"
           onClick={saveToSupabase}
           disabled={isSaving || managedCount === 0}
           style={{
-            width: '100%',
-            height: '60px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
-            color: 'white',
+            flex: 1,
+            minWidth: '220px',
+            height: '52px',
             fontWeight: '800',
-            fontSize: '22px',
-            border: 'none',
+            fontSize: '15px',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
             cursor: (isSaving || managedCount === 0) ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '12px',
-            opacity: (isSaving || managedCount === 0) ? 0.6 : 1,
-            transform: 'translateY(0)'
+            gap: '10px',
+            opacity: (isSaving || managedCount === 0) ? 0.5 : 1
           }}
         >
-          <Save size={26} />
+          <Save size={18} strokeWidth={2} />
           {isSaving ? 'GUARDANDO...' : isAutoSaving ? 'AUTO-GUARDADO...' : 'GUARDAR MÉTRICAS'}
         </button>
-        {lastSavedAt && (
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-dim)',
-            textAlign: 'center',
-            marginTop: '10px',
-            fontWeight: '500'
-          }}>
-            Auto-sincronizado a las {lastSavedAt.toLocaleTimeString()}
-          </div>
-        )}
+
+        <button
+          className="btn btn-secondary"
+          onClick={handleDownloadCSV}
+          style={{
+            flex: 1,
+            minWidth: '220px',
+            height: '52px',
+            fontWeight: '800',
+            fontSize: '15px',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            border: '1px solid var(--border-strong)',
+            background: 'var(--bg-card)',
+            color: 'var(--text-bright)'
+          }}
+          title="Descargar archivo CSV con el detalle de métricas registradas en la sesión"
+        >
+          <Download size={18} strokeWidth={2} />
+          DESCARGAR CSV
+        </button>
       </div>
+      {lastSavedAt && (
+        <div style={{
+          fontSize: '11px',
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          marginTop: '-12px',
+          marginBottom: '20px'
+        }}>
+          Auto-sincronizado a las {lastSavedAt.toLocaleTimeString()}
+        </div>
+      )}
     </>
   );
 }

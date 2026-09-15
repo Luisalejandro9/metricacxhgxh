@@ -63,7 +63,7 @@ const formatTime = (totalSeconds) => {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
 };
 
-function Dashboard({ user, profile, setNetworkError }) {
+function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
   // Dynamic Standards State
@@ -974,24 +974,23 @@ function Dashboard({ user, profile, setNetworkError }) {
         resetAll={resetAll}
         handleLogout={handleLogout}
         onNavigateToAdmin={() => navigate('/admin')}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       <main className="main-content">
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
           <button 
-            className="btn" 
+            className="btn btn-secondary" 
             style={{ 
-              borderRadius: 'var(--radius-full)', 
-              padding: '8px 16px', 
-              background: 'rgba(99, 102, 241, 0.1)', 
-              color: 'var(--primary-light)', 
-              border: '1px solid rgba(99, 102, 241, 0.2)',
-              fontSize: '12px',
-              fontWeight: '700'
+              padding: '6px 14px', 
+              fontSize: '11px',
+              fontWeight: '800',
+              letterSpacing: '0.05em'
             }}
             onClick={() => setShowHelpModal(true)}
           >
-            <BookOpen size={16} style={{ marginRight: '8px' }} /> Manual / Cómo funciona
+            <BookOpen size={14} style={{ marginRight: '6px' }} /> MANUAL / CÓMO FUNCIONA
           </button>
         </div>
 
@@ -1004,6 +1003,8 @@ function Dashboard({ user, profile, setNetworkError }) {
         )}
 
         <DashboardStats
+          user={user}
+          timerSeconds={timerSeconds}
           isEditingClosed={isEditingClosed}
           setIsEditingClosed={setIsEditingClosed}
           isEditingManaged={isEditingManaged}
@@ -1024,6 +1025,10 @@ function Dashboard({ user, profile, setNetworkError }) {
           isAutoSaving={isAutoSaving}
           lastSavedAt={lastSavedAt}
           getStatusClass={getStatusClass}
+          accumulatedBonusTotal={accumulatedBonusTotal}
+          getGxHBonus={getGxHBonus}
+          getResolucionBonus={getResolucionBonus}
+          calculateRecordBonus={calculateRecordBonus}
         />
 
         <HistoryTables

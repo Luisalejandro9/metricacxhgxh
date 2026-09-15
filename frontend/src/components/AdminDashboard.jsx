@@ -8,7 +8,9 @@ import {
   Mail,
   Trash2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
@@ -36,7 +38,7 @@ const DEFAULT_RESOLUTION_TIERS = [
   { min: 0.00, bonus: -2.0 }
 ];
 
-function AdminDashboard({ user, profile, setNetworkError }) {
+function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
   // Navigation Tab State
@@ -578,16 +580,28 @@ function AdminDashboard({ user, profile, setNetworkError }) {
       {/* SIDEBAR */}
       <aside className="sidebar">
         <header className="sidebar-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', marginBottom: '10px' }}>
-            <Database className="text-primary" size={24} />
-            <h1 style={{ margin: 0 }}>Admin Panel</h1>
+          <div className="sidebar-header-top">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Database className="text-primary" size={20} />
+              <h1 style={{ margin: 0, fontSize: '18px' }}>Admin Panel</h1>
+            </div>
+            {toggleTheme && (
+              <button 
+                className="theme-toggle-btn" 
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Cambiar a Tema Claro (Suizo)' : 'Cambiar a Tema Oscuro'}
+              >
+                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                <span>{theme === 'dark' ? 'CLARO' : 'OSCURO'}</span>
+              </button>
+            )}
           </div>
-          <div className="subtitle">CONTROL CENTRAL</div>
+          <div className="subtitle">00 / CONTROL CENTRAL</div>
         </header>
 
         <section className="user-info">
           <span>{user?.email}</span>
-          <div style={{ fontSize: '10px', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>ADMINISTRADOR</div>
+          <div style={{ fontSize: '10px', background: 'var(--primary)', color: '#ffffff', padding: '2px 8px', fontWeight: 'bold', textTransform: 'uppercase' }}>ADMINISTRADOR</div>
         </section>
 
         <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>

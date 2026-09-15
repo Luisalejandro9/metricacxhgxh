@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
+import { useTheme } from './hooks/useTheme';
 import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import './App.css';
 
@@ -20,6 +21,9 @@ const isEmailAllowed = (email) => {
 };
 
 function App() {
+  // --- Theme State ---
+  const { theme, toggleTheme } = useTheme();
+
   // --- Global State ---
   const [user, setUser] = useState(null); // Current authenticated user
   const [profile, setProfile] = useState(undefined); // undefined: not loaded, null: not found, object: loaded
@@ -430,7 +434,7 @@ function App() {
         <Route 
           path="/" 
           element={
-            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} handleSpectatorLogin={handleSpectatorLogin} envsMissing={envsMissing} authError={authError} setNetworkError={setNetworkError} />
+            user ? <Navigate to="/dashboard" /> : <Login handleGoogleLogin={handleGoogleLogin} handleSpectatorLogin={handleSpectatorLogin} envsMissing={envsMissing} authError={authError} setNetworkError={setNetworkError} theme={theme} toggleTheme={toggleTheme} />
           } 
         />
 
@@ -438,7 +442,7 @@ function App() {
         <Route 
           path="/dashboard" 
           element={
-            user ? <Dashboard user={user} profile={profile} setNetworkError={setNetworkError} /> : <Navigate to="/" />
+            user ? <Dashboard user={user} profile={profile} setNetworkError={setNetworkError} theme={theme} toggleTheme={toggleTheme} /> : <Navigate to="/" />
           } 
         />
 
@@ -447,7 +451,7 @@ function App() {
           path="/admin" 
           element={
             user ? 
-              <AdminDashboard user={user} profile={profile} setNetworkError={setNetworkError} /> : 
+              <AdminDashboard user={user} profile={profile} setNetworkError={setNetworkError} theme={theme} toggleTheme={toggleTheme} /> : 
               <Navigate to="/" />
           } 
         />

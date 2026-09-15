@@ -1,59 +1,127 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
 
-:root {
-  /* Color Palette - Premium Dark Theme */
-  --bg-main: #050508;
-  --bg-card: rgba(17, 18, 25, 0.8);
-  --bg-sidebar: #0a0b10;
+/* --- LOCAL CODE FONT DECLARATIONS --- */
+@font-face {
+  font-family: 'Code';
+  src: local('Code'), local('Code Bold'), local('Code-Bold'), local('Code Light'), local('Code-Light'), local('CodePro'), local('Code Pro'), local('CodeBold');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Code';
+  src: local('Code Bold'), local('Code-Bold'), local('CodeBold'), local('Code Pro Bold'), local('Code');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Code';
+  src: local('Code Bold'), local('Code-Bold'), local('CodeBold'), local('Code Pro Bold'), local('Code');
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* --- SWISS INTERNATIONAL DESIGN SYSTEM --- */
+
+:root,
+[data-theme="dark"] {
+  /* Dark Theme Palette (Default Matte Obsidian Swiss) */
+  --bg-main: #09090b;
+  --bg-card: #121318;
+  --bg-sidebar: #0e0f14;
+  --bg-hover: #1c1e26;
+  --bg-input: #16171e;
   
-  --primary: #6366f1;
-  --primary-light: #818cf8;
-  --primary-dark: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.3);
+  --primary: #3b82f6;        /* Neutral Swiss Cobalt Blue */
+  --primary-light: #60a5fa;
+  --primary-dark: #1d4ed8;
+  --primary-glow: rgba(59, 130, 246, 0.2);
   
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
   --accent-info: #3b82f6;
 
-  --text-main: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
   --text-bright: #ffffff;
+  --text-inverse: #09090b;
 
-  --border-light: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(99, 102, 241, 0.5);
+  --border-light: #27272a;
+  --border-strong: #3f3f46;
+  --border-focus: #3b82f6;
   
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-glow: none;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-full: 9999px;
+  /* STRICT SWISS ZERO RADIUS */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-full: 0px;
 
-  --font-main: 'Inter', system-ui, sans-serif;
-  --font-heading: 'Outfit', var(--font-main);
+  --font-main: 'Code', 'Code Bold', 'Code Pro', 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-heading: 'Code', 'Code Bold', 'Code Pro', 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono: 'Code', 'Code Bold', 'JetBrains Mono', monospace;
   
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.15s ease-in-out;
 }
 
-* {
+[data-theme="light"] {
+  /* Light Theme Palette (Swiss International Architectural Paper White) */
+  --bg-main: #f4f4f0;
+  --bg-card: #ffffff;
+  --bg-sidebar: #eaeae5;
+  --bg-hover: #e4e4df;
+  --bg-input: #ffffff;
+  
+  --primary: #2563eb;        /* Neutral Swiss Blue */
+  --primary-light: #3b82f6;
+  --primary-dark: #1e40af;
+  --primary-glow: rgba(37, 99, 235, 0.15);
+  
+  --accent-success: #059669;
+  --accent-warning: #d97706;
+  --accent-error: #dc2626;
+  --accent-info: #2563eb;
+
+  --text-main: #09090b;
+  --text-muted: #4b5563;
+  --text-dim: #6b7280;
+  --text-bright: #000000;
+  --text-inverse: #ffffff;
+
+  --border-light: #d4d4d8;
+  --border-strong: #09090b;
+  --border-focus: #09090b;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-glow: none;
+}
+
+/* MANDATORY RULE: ALL BORDERS MUST BE ABSOLUTELY SQUARE */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  border-radius: 0px !important;
 }
 
-body {
-  font-family: var(--font-main);
+html, body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  line-height: 1.6;
+  font-family: var(--font-main);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -62,10 +130,27 @@ body {
   flex-direction: column;
 }
 
-h1, h2, h3, h4 {
+/* Swiss Typographic Hierarchy */
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+}
+
+.swiss-section-header {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 4px;
 }
 
 button {
@@ -79,34 +164,65 @@ button {
 a {
   text-decoration: none;
   color: inherit;
-  transition: var(--transition);
 }
 
 ul {
   list-style: none;
 }
 
-input {
+input, select, textarea {
   outline: none;
   font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  padding: 8px 12px;
+  transition: var(--transition);
 }
 
-/* Glassmorphism Classes */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+}
+
+/* Glass & Card Classes adapted to Swiss Grid */
 .glass {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-light);
 }
 
 .glass-hover:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-focus);
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
 }
 
-/* Scrollbar Styling */
+/* Custom Theme Toggle Switch Button */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* Sharp Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -114,10 +230,9 @@ input {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: var(--border-strong);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--primary);
 }

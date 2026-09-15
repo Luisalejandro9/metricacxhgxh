@@ -1,4 +1,10 @@
 {
+  "name": "contador-cxh-gxh",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "dev": "npm run dev --prefix frontend"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.1",
     "chart.js": "^4.5.1",

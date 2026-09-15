@@ -8,3 +8,10 @@ frontend/.env
 frontend/node_modules/
 frontend/dist/
 vanilla-backup/js/config.js
+
+# Agent metadata
+.agents/
+frontend/.agents/
+skills-lock.json
+frontend/skills-lock.json
+
