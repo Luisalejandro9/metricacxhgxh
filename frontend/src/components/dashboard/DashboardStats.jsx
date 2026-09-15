@@ -18,15 +18,12 @@ const formatTime = (totalSeconds) => {
 
 // --- EXACT RECOVERY ALGORITHMS TO REACH 0 / TARGET ---
 const getCasesNeededToFixReso = (managed, technicians, targetPct = 84.0) => {
-  if (managed === 0 || technicians === 0) return 0;
+  if (managed === 0) return 0;
   const targetRatio = targetPct / 100;
-  const maxTechRatio = 1 - targetRatio;
   const currentResolved = managed - technicians;
   const currentDiff = currentResolved - Math.ceil(managed * targetRatio);
   if (currentDiff >= 0) return 0;
-  const targetTotalManaged = Math.ceil(technicians / maxTechRatio);
-  const needed = targetTotalManaged - managed;
-  return needed > 0 ? needed : 0;
+  return Math.abs(currentDiff);
 };
 
 const getCasesNeededToFixCierre = (managed, closed, targetPct = 78.8) => {
@@ -34,8 +31,7 @@ const getCasesNeededToFixCierre = (managed, closed, targetPct = 78.8) => {
   const targetRatio = targetPct / 100;
   const currentDiff = closed - Math.ceil(managed * targetRatio);
   if (currentDiff >= 0) return 0;
-  const needed = Math.ceil((targetRatio * managed - closed) / (1 - targetRatio));
-  return needed > 0 ? needed : 0;
+  return Math.abs(currentDiff);
 };
 
 const getCasesNeededToFixGxH = (managed, totalHours, targetGxH = 4.0) => {
@@ -338,7 +334,7 @@ function DashboardStats({
             const needed = getCasesNeededToFixCierre(managedCount, closedCount, standards.CLOSED_GREEN);
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.closingBalance >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {stats.closingBalance < 0 ? `Para 0: Cierra ${needed} caso(s) seguidos` : '✓ En objetivo (0 pend.)'}
+                {stats.closingBalance < 0 ? `Para 0: Cierra ${needed} caso${needed > 1 ? 's' : ''}` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -367,7 +363,7 @@ function DashboardStats({
             const needed = getCasesNeededToFixReso(managedCount, techniciansCount, standards.RESOLUTION_GREEN);
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.resoDiff >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {stats.resoDiff < 0 ? `Para 0: Resuelve ${needed} caso(s) sin técnico` : '✓ En objetivo (0 pend.)'}
+                {stats.resoDiff < 0 ? `Para 0: Resuelve ${needed} caso${needed > 1 ? 's' : ''} sin técnico` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -402,7 +398,7 @@ function DashboardStats({
             const needed = currentAccum ? getCasesNeededToFixCierre(currentAccum.accumManaged, currentAccum.accumClosed, standards.CLOSED_GREEN) : 0;
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Para 0: Cierra ${needed} caso(s) seguidos` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `Para 0: Cierra ${needed} caso${needed > 1 ? 's' : ''}` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -432,7 +428,7 @@ function DashboardStats({
             const needed = currentAccum ? getCasesNeededToFixReso(currentAccum.accumManaged, currentAccum.accumTechnicians, standards.RESOLUTION_GREEN) : 0;
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Para 0: Resuelve ${needed} caso(s) sin técnico` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `Para 0: Resuelve ${needed} caso${needed > 1 ? 's' : ''} sin técnico` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
