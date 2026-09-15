@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, RefreshCw, Plus, CheckCircle2, Play, AlertCircle, Trash2 } from 'lucide-react';
+import { Clock, CheckCircle2, Play } from 'lucide-react';
 
 export default function HalfHourlyLogSection({
   closedCount = 0,
@@ -35,7 +35,7 @@ export default function HalfHourlyLogSection({
     return `${h}:${m}`;
   };
 
-  // Load saved logs for today
+  // Load saved frontend logs for today from localStorage
   useEffect(() => {
     const todayStr = getTodayStr();
     const saved = localStorage.getItem(`gxh_half_hourly_logs_${todayStr}`);
@@ -43,20 +43,19 @@ export default function HalfHourlyLogSection({
       try {
         setLogs(JSON.parse(saved));
       } catch (e) {
-        console.error('Error loading half hourly logs', e);
+        console.error('Error loading half hourly frontend logs', e);
       }
     }
   }, []);
 
-  // Update current real time clock & active half hour slot log
+  // Pure frontend automatic ticker: records and locks snapshots every 30 mins
   useEffect(() => {
-    const interval = setInterval(() => {
+    const updateTicker = () => {
       const now = new Date();
       const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
       setCurrentTimeStr(timeString);
       setNextCutStr(getNextCutTime(now));
 
-      // Auto update current slot entry if user has activity
       const todayStr = getTodayStr();
       const currentSlot = getHalfHourSlot(now);
 
@@ -64,7 +63,7 @@ export default function HalfHourlyLogSection({
         const existingIndex = prevLogs.findIndex(item => item.slot === currentSlot);
         const resoRate = managedCount > 0 ? ((managedCount - techniciansCount) / managedCount) * 100 : 0;
 
-        const updatedEntry = {
+        const currentEntry = {
           slot: currentSlot,
           realTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
           closed: closedCount,
@@ -72,13 +71,12 @@ export default function HalfHourlyLogSection({
           technicians: techniciansCount,
           gxh: stats.managedPerHour || 0,
           resolutionRate: parseFloat(resoRate.toFixed(2)),
-          timestamp: Date.now(),
           status: 'EN CURSO'
         };
 
         let newLogs = [...prevLogs];
 
-        // Mark previous slots as 'COMPLETADO'
+        // Mark all past slots before the current active slot as 'COMPLETADO'
         newLogs = newLogs.map(item => {
           if (item.slot !== currentSlot && item.status === 'EN CURSO') {
             return { ...item, status: 'COMPLETADO' };
@@ -87,111 +85,59 @@ export default function HalfHourlyLogSection({
         });
 
         if (existingIndex >= 0) {
-          newLogs[existingIndex] = {
-            ...newLogs[existingIndex],
-            ...updatedEntry
-          };
+          // Keep completed values intact; only update the active 'EN CURSO' slot
+          if (newLogs[existingIndex].status === 'EN CURSO') {
+            newLogs[existingIndex] = {
+              ...newLogs[existingIndex],
+              ...currentEntry
+            };
+          }
         } else {
-          // Only auto-create if there is activity or timer is running
-          if (managedCount > 0 || closedCount > 0 || timerSeconds > 0) {
-            newLogs.push(updatedEntry);
+          // Auto-start tracking if user has activity or timer running
+          if (managedCount > 0 || closedCount > 0 || timerSeconds > 0 || prevLogs.length > 0) {
+            newLogs.push(currentEntry);
           }
         }
 
-        // Sort by slot time
+        // Sort chronologically by slot time
         newLogs.sort((a, b) => a.slot.localeCompare(b.slot));
 
+        // Save strictly to client-side localStorage
         localStorage.setItem(`gxh_half_hourly_logs_${todayStr}`, JSON.stringify(newLogs));
         return newLogs;
       });
-
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [closedCount, managedCount, techniciansCount, timerSeconds, stats.managedPerHour]);
-
-  // Force a manual cut right now
-  const handleManualCut = () => {
-    const now = new Date();
-    const slot = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todayStr = getTodayStr();
-    const resoRate = managedCount > 0 ? ((managedCount - techniciansCount) / managedCount) * 100 : 0;
-
-    const newEntry = {
-      slot: slot,
-      realTime: slot,
-      closed: closedCount,
-      managed: managedCount,
-      technicians: techniciansCount,
-      gxh: stats.managedPerHour || 0,
-      resolutionRate: parseFloat(resoRate.toFixed(2)),
-      timestamp: Date.now(),
-      status: 'MANUAL'
     };
 
-    setLogs((prev) => {
-      const filtered = prev.filter(item => item.slot !== slot);
-      const updated = [...filtered, newEntry].sort((a, b) => a.slot.localeCompare(b.slot));
-      localStorage.setItem(`gxh_half_hourly_logs_${todayStr}`, JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const handleClearLogs = () => {
-    if (window.confirm('¿Deseas borrar los registros de cortes de media hora de hoy?')) {
-      const todayStr = getTodayStr();
-      localStorage.removeItem(`gxh_half_hourly_logs_${todayStr}`);
-      setLogs([]);
-    }
-  };
+    updateTicker();
+    const interval = setInterval(updateTicker, 1000);
+    return () => clearInterval(interval);
+  }, [closedCount, managedCount, techniciansCount, timerSeconds, stats.managedPerHour]);
 
   return (
     <div className="section-container" style={{ marginTop: '30px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 className="section-title" style={{ margin: 0 }}>04 / REGISTROS CADA 30 MINUTOS (HORA REAL)</h2>
+          <h2 className="section-title" style={{ margin: 0 }}>04 / REGISTROS AUTOMÁTICOS CADA 30 MINUTOS (HORA REAL)</h2>
           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', letterSpacing: '0.04em' }}>
-            REGISTRO CRONOLÓGICO AUTOMÁTICO EN BASE A LA HORA DE TU RELOJ
+            CORTE CRONOLÓGICO AUTOMÁTICO EN EL FRONTEND (CADA MEDIA HORA DE RELOJ)
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '6px 12px', 
-            backgroundColor: 'var(--bg-card)', 
-            border: '1px solid var(--border-color)',
-            fontSize: '11px',
-            fontWeight: '700',
-            letterSpacing: '0.06em'
-          }}>
-            <Clock size={14} style={{ color: 'var(--primary)' }} />
-            <span>HORA REAL: <strong style={{ color: 'var(--primary)', fontFamily: 'var(--font-code)' }}>{currentTimeStr || '--:--:--'}</strong></span>
-            <span style={{ color: 'var(--text-secondary)', margin: '0 4px' }}>|</span>
-            <span>PRÓXIMO CORTE: <strong style={{ fontFamily: 'var(--font-code)' }}>{nextCutStr || '--:--'}</strong></span>
-          </div>
-
-          <button 
-            className="btn btn-secondary"
-            onClick={handleManualCut}
-            style={{ padding: '6px 12px', fontSize: '11px', fontWeight: '700' }}
-            title="Forzar un corte en este instante exacto"
-          >
-            <Plus size={13} style={{ marginRight: '4px' }} /> CORTE AHORA
-          </button>
-
-          {logs.length > 0 && (
-            <button 
-              className="btn btn-danger"
-              onClick={handleClearLogs}
-              style={{ padding: '6px 10px', fontSize: '11px' }}
-              title="Limpiar historial de cortes de hoy"
-            >
-              <Trash2 size={13} />
-            </button>
-          )}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          padding: '6px 14px', 
+          backgroundColor: 'var(--bg-card)', 
+          border: '1px solid var(--border-color)',
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.06em'
+        }}>
+          <Clock size={14} style={{ color: 'var(--primary)' }} />
+          <span>HORA REAL: <strong style={{ color: 'var(--primary)', fontFamily: 'var(--font-code)' }}>{currentTimeStr || '--:--:--'}</strong></span>
+          <span style={{ color: 'var(--text-secondary)', margin: '0 4px' }}>|</span>
+          <span>PRÓXIMO CORTE AUTOMÁTICO: <strong style={{ fontFamily: 'var(--font-code)' }}>{nextCutStr || '--:--'}</strong></span>
         </div>
       </div>
 
@@ -214,7 +160,7 @@ export default function HalfHourlyLogSection({
             {logs.length === 0 ? (
               <tr>
                 <td colSpan="9" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
-                  Sin cortes registrados hoy. Se registrarán automáticamente cada 30 minutos o al presionar "CORTE AHORA".
+                  El contador registrará automáticamente los avances al llegar a cada media hora (ej: 08:00, 08:30, 09:00, 09:30...).
                 </td>
               </tr>
             ) : (
@@ -294,7 +240,7 @@ export default function HalfHourlyLogSection({
                           color: '#22c55e',
                           border: '1px solid #22c55e'
                         }}>
-                          <CheckCircle2 size={10} /> {item.status}
+                          <CheckCircle2 size={10} /> COMPLETADO
                         </span>
                       )}
                     </td>

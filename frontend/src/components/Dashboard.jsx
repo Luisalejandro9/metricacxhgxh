@@ -509,6 +509,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         const localDate = new Date();
         const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
         localStorage.removeItem(`gxh_counts_${dateStr}`);
+        localStorage.removeItem(`gxh_half_hourly_logs_${dateStr}`);
         showMessage('info', 'Contadores reiniciados.');
       },
       'danger',
