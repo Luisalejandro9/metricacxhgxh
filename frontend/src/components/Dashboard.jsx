@@ -11,6 +11,7 @@ import EditTimeModal from './dashboard/modals/EditTimeModal';
 import EditRecordModal from './dashboard/modals/EditRecordModal';
 import DashboardSidebar from './dashboard/DashboardSidebar';
 import DashboardStats from './dashboard/DashboardStats';
+import HalfHourlyLogSection from './dashboard/HalfHourlyLogSection';
 import HistoryTables from './dashboard/HistoryTables';
 import DashboardCharts from './dashboard/DashboardCharts';
 
@@ -1047,6 +1048,14 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           getGxHBonus={getGxHBonus}
           getResolucionBonus={getResolucionBonus}
           calculateRecordBonus={calculateRecordBonus}
+        />
+
+        <HalfHourlyLogSection
+          closedCount={closedCount}
+          managedCount={managedCount}
+          techniciansCount={techniciansCount}
+          timerSeconds={timerSeconds}
+          stats={stats}
         />
 
         <HistoryTables
