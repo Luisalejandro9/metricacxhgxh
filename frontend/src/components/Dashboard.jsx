@@ -304,20 +304,35 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
     if (savedState) {
       try {
-        const { seconds, isRunning, startTime } = JSON.parse(savedState);
-        if (isRunning && startTime) {
-          const now = Date.now();
-          const elapsed = Math.floor((now - startTime) / 1000);
-          setTimerSeconds(elapsed);
-          setIsTimerRunning(true);
-          startTimeRef.current = startTime;
+        const parsed = JSON.parse(savedState);
+        const { seconds, isRunning, startTime, date } = parsed;
+
+        // Only restore timer if it belongs to today's date
+        if (date === todayStr) {
+          if (isRunning && startTime) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            setTimerSeconds(elapsed >= 0 ? elapsed : 0);
+            setIsTimerRunning(true);
+            startTimeRef.current = startTime;
+          } else {
+            setTimerSeconds(seconds || 0);
+            setIsTimerRunning(false);
+          }
         } else {
-          setTimerSeconds(seconds || 0);
+          // Reset stale timer state from previous sessions/days to 00:00:00
+          setTimerSeconds(0);
           setIsTimerRunning(false);
+          localStorage.removeItem('gxh_timer_state');
         }
       } catch (e) {
         console.error('Error loading timer state', e);
+        setTimerSeconds(0);
+        setIsTimerRunning(false);
       }
+    } else {
+      setTimerSeconds(0);
+      setIsTimerRunning(false);
     }
 
     if (savedCounts) {
@@ -332,12 +347,15 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     }
   }, [user]);
 
-  // Persist timer state
+  // Persist timer state with date tag
   useEffect(() => {
+    const localDate = new Date();
+    const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
     const state = {
       seconds: timerSeconds,
       isRunning: isTimerRunning,
-      startTime: startTimeRef.current
+      startTime: startTimeRef.current,
+      date: todayStr
     };
     localStorage.setItem('gxh_timer_state', JSON.stringify(state));
   }, [timerSeconds, isTimerRunning]);
