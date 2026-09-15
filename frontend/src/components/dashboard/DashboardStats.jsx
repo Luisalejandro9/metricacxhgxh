@@ -305,17 +305,26 @@ function DashboardStats({
           <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
           </div>
+          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.closingBalance >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+            {stats.closingBalance < 0 ? `Faltan ${Math.abs(stats.closingBalance)} cierres para 0` : '✓ En objetivo (0 pend.)'}
+          </div>
         </div>
         <div className="metric-card">
           <span className="metric-label">Dif. GxH ({standards.GXH_GREEN.toFixed(1)})</span>
           <div className={`metric-value medium ${parseFloat(stats.gxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
           </div>
+          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: parseFloat(stats.gxhDiff) >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+            {parseFloat(stats.gxhDiff) < 0 ? `Faltan ${Math.ceil(Math.abs(parseFloat(stats.gxhDiff)))} gestiones para 0` : '✓ En objetivo (0 pend.)'}
+          </div>
         </div>
         <div className="metric-card">
           <span className="metric-label">Dif. Reso ({standards.RESOLUTION_GREEN}%)</span>
           <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
+          </div>
+          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.resoDiff >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+            {stats.resoDiff < 0 ? `Faltan ${Math.abs(stats.resoDiff)} resoluciones para 0` : '✓ En objetivo (0 pend.)'}
           </div>
         </div>
         <div className="metric-card">
@@ -343,18 +352,43 @@ function DashboardStats({
           <div className={`metric-value medium ${currentAccum && currentAccum.accumClosingDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {currentAccum ? (currentAccum.accumClosingDiff > 0 ? `+${currentAccum.accumClosingDiff}` : currentAccum.accumClosingDiff) : 0}
           </div>
+          {(() => {
+            const val = currentAccum ? currentAccum.accumClosingDiff : 0;
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {val < 0 ? `Faltan ${Math.abs(val)} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
         <div className="metric-card accum-card">
           <span className="metric-label accum-label">Dif. GxH Acum</span>
           <div className={`metric-value medium ${currentAccum && parseFloat(currentAccum.accumGxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {currentAccum ? (parseFloat(currentAccum.accumGxhDiff) > 0 ? `+${currentAccum.accumGxhDiff}` : currentAccum.accumGxhDiff) : 0}
           </div>
+          {(() => {
+            const val = currentAccum ? parseFloat(currentAccum.accumGxhDiff) : 0;
+            const needed = Math.ceil(Math.abs(val));
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {val < 0 ? `Faltan ${needed} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
         <div className="metric-card accum-card">
           <span className="metric-label accum-label">Dif. Reso Acum</span>
           <div className={`metric-value medium ${currentAccum && currentAccum.accumResoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {currentAccum ? (currentAccum.accumResoDiff > 0 ? `+${currentAccum.accumResoDiff}` : currentAccum.accumResoDiff) : 0}
           </div>
+          {(() => {
+            const val = currentAccum ? currentAccum.accumResoDiff : 0;
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {val < 0 ? `Faltan ${Math.abs(val)} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
