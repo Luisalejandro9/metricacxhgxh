@@ -16,6 +16,35 @@ const formatTime = (totalSeconds) => {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
 };
 
+// --- EXACT RECOVERY ALGORITHMS TO REACH 0 / TARGET ---
+const getCasesNeededToFixReso = (managed, technicians, targetPct = 84.0) => {
+  if (managed === 0 || technicians === 0) return 0;
+  const targetRatio = targetPct / 100;
+  const maxTechRatio = 1 - targetRatio;
+  const currentResolved = managed - technicians;
+  const currentDiff = currentResolved - Math.ceil(managed * targetRatio);
+  if (currentDiff >= 0) return 0;
+  const targetTotalManaged = Math.ceil(technicians / maxTechRatio);
+  const needed = targetTotalManaged - managed;
+  return needed > 0 ? needed : 0;
+};
+
+const getCasesNeededToFixCierre = (managed, closed, targetPct = 78.8) => {
+  if (managed === 0) return 0;
+  const targetRatio = targetPct / 100;
+  const currentDiff = closed - Math.ceil(managed * targetRatio);
+  if (currentDiff >= 0) return 0;
+  const needed = Math.ceil((targetRatio * managed - closed) / (1 - targetRatio));
+  return needed > 0 ? needed : 0;
+};
+
+const getCasesNeededToFixGxH = (managed, totalHours, targetGxH = 4.0) => {
+  if (totalHours === 0) return 0;
+  const targetManaged = Math.ceil(totalHours * targetGxH);
+  const needed = targetManaged - managed;
+  return needed > 0 ? needed : 0;
+};
+
 function DashboardStats({
   user,
   timerSeconds = 0,
@@ -305,27 +334,42 @@ function DashboardStats({
           <div className={`metric-value medium ${stats.closingBalance >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {stats.closingBalance > 0 ? `+${stats.closingBalance}` : stats.closingBalance}
           </div>
-          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.closingBalance >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-            {stats.closingBalance < 0 ? `Faltan ${Math.abs(stats.closingBalance)} cierres para 0` : '✓ En objetivo (0 pend.)'}
-          </div>
+          {(() => {
+            const needed = getCasesNeededToFixCierre(managedCount, closedCount, standards.CLOSED_GREEN);
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.closingBalance >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {stats.closingBalance < 0 ? `Para 0: Cierra ${needed} caso(s) seguidos` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
         <div className="metric-card">
           <span className="metric-label">Dif. GxH ({standards.GXH_GREEN.toFixed(1)})</span>
           <div className={`metric-value medium ${parseFloat(stats.gxhDiff) >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {parseFloat(stats.gxhDiff) > 0 ? `+${stats.gxhDiff}` : stats.gxhDiff}
           </div>
-          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: parseFloat(stats.gxhDiff) >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-            {parseFloat(stats.gxhDiff) < 0 ? `Faltan ${Math.ceil(Math.abs(parseFloat(stats.gxhDiff)))} gestiones para 0` : '✓ En objetivo (0 pend.)'}
-          </div>
+          {(() => {
+            const needed = getCasesNeededToFixGxH(managedCount, timerSeconds / 3600, standards.GXH_GREEN);
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: parseFloat(stats.gxhDiff) >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {parseFloat(stats.gxhDiff) < 0 ? `Para 0: Gestiona ${needed} caso(s)` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
         <div className="metric-card">
           <span className="metric-label">Dif. Reso ({standards.RESOLUTION_GREEN}%)</span>
           <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
             {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
           </div>
-          <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.resoDiff >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-            {stats.resoDiff < 0 ? `Faltan ${Math.abs(stats.resoDiff)} resoluciones para 0` : '✓ En objetivo (0 pend.)'}
-          </div>
+          {(() => {
+            const needed = getCasesNeededToFixReso(managedCount, techniciansCount, standards.RESOLUTION_GREEN);
+            return (
+              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.resoDiff >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
+                {stats.resoDiff < 0 ? `Para 0: Resuelve ${needed} caso(s) sin técnico` : '✓ En objetivo (0 pend.)'}
+              </div>
+            );
+          })()}
         </div>
         <div className="metric-card">
           <span className="metric-label">TMO GxH</span>
@@ -354,9 +398,10 @@ function DashboardStats({
           </div>
           {(() => {
             const val = currentAccum ? currentAccum.accumClosingDiff : 0;
+            const needed = currentAccum ? getCasesNeededToFixCierre(currentAccum.accumManaged, currentAccum.accumClosed, standards.CLOSED_GREEN) : 0;
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Faltan ${Math.abs(val)} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `Para 0: Cierra ${needed} caso(s) seguidos` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -368,10 +413,10 @@ function DashboardStats({
           </div>
           {(() => {
             const val = currentAccum ? parseFloat(currentAccum.accumGxhDiff) : 0;
-            const needed = Math.ceil(Math.abs(val));
+            const needed = currentAccum ? getCasesNeededToFixGxH(currentAccum.accumManaged, currentAccum.accumSeconds / 3600, standards.GXH_GREEN) : 0;
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Faltan ${needed} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `Para 0: Gestiona ${needed} caso(s)` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
@@ -383,9 +428,10 @@ function DashboardStats({
           </div>
           {(() => {
             const val = currentAccum ? currentAccum.accumResoDiff : 0;
+            const needed = currentAccum ? getCasesNeededToFixReso(currentAccum.accumManaged, currentAccum.accumTechnicians, standards.RESOLUTION_GREEN) : 0;
             return (
               <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Faltan ${Math.abs(val)} para llegar a 0` : '✓ En objetivo (0 pend.)'}
+                {val < 0 ? `Para 0: Resuelve ${needed} caso(s) sin técnico` : '✓ En objetivo (0 pend.)'}
               </div>
             );
           })()}
