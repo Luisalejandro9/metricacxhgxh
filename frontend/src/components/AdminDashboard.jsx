@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Sun,
-  Moon
+  Moon,
+  Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
@@ -605,8 +606,16 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         </section>
 
         <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
-          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '10px' }} onClick={() => navigate('/dashboard')}>
+          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '8px' }} onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={16} /> Panel Usuario
+          </button>
+
+          <button 
+            className="btn btn-secondary" 
+            style={{ width: '100%', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }} 
+            onClick={() => navigate('/status')}
+          >
+            <Activity size={14} style={{ color: '#10b981' }} /> Diagnóstico / Estado de Red
           </button>
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>

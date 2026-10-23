@@ -3,6 +3,14 @@
   command = "npm run build"
   publish = "dist"
 
+# Proxy inverso transparente para omitir bloqueos DNS de redes corporativas (Konecta)
+# Las peticiones a /supabase/* son atendidas por los servidores de Netlify y reenviadas a Supabase con status 200
+[[redirects]]
+  from = "/supabase/*"
+  to = "https://oyhlhdlubralrgjbgtqw.supabase.co/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

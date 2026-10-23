@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './lib/supabase';
+import { supabase, getEffectiveSupabaseUrl, DIRECT_SUPABASE_URL } from './lib/supabase';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
+import TechStatusDashboard from './components/TechStatusDashboard';
+import AutoUpdater from './components/AutoUpdater';
+import { runPassiveSentinelCheck } from './lib/incidentSentinel';
 import { useTheme } from './hooks/useTheme';
 import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import './App.css';
@@ -119,25 +122,48 @@ function App() {
     }
   };
 
-  // --- Check if Supabase DNS is Reachable ---
+  // --- Check if Supabase (or its Netlify Proxy) is Reachable ---
   const checkSupabaseConnection = async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
       
-      // We try to fetch the Supabase URL. Even with no-cors, if it resolves, the DNS block is lifted!
-      await fetch(import.meta.env.VITE_SUPABASE_URL, { 
-        method: 'GET', 
-        mode: 'no-cors',
-        signal: controller.signal
+      // Sonda al proxy efectivo (/supabase/rest/v1/)
+      await fetch(`${getEffectiveSupabaseUrl()}/rest/v1/`, { 
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store'
       });
       
       clearTimeout(timeoutId);
       return true;
     } catch (err) {
-      return false;
+      // Si el proxy falló (ej: entorno local sin proxy), intentar conexión directa
+      try {
+        const directCtrl = new AbortController();
+        const directTimeout = setTimeout(() => directCtrl.abort(), 2500);
+        await fetch(`${DIRECT_SUPABASE_URL}/rest/v1/`, {
+          method: 'HEAD',
+          signal: directCtrl.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(directTimeout);
+        return true;
+      } catch {
+        return false;
+      }
     }
   };
+
+  // --- Centinela Pasivo de Incidentes de Red ---
+  useEffect(() => {
+    const sentinelTimeout = setTimeout(runPassiveSentinelCheck, 3500);
+    const sentinelInterval = setInterval(runPassiveSentinelCheck, 10 * 60 * 1000);
+    return () => {
+      clearTimeout(sentinelTimeout);
+      clearInterval(sentinelInterval);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -429,6 +455,9 @@ function App() {
         </div>
       )}
 
+      {/* SILENT AUTO-UPDATER TOAST */}
+      <AutoUpdater />
+
       <Routes>
         {/* LOGIN ROUTE */}
         <Route 
@@ -454,6 +483,12 @@ function App() {
               <AdminDashboard user={user} profile={profile} setNetworkError={setNetworkError} theme={theme} toggleTheme={toggleTheme} /> : 
               <Navigate to="/" />
           } 
+        />
+
+        {/* TECHNICAL STATUS DASHBOARD ROUTE */}
+        <Route 
+          path="/status" 
+          element={<TechStatusDashboard onExit={() => window.location.href = '/'} />} 
         />
 
         {/* FALLBACK */}

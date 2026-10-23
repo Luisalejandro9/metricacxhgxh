@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, CheckCircle2, BookOpen } from 'lucide-react';
+import { AlertCircle, CheckCircle2, BookOpen, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
 
@@ -999,7 +999,26 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       />
 
       <main className="main-content">
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px' }}>
+          {(profile?.role === 'admin' || user?.isDemo) && (
+            <button 
+              className="btn btn-secondary" 
+              style={{ 
+                padding: '6px 14px', 
+                fontSize: '11px',
+                fontWeight: '800',
+                letterSpacing: '0.05em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                borderColor: 'var(--border-strong)'
+              }}
+              onClick={() => navigate('/status')}
+              title="Centro de Estado Técnico y Anti-bloqueo DNS"
+            >
+              <Activity size={14} style={{ color: '#10b981' }} /> ESTADO RED / STATUS
+            </button>
+          )}
           <button 
             className="btn btn-secondary" 
             style={{ 
