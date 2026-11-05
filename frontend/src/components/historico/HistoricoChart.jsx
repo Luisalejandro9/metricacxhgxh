@@ -113,7 +113,27 @@ export default function HistoricoChart({ allRecords }) {
           accum_gxh: current.working > 0 ? current.managed / (current.working / 3600) : null
         };
       });
-      return { key: day, fecha: day, intervalo: 'Cierre diario', records: accumulatedRows };
+      const teamTotals = Array.from(runningByAgent.values()).reduce((total, current) => ({
+        managed: total.managed + current.managed,
+        closed: total.closed + current.closed,
+        discarded: total.discarded + current.discarded,
+        working: total.working + current.working
+      }), { managed: 0, closed: 0, discarded: 0, working: 0 });
+      return {
+        key: day,
+        fecha: day,
+        intervalo: 'Cierre diario',
+        records: accumulatedRows,
+        teamAccum: {
+          accum_gestionados: teamTotals.managed,
+          accum_cerrados: teamTotals.closed,
+          accum_descartados: teamTotals.discarded,
+          accum_working_s: teamTotals.working,
+          accum_pct_cierre: teamTotals.managed > 0 ? (teamTotals.closed / teamTotals.managed) * 100 : null,
+          accum_resolucion: teamTotals.managed > 0 ? ((teamTotals.managed - teamTotals.discarded) / teamTotals.managed) * 100 : null,
+          accum_gxh: teamTotals.working > 0 ? teamTotals.managed / (teamTotals.working / 3600) : null
+        }
+      };
     });
   }, [allRecords]);
 
