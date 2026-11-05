@@ -27,7 +27,12 @@ const DEFAULT_CONFIG = {
   pulsoEmail: 'luis.acosta@konecta.com'
 };
 
-export default function PulsoHistorico({ theme, toggleTheme }) {
+export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
+  const isAdmin = profile?.role === 'admin' || (user?.email && (
+    user.email === 'lacosta.develop@gmail.com' ||
+    user.email === 'lacosta151999@gmail.com' ||
+    user.email === 'luis.acosta@konecta.com'
+  ));
   const navigate = useNavigate();
 
   // 1. Estado de Configuración (cargada de localStorage)
@@ -381,28 +386,30 @@ export default function PulsoHistorico({ theme, toggleTheme }) {
             <LineChart size={15} /> Evolución & Tendencias
           </button>
 
-          <button
-            onClick={() => setActiveTab('config')}
-            style={{
-              padding: '12px 20px',
-              background: activeTab === 'config' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'config' ? 'var(--text-bright)' : 'var(--text-muted)',
-              borderTop: activeTab === 'config' ? '2px solid var(--primary)' : '2px solid transparent',
-              borderLeft: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
-              borderRight: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
-              borderBottom: 'none',
-              cursor: 'pointer',
-              fontWeight: '800',
-              fontSize: '12px',
-              letterSpacing: '0.04em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              textTransform: 'uppercase'
-            }}
-          >
-            <Settings size={15} /> Carga & Configuración
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('config')}
+              style={{
+                padding: '12px 20px',
+                background: activeTab === 'config' ? 'var(--bg-card)' : 'transparent',
+                color: activeTab === 'config' ? 'var(--text-bright)' : 'var(--text-muted)',
+                borderTop: activeTab === 'config' ? '2px solid var(--primary)' : '2px solid transparent',
+                borderLeft: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
+                borderRight: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
+                borderBottom: 'none',
+                cursor: 'pointer',
+                fontWeight: '800',
+                fontSize: '12px',
+                letterSpacing: '0.04em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textTransform: 'uppercase'
+              }}
+            >
+              <Settings size={15} /> Carga & Configuración (Admin)
+            </button>
+          )}
         </div>
       </div>
 
@@ -416,7 +423,7 @@ export default function PulsoHistorico({ theme, toggleTheme }) {
           <HistoricoChart allRecords={allRecords} />
         )}
 
-        {activeTab === 'config' && (
+        {activeTab === 'config' && isAdmin && (
           <HistoricoConfig
             config={config}
             onSaveConfig={handleSaveConfig}

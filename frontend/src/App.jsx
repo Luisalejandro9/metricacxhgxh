@@ -489,7 +489,7 @@ function App() {
         {/* TECHNICAL STATUS DASHBOARD ROUTE */}
         <Route
           path="/historico"
-          element={<PulsoHistorico theme={theme} toggleTheme={toggleTheme} />}
+          element={<PulsoHistorico theme={theme} toggleTheme={toggleTheme} user={user} profile={profile} />}
         />
 
         <Route 
