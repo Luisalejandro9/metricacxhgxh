@@ -36,7 +36,7 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       ...r,
       gestionados_corregidos: gestionados,
       pct_cierre_corregido: gestionados > 0 ? (cerrados / gestionados) * 100 : null,
-      resolucion_corregida: gestionados > 0 ? ((gestionados - descartados) / gestionados) * 100 : null,
+      resolucion_corregida: gestionados > 0 ? ((gestionados - descartados - (Number(r.service_fan) || 0)) / gestionados) * 100 : null,
       gxh_corregido: Number(r.working_s) > 0 ? gestionados / (Number(r.working_s) / 3600) : (Number(r.gxh) || 0)
     };
   };
@@ -120,7 +120,7 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       avail,
       breakTime,
       auxiliares,
-      avgReso: validResoCount > 0 ? (gestionados > 0 ? ((gestionados - descartados) / gestionados) * 100 : 0).toFixed(1) : '-',
+      avgReso: validResoCount > 0 ? (gestionados > 0 ? ((gestionados - descartados - serviceFan) / gestionados) * 100 : 0).toFixed(1) : '-',
       serviceFan
     };
   }, [records]);
