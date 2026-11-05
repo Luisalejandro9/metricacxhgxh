@@ -36,7 +36,12 @@ const METRIC_OPTIONS = [
   { id: 'login_s', label: 'Tiempo de Login (horas)', isTime: 'h', unit: 'h' },
   { id: 'break_s', label: 'Tiempo de Break (min)', isTime: 'min', unit: 'm' },
   { id: 'auxiliares_s', label: 'Auxiliares (min)', isTime: 'min', unit: 'm' },
-  { id: 'service_fan', label: 'Service Fan', isTime: false, unit: '' }
+  { id: 'service_fan', label: 'Service Fan', isTime: false, unit: '' },
+  { id: 'accum_gestionados', label: 'Acumulado: Gestionados netos', isTime: false, unit: '' },
+  { id: 'accum_cerrados', label: 'Acumulado: Cerrados', isTime: false, unit: '' },
+  { id: 'accum_pct_cierre', label: 'Acumulado: % Cierre', isTime: false, unit: '%' },
+  { id: 'accum_resolucion', label: 'Acumulado: % Resolución Neta', isTime: false, unit: '%' },
+  { id: 'accum_gxh', label: 'Acumulado: GxH', isTime: false, unit: '' }
 ];
 
 export default function HistoricoChart({ allRecords }) {
@@ -56,30 +61,60 @@ export default function HistoricoChart({ allRecords }) {
 
   // Agrupar registros por Snapshot / Carga
   const snapshotsMap = useMemo(() => {
-    // Mapa: `${fecha_hora_carga}_${intervalo}` -> lista de métricas
-    const map = new Map();
+    const snapshots = new Map();
     allRecords.forEach((r) => {
-      const key = `${r.fecha_hora_carga || ''} | ${r.intervalo || ''}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          fecha: r.fecha_hora_carga,
-          intervalo: r.intervalo,
-          records: []
-        });
-      }
-      map.get(key).records.push(r);
+      const key = String(r.snapshot_id || (String(r.fecha_hora_carga || '') + ' | ' + String(r.intervalo || '')));
+      if (!snapshots.has(key)) snapshots.set(key, { key, fecha: r.fecha_hora_carga, intervalo: r.intervalo, records: [] });
+      snapshots.get(key).records.push(r);
     });
-
-    // Ordenar cronológicamente (antiguos primero, recientes al final para evolución)
-    const list = Array.from(map.values());
-    list.sort((a, b) => {
-      const dateA = `${a.fecha} ${a.intervalo}`;
-      const dateB = `${b.fecha} ${b.intervalo}`;
-      return dateA.localeCompare(dateB);
+    const ordered = Array.from(snapshots.values()).sort((a, b) =>
+      (String(a.fecha || '') + ' ' + String(a.intervalo || '')).localeCompare(String(b.fecha || '') + ' ' + String(b.intervalo || ''))
+    );
+    const lastAgentDay = new Map();
+    ordered.forEach((snapshot) => {
+      const day = String(snapshot.fecha || '').split(/[T ]/)[0];
+      snapshot.records.forEach((r) => {
+        if (!r.agente || r.agente === 'TOTAL EQUIPO') return;
+        lastAgentDay.set(day + '|' + r.agente, { day, agente: r.agente, ...r });
+      });
     });
-
-    return list;
+    const grouped = new Map();
+    Array.from(lastAgentDay.values()).forEach((r) => {
+      if (!grouped.has(r.day)) grouped.set(r.day, []);
+      grouped.get(r.day).push(r);
+    });
+    const runningByAgent = new Map();
+    return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([day, rows]) => {
+      const accumulatedRows = rows.map((r) => {
+        const managed = Math.max(0, (Number(r.gestionados) || 0) - (Number(r.transferidos) || 0));
+        const closed = Number(r.cerrados) || 0;
+        const discarded = Number(r.descartados) || 0;
+        const working = Number(r.working_s) || 0;
+        const previous = runningByAgent.get(r.agente) || { managed: 0, closed: 0, discarded: 0, working: 0 };
+        const current = {
+          managed: previous.managed + managed,
+          closed: previous.closed + closed,
+          discarded: previous.discarded + discarded,
+          working: previous.working + working
+        };
+        runningByAgent.set(r.agente, current);
+        return {
+          ...r,
+          gestionados_corregidos: managed,
+          pct_cierre_corregido: managed > 0 ? (closed / managed) * 100 : null,
+          resolucion_corregida: managed > 0 ? ((managed - discarded) / managed) * 100 : null,
+          gxh_corregido: working > 0 ? managed / (working / 3600) : (Number(r.gxh) || 0),
+          accum_gestionados: current.managed,
+          accum_cerrados: current.closed,
+          accum_descartados: current.discarded,
+          accum_working_s: current.working,
+          accum_pct_cierre: current.managed > 0 ? (current.closed / current.managed) * 100 : null,
+          accum_resolucion: current.managed > 0 ? ((current.managed - current.discarded) / current.managed) * 100 : null,
+          accum_gxh: current.working > 0 ? current.managed / (current.working / 3600) : null
+        };
+      });
+      return { key: day, fecha: day, intervalo: 'Cierre diario', records: accumulatedRows };
+    });
   }, [allRecords]);
 
   const metricMeta = useMemo(() => {
@@ -88,13 +123,24 @@ export default function HistoricoChart({ allRecords }) {
 
   // Construir datos del gráfico
   const chartData = useMemo(() => {
-    const labels = snapshotsMap.map((s) => `${s.fecha ? s.fecha.split('T')[0] : ''} ${s.intervalo || ''}`);
+    const labels = snapshotsMap.map((s) => `${s.fecha || ''} ${s.intervalo || ''}`);
     const dataPoints = snapshotsMap.map((s) => {
       if (selectedAgent === 'PROMEDIO_EQUIPO') {
+        if (selectedMetric.startsWith('accum_')) {
+          const managed = s.records.reduce((sum, r) => sum + (Number(r.accum_gestionados) || 0), 0);
+          const closed = s.records.reduce((sum, r) => sum + (Number(r.accum_cerrados) || 0), 0);
+          const discarded = s.records.reduce((sum, r) => sum + (Number(r.accum_descartados) || 0), 0);
+          const working = s.records.reduce((sum, r) => sum + (Number(r.accum_working_s) || 0), 0);
+          if (selectedMetric === 'accum_gestionados') return managed;
+          if (selectedMetric === 'accum_cerrados') return closed;
+          if (selectedMetric === 'accum_pct_cierre') return managed > 0 ? parseFloat(((closed / managed) * 100).toFixed(2)) : null;
+          if (selectedMetric === 'accum_resolucion') return managed > 0 ? parseFloat((((managed - discarded) / managed) * 100).toFixed(2)) : null;
+          if (selectedMetric === 'accum_gxh') return working > 0 ? parseFloat((managed / (working / 3600)).toFixed(2)) : null;
+        }
         let total = 0;
         let count = 0;
         s.records.forEach((r) => {
-          let val = r[selectedMetric];
+          let val = selectedMetric === 'gestionados' ? r.gestionados_corregidos : selectedMetric === 'pct_cierre' ? r.pct_cierre_corregido : selectedMetric === 'resolucion' ? r.resolucion_corregida : selectedMetric === 'gxh' ? r.gxh_corregido : r[selectedMetric];
           if (val !== null && val !== undefined && !isNaN(val)) {
             let num = parseFloat(val);
             if (metricMeta.isTime === 'h') num = num / 3600;
@@ -107,7 +153,7 @@ export default function HistoricoChart({ allRecords }) {
       } else {
         const row = s.records.find((r) => r.agente === selectedAgent);
         if (!row) return null;
-        let val = row[selectedMetric];
+        let val = selectedMetric.startsWith('accum_') ? row[selectedMetric] : selectedMetric === 'gestionados' ? row.gestionados_corregidos : selectedMetric === 'pct_cierre' ? row.pct_cierre_corregido : selectedMetric === 'resolucion' ? row.resolucion_corregida : selectedMetric === 'gxh' ? row.gxh_corregido : row[selectedMetric];
         if (val === null || val === undefined || isNaN(val)) return null;
         let num = parseFloat(val);
         if (metricMeta.isTime === 'h') num = num / 3600;
@@ -264,11 +310,11 @@ export default function HistoricoChart({ allRecords }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={18} color="var(--primary)" />
             <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-              Evolución Temporal ({metricMeta.label})
+              Evolución Diaria ({metricMeta.label})
             </h3>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
-            {snapshotsMap.length} Cargas Registradas
+            {snapshotsMap.length} Días Registrados
           </span>
         </div>
 
@@ -285,4 +331,5 @@ export default function HistoricoChart({ allRecords }) {
     </div>
   );
 }
+
 
