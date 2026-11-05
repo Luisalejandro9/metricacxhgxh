@@ -26,6 +26,21 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       .replace(/'/g, '&#039;');
   };
 
+  // Pulso cuenta como gestión adicional los casos que el agente transfirió.
+  // Para los indicadores calculados usamos la gestión neta, sin alterar los datos de Tracker.
+  const getPulsoMetrics = (r) => {
+    const gestionados = Math.max(0, (Number(r.gestionados) || 0) - (Number(r.transferidos) || 0));
+    const cerrados = Number(r.cerrados) || 0;
+    const descartados = Number(r.descartados) || 0;
+    return {
+      ...r,
+      gestionados_corregidos: gestionados,
+      pct_cierre_corregido: gestionados > 0 ? (cerrados / gestionados) * 100 : null,
+      resolucion_corregida: gestionados > 0 ? ((gestionados - descartados) / gestionados) * 100 : null,
+      gxh_corregido: Number(r.working_s) > 0 ? gestionados / (Number(r.working_s) / 3600) : (Number(r.gxh) || 0)
+    };
+  };
+
   // Filtrado y ordenación
   const filteredAndSortedRecords = useMemo(() => {
     let result = [...records];
@@ -71,9 +86,10 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
     let totalReso = 0;
     let serviceFan = 0;
 
-    records.forEach((r) => {
+    records.forEach((raw) => {
+      const r = getPulsoMetrics(raw);
       cerrados += r.cerrados || 0;
-      gestionados += r.gestionados || 0;
+      gestionados += r.gestionados_corregidos || 0;
       descartados += r.descartados || 0;
       transferidos += r.transferidos || 0;
       finalizados += r.finalizados || 0;
@@ -83,12 +99,9 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       breakTime += r.break_s || 0;
       auxiliares += r.auxiliares_s || 0;
       totalCxh += parseFloat(r.cxh) || 0;
-      totalGxh += parseFloat(r.gxh) || 0;
-      totalPctCierre += parseFloat(r.pct_cierre) || 0;
-      if (r.resolucion !== null && r.resolucion !== undefined) {
-        totalReso += parseFloat(r.resolucion);
-        validResoCount++;
-      }
+      totalGxh += parseFloat(r.gxh_corregido) || 0;
+      totalPctCierre += parseFloat(r.pct_cierre_corregido) || 0;
+      if (r.resolucion_corregida !== null && r.resolucion_corregida !== undefined) validResoCount++;
       serviceFan += r.service_fan || 0;
     });
 
@@ -101,13 +114,13 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       finalizados,
       avgCxh: (totalCxh / count).toFixed(2),
       avgGxh: (totalGxh / count).toFixed(2),
-      avgPctCierre: (totalPctCierre / count).toFixed(1),
+      avgPctCierre: (gestionados > 0 ? (cerrados / gestionados) * 100 : 0).toFixed(1),
       working,
       login,
       avail,
       breakTime,
       auxiliares,
-      avgReso: validResoCount > 0 ? (totalReso / validResoCount).toFixed(1) : '-',
+      avgReso: validResoCount > 0 ? (gestionados > 0 ? ((gestionados - descartados) / gestionados) * 100 : 0).toFixed(1) : '-',
       serviceFan
     };
   }, [records]);
@@ -267,7 +280,8 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
                 </td>
               </tr>
             ) : (
-              filteredAndSortedRecords.map((r, idx) => {
+              filteredAndSortedRecords.map((raw, idx) => {
+                const r = getPulsoMetrics(raw);
                 const isEven = idx % 2 === 0;
                 return (
                   <tr
@@ -289,19 +303,19 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
                       dangerouslySetInnerHTML={{ __html: escapeHtml(r.agente) }}
                     />
                     <td style={{ padding: '10px' }}>
-                      {r.pct_cierre !== null ? `${parseFloat(r.pct_cierre).toFixed(1)}%` : '-'}
+                      {r.pct_cierre_corregido !== null ? `${r.pct_cierre_corregido.toFixed(1)}%` : '-'}
                     </td>
                     <td
                       style={{
                         padding: '10px',
                         fontWeight: '800',
-                        color: parseFloat(r.gxh) >= 4.0 ? 'var(--accent-success)' : parseFloat(r.gxh) >= 3.5 ? 'var(--accent-warning)' : 'var(--accent-error)'
+                        color: parseFloat(r.gxh_corregido) >= 4.0 ? 'var(--accent-success)' : parseFloat(r.gxh_corregido) >= 3.5 ? 'var(--accent-warning)' : 'var(--accent-error)'
                       }}
                     >
-                      {r.gxh !== null ? parseFloat(r.gxh).toFixed(2) : '-'}
+                      {r.gxh_corregido !== null ? parseFloat(r.gxh_corregido).toFixed(2) : '-'}
                     </td>
                     <td style={{ padding: '10px' }}>{r.cxh !== null ? parseFloat(r.cxh).toFixed(2) : '-'}</td>
-                    <td style={{ padding: '10px' }}>{r.gestionados ?? '-'}</td>
+                    <td style={{ padding: '10px' }}>{r.gestionados_corregidos ?? '-'}</td>
                     <td style={{ padding: '10px' }}>{r.cerrados ?? '-'}</td>
                     <td style={{ padding: '10px' }}>{r.finalizados ?? '-'}</td>
                     <td style={{ padding: '10px' }}>{r.transferidos ?? '-'}</td>
@@ -314,7 +328,7 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
                     </td>
                     <td style={{ padding: '10px' }}>{formatSeconds(r.auxiliares_s)}</td>
                     <td style={{ padding: '10px' }}>
-                      {r.resolucion !== null && r.resolucion !== undefined ? `${parseFloat(r.resolucion).toFixed(1)}%` : '-'}
+                      {r.resolucion_corregida !== null && r.resolucion_corregida !== undefined ? `${parseFloat(r.resolucion_corregida).toFixed(1)}%` : '-'}
                     </td>
                     <td style={{ padding: '10px 14px' }}>{r.service_fan ?? '-'}</td>
                   </tr>
