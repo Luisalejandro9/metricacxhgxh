@@ -94,7 +94,7 @@ export default function HistoricoChart({ allRecords }) {
         let total = 0;
         let count = 0;
         s.records.forEach((r) => {
-          let val = r[selectedMetric];
+          let val = selectedMetric === 'gestionados' ? Math.max(0, (Number(r.gestionados) || 0) - (Number(r.transferidos) || 0)) : selectedMetric === 'pct_cierre' ? ((Number(r.gestionados) || 0) > (Number(r.transferidos) || 0) ? ((Number(r.cerrados) || 0) / ((Number(r.gestionados) || 0) - (Number(r.transferidos) || 0))) * 100 : null) : r[selectedMetric];
           if (val !== null && val !== undefined && !isNaN(val)) {
             let num = parseFloat(val);
             if (metricMeta.isTime === 'h') num = num / 3600;
@@ -107,7 +107,7 @@ export default function HistoricoChart({ allRecords }) {
       } else {
         const row = s.records.find((r) => r.agente === selectedAgent);
         if (!row) return null;
-        let val = row[selectedMetric];
+        let val = selectedMetric === 'gestionados' ? Math.max(0, (Number(row.gestionados) || 0) - (Number(row.transferidos) || 0)) : selectedMetric === 'pct_cierre' ? ((Number(row.gestionados) || 0) > (Number(row.transferidos) || 0) ? ((Number(row.cerrados) || 0) / ((Number(row.gestionados) || 0) - (Number(row.transferidos) || 0))) * 100 : null) : row[selectedMetric];
         if (val === null || val === undefined || isNaN(val)) return null;
         let num = parseFloat(val);
         if (metricMeta.isTime === 'h') num = num / 3600;
