@@ -4,6 +4,12 @@ dist/
 .DS_Store
 *.local
 .env
+.env.*
+*.db
+*.sqlite
+pulso_profile/
+*.har
+datos_reales/
 frontend/.env
 frontend/node_modules/
 frontend/dist/
