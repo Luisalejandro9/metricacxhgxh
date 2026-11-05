@@ -81,9 +81,7 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
     let auxiliares = 0;
     let totalCxh = 0;
     let totalGxh = 0;
-    let totalPctCierre = 0;
     let validResoCount = 0;
-    let totalReso = 0;
     let serviceFan = 0;
 
     records.forEach((raw) => {
@@ -100,7 +98,6 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
       auxiliares += r.auxiliares_s || 0;
       totalCxh += parseFloat(r.cxh) || 0;
       totalGxh += parseFloat(r.gxh_corregido) || 0;
-      totalPctCierre += parseFloat(r.pct_cierre_corregido) || 0;
       if (r.resolucion_corregida !== null && r.resolucion_corregida !== undefined) validResoCount++;
       serviceFan += r.service_fan || 0;
     });
