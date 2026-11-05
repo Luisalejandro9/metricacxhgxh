@@ -38,7 +38,7 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
-  // Código JS puro del script de captura
+  // Código JS puro del script de captura con la ruta REAL de Pulso: produDiaria/obtenerUltimoIntervalo
   const getRawScriptCode = () => {
     const C = {
       u: url.trim().replace(/\/$/, ''),
@@ -53,7 +53,8 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
     .then(r => { if(!r.ok) throw new Error(p+' '+r.status); return r.json(); });
   let d;
   try {
-    const i = await g('obtenerUltimoIntervalo'),
+    const rawI = await g('produDiaria/obtenerUltimoIntervalo'),
+          i = Array.isArray(rawI) ? rawI[0] : rawI,
           p = await g('produDiariaPorEquipo?email='+C.e),
           l = await g('getRelDiaria?mail='+C.e).catch(()=>[]);
     d = {i,p,l};
@@ -74,7 +75,7 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
     return `javascript:${encodeURIComponent(getRawScriptCode())}`;
   };
 
-  // Asignar href imperativamente al DOM nativo para evitar que React 19 bloquee 'javascript:'
+  // Asignar href imperativamente al DOM nativo para evitar que React bloquee 'javascript:'
   useEffect(() => {
     if (bookmarkLinkRef.current) {
       bookmarkLinkRef.current.setAttribute('href', getBookmarkletHref());
