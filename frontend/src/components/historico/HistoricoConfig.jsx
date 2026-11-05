@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, Copy, Check, UploadCloud, AlertTriangle, Shield, CheckCircle2 } from 'lucide-react';
 
 export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) {
