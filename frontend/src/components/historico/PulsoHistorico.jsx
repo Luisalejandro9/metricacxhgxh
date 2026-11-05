@@ -7,25 +7,15 @@ import {
   Clock,
   Layers,
   LineChart,
-  Settings,
+  ShieldCheck,
   AlertCircle,
-  CheckCircle,
   Sun,
   Moon
 } from 'lucide-react';
-import { getEffectiveSupabaseUrl, DIRECT_SUPABASE_URL, SUPABASE_ANON_KEY } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import HistoricoTable from './HistoricoTable';
 import HistoricoChart from './HistoricoChart';
-import HistoricoConfig from './HistoricoConfig';
 import '../../App.css';
-
-const DEFAULT_CONFIG = {
-  supabaseUrl: DIRECT_SUPABASE_URL,
-  anonKey: SUPABASE_ANON_KEY,
-  ingestToken: '',
-  viewToken: '',
-  pulsoEmail: 'luis.acosta@konecta.com'
-};
 
 export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
   const isAdmin = profile?.role === 'admin' || (user?.email && (
@@ -35,147 +25,53 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
   ));
   const navigate = useNavigate();
 
-  // 1. Estado de Configuración (cargada de localStorage)
-  const [config, setConfig] = useState(() => {
-    try {
-      const savedUrl = localStorage.getItem('pulso_supabase_url');
-      const savedKey = localStorage.getItem('pulso_anon_key');
-      const savedIngest = localStorage.getItem('pulso_ingest_token');
-      const savedView = localStorage.getItem('pulso_view_token');
-      const savedEmail = localStorage.getItem('pulso_email');
-
-      return {
-        supabaseUrl: savedUrl || DEFAULT_CONFIG.supabaseUrl,
-        anonKey: savedKey || DEFAULT_CONFIG.anonKey,
-        ingestToken: savedIngest || DEFAULT_CONFIG.ingestToken,
-        viewToken: savedView || DEFAULT_CONFIG.viewToken,
-        pulsoEmail: savedEmail || DEFAULT_CONFIG.pulsoEmail
-      };
-    } catch {
-      return DEFAULT_CONFIG;
-    }
-  });
-
-  // 2. Estado de Datos
-  const [activeTab, setActiveTab] = useState('tabla'); // 'tabla' | 'evolucion' | 'config'
+  // Estado de Datos
+  const [activeTab, setActiveTab] = useState('tabla'); // 'tabla' | 'evolucion'
   const [allRecords, setAllRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
-  // Guardar configuración en localStorage
-  const handleSaveConfig = (newConfig) => {
-    setConfig(newConfig);
+  // Lectura de Métricas vía RPC 'leer' usando el cliente Supabase
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+
     try {
-      localStorage.setItem('pulso_supabase_url', newConfig.supabaseUrl);
-      localStorage.setItem('pulso_anon_key', newConfig.anonKey);
-      localStorage.setItem('pulso_ingest_token', newConfig.ingestToken);
-      localStorage.setItem('pulso_view_token', newConfig.viewToken);
-      localStorage.setItem('pulso_email', newConfig.pulsoEmail);
-    } catch (e) {
-      console.error('Error al guardar en localStorage:', e);
+      // Llamada resiliente a leer()
+      const { data, error } = await supabase.rpc('leer', { p_token: null });
+
+      if (error) {
+        throw error;
+      }
+
+      setAllRecords(Array.isArray(data) ? data : []);
+      setLastSyncTime(new Date());
+    } catch (err) {
+      console.error('Error al leer histórico de Pulso:', err);
+      setErrorMsg(err.message || 'Error al conectar con la base de datos');
+    } finally {
+      setIsLoading(false);
     }
-    // Reintentar lectura con el nuevo token
-    fetchData(newConfig);
-  };
-
-  // 3. Lectura de Métricas vía RPC 'leer'
-  const fetchData = useCallback(
-    async (cfg = config) => {
-      const token = cfg.viewToken?.trim();
-      if (!token) {
-        setErrorMsg('Falta el Token de Vista (view_token). Configúralo en la pestaña "Configuración & Carga".');
-        setAllRecords([]);
-        return;
-      }
-
-      setIsLoading(true);
-      setErrorMsg(null);
-
-      try {
-        const targetUrl = `${cfg.supabaseUrl}/rest/v1/rpc/leer`;
-        const res = await fetch(targetUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: cfg.anonKey,
-            Authorization: `Bearer ${cfg.anonKey}`
-          },
-          body: JSON.stringify({ p_token: token })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          if (res.status === 401 || errText.includes('token de vista invalido')) {
-            throw new Error('Token de vista inválido. Verifica el token en la configuración.');
-          }
-          throw new Error(`Error en servidor (${res.status}): ${errText}`);
-        }
-
-        const data = await res.json();
-        setAllRecords(Array.isArray(data) ? data : []);
-        setLastSyncTime(new Date());
-      } catch (err) {
-        console.error('Error al leer histórico:', err);
-        setErrorMsg(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [config]
-  );
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // 4. Ingestión manual (Plan B de pegado)
-  const handleIngestData = async ({ info, produ, rel }) => {
-    const token = config.ingestToken?.trim();
-    if (!token) {
-      throw new Error('Falta el Token de Carga (ingest_token). Configúralo primero.');
-    }
-
-    const targetUrl = `${config.supabaseUrl}/rest/v1/rpc/ingest`;
-    const res = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.anonKey,
-        Authorization: `Bearer ${config.anonKey}`
-      },
-      body: JSON.stringify({
-        p_token: token,
-        p_info: info,
-        p_produ: produ,
-        p_rel: rel
-      })
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(errText || `Error HTTP ${res.status}`);
-    }
-
-    const resultText = await res.text();
-    // Refrescar automáticamente la tabla tras guardar
-    await fetchData();
-    return resultText;
-  };
-
-  // 5. Metadatos de la Última Carga
+  // Extraer información del snapshot más reciente
   const latestSnapshotInfo = useMemo(() => {
-    if (!allRecords.length) return null;
+    if (!allRecords || allRecords.length === 0) return null;
     const first = allRecords[0];
     return {
+      snapshot_id: first.snapshot_id,
       fecha_hora_carga: first.fecha_hora_carga,
       intervalo: first.intervalo,
-      responsable: first.responsable,
-      snapshot_id: first.snapshot_id
+      responsable: first.responsable
     };
   }, [allRecords]);
 
-  // Registros que corresponden únicamente a la última carga
+  // Filtrar registros que pertenecen únicamente al snapshot más reciente
   const latestRecords = useMemo(() => {
     if (!latestSnapshotInfo) return [];
     return allRecords.filter((r) => r.snapshot_id === latestSnapshotInfo.snapshot_id);
@@ -215,6 +111,28 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
           >
             <ArrowLeft size={14} /> Volver al Tracker
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid var(--primary)',
+                color: 'var(--primary-light)',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                fontWeight: '700'
+              }}
+              title="Ir al Panel de Administración"
+            >
+              <ShieldCheck size={14} /> Panel Admin (Cargar Datos)
+            </button>
+          )}
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -304,7 +222,9 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
               )}
             </span>
           ) : (
-            <span style={{ color: 'var(--text-dim)' }}>No hay cargas guardadas en la base de datos aún.</span>
+            <span style={{ color: 'var(--text-dim)' }}>
+              {isLoading ? 'Cargando datos...' : 'No hay cargas guardadas en la base de datos aún.'}
+            </span>
           )}
         </div>
 
@@ -385,31 +305,6 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
           >
             <LineChart size={15} /> Evolución & Tendencias
           </button>
-
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('config')}
-              style={{
-                padding: '12px 20px',
-                background: activeTab === 'config' ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === 'config' ? 'var(--text-bright)' : 'var(--text-muted)',
-                borderTop: activeTab === 'config' ? '2px solid var(--primary)' : '2px solid transparent',
-                borderLeft: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
-                borderRight: activeTab === 'config' ? '1px solid var(--border-light)' : 'none',
-                borderBottom: 'none',
-                cursor: 'pointer',
-                fontWeight: '800',
-                fontSize: '12px',
-                letterSpacing: '0.04em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                textTransform: 'uppercase'
-              }}
-            >
-              <Settings size={15} /> Carga & Configuración (Admin)
-            </button>
-          )}
         </div>
       </div>
 
@@ -422,16 +317,7 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
         {activeTab === 'evolucion' && (
           <HistoricoChart allRecords={allRecords} />
         )}
-
-        {activeTab === 'config' && isAdmin && (
-          <HistoricoConfig
-            config={config}
-            onSaveConfig={handleSaveConfig}
-            onIngestData={handleIngestData}
-          />
-        )}
       </main>
     </div>
   );
 }
-

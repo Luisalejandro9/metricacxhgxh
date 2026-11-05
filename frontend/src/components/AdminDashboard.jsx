@@ -82,17 +82,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   const handleIngestPulsoData = async ({ info, produ, rel }) => {
     const token = pulsoConfig.ingestToken?.trim();
     if (!token) throw new Error('Falta el Token de Carga.');
-    const res = await fetch(`${pulsoConfig.supabaseUrl}/rest/v1/rpc/ingest`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: pulsoConfig.anonKey,
-        Authorization: `Bearer ${pulsoConfig.anonKey}`
-      },
-      body: JSON.stringify({ p_token: token, p_info: info, p_produ: produ, p_rel: rel })
+    const { data, error } = await supabase.rpc('ingest', {
+      p_token: token,
+      p_info: info,
+      p_produ: produ,
+      p_rel: rel
     });
-    if (!res.ok) throw new Error(await res.text());
-    return await res.text();
+    if (error) throw error;
+    return data || 'guardado';
   };
 
 
@@ -771,6 +768,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             addTier={addTier}
             deleteTier={deleteTier}
           />
+        ) : activeTab === 'pulso_config' ? (
+          <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+            <HistoricoConfig
+              config={pulsoConfig}
+              onSaveConfig={handleSavePulsoConfig}
+              onIngestData={handleIngestPulsoData}
+            />
+          </div>
         ) : (
           <MonitorPanel
             users={users}

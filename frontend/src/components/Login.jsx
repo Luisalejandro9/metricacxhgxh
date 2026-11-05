@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, RefreshCw, Sun, Moon, Database } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Sun, Moon } from 'lucide-react';
 
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
   if (envsMissing) {
@@ -130,29 +130,6 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
         >
           <ShieldCheck size={16} style={{ color: 'var(--primary)' }} />
           Modo Espectador (Demo)
-        </button>
-
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => window.location.href = '/historico'}
-          style={{
-            width: '100%',
-            marginTop: '10px',
-            padding: '14px',
-            fontSize: '12px',
-            fontWeight: '800',
-            letterSpacing: '0.05em',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            borderColor: 'var(--primary)',
-            color: 'var(--primary-light)',
-            background: 'rgba(59, 130, 246, 0.08)'
-          }}
-        >
-          <Database size={16} />
-          Acceder a Histórico Pulso (CxH / GxH)
         </button>
       </div>
     </div>

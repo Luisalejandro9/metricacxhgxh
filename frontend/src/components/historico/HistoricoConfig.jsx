@@ -184,15 +184,14 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
 
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px' }}>
-              TOKEN DE VISTA (VIEW_TOKEN)
+              TOKEN DE VISTA (VIEW_TOKEN) <span style={{ fontWeight: 'normal', color: 'var(--accent-success)' }}>- Opcional (Lectura automática en la app)</span>
             </label>
             <input
               type="password"
               value={viewToken}
               onChange={(e) => setViewToken(e.target.value)}
-              placeholder="Clave para leer el histórico"
+              placeholder="Opcional. Los usuarios de la app leen automáticamente."
               style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-main)', fontSize: '13px', borderRadius: '4px' }}
-              required
             />
           </div>
 

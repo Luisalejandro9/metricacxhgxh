@@ -90,20 +90,25 @@ function DashboardSidebar({
           )}
         </div>
         <button
-          className="btn-logout"
+          className="btn btn-secondary"
           onClick={() => window.location.href = '/historico'}
           style={{
             marginTop: '8px',
             width: '100%',
             color: 'var(--primary-light)',
             borderColor: 'var(--primary)',
+            background: 'rgba(59, 130, 246, 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px'
+            gap: '6px',
+            padding: '8px 12px',
+            fontSize: '11px',
+            fontWeight: '800',
+            letterSpacing: '0.04em'
           }}
         >
-          <Database size={12} strokeWidth={2} /> Histórico Pulso
+          <Database size={13} strokeWidth={2} /> Histórico Pulso (CxH / GxH)
         </button>
       </section>
 
