@@ -36,7 +36,12 @@ const METRIC_OPTIONS = [
   { id: 'login_s', label: 'Tiempo de Login (horas)', isTime: 'h', unit: 'h' },
   { id: 'break_s', label: 'Tiempo de Break (min)', isTime: 'min', unit: 'm' },
   { id: 'auxiliares_s', label: 'Auxiliares (min)', isTime: 'min', unit: 'm' },
-  { id: 'service_fan', label: 'Service Fan', isTime: false, unit: '' }
+  { id: 'service_fan', label: 'Service Fan', isTime: false, unit: '' },
+  { id: 'accum_gestionados', label: 'Acumulado: Gestionados netos', isTime: false, unit: '' },
+  { id: 'accum_cerrados', label: 'Acumulado: Cerrados', isTime: false, unit: '' },
+  { id: 'accum_pct_cierre', label: 'Acumulado: % Cierre', isTime: false, unit: '%' },
+  { id: 'accum_resolucion', label: 'Acumulado: % Resolución Neta', isTime: false, unit: '%' },
+  { id: 'accum_gxh', label: 'Acumulado: GxH', isTime: false, unit: '' }
 ];
 
 export default function HistoricoChart({ allRecords }) {
