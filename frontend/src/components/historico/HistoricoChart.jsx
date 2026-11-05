@@ -147,15 +147,9 @@ export default function HistoricoChart({ allRecords }) {
     const dataPoints = snapshotsMap.map((s) => {
       if (selectedAgent === 'PROMEDIO_EQUIPO') {
         if (selectedMetric.startsWith('accum_')) {
-          const managed = s.records.reduce((sum, r) => sum + (Number(r.accum_gestionados) || 0), 0);
-          const closed = s.records.reduce((sum, r) => sum + (Number(r.accum_cerrados) || 0), 0);
-          const discarded = s.records.reduce((sum, r) => sum + (Number(r.accum_descartados) || 0), 0);
-          const working = s.records.reduce((sum, r) => sum + (Number(r.accum_working_s) || 0), 0);
-          if (selectedMetric === 'accum_gestionados') return managed;
-          if (selectedMetric === 'accum_cerrados') return closed;
-          if (selectedMetric === 'accum_pct_cierre') return managed > 0 ? parseFloat(((closed / managed) * 100).toFixed(2)) : null;
-          if (selectedMetric === 'accum_resolucion') return managed > 0 ? parseFloat((((managed - discarded) / managed) * 100).toFixed(2)) : null;
-          if (selectedMetric === 'accum_gxh') return working > 0 ? parseFloat((managed / (working / 3600)).toFixed(2)) : null;
+          const teamAccum = s.teamAccum || {};
+          const value = teamAccum[selectedMetric];
+          return value === null || value === undefined ? null : parseFloat(Number(value).toFixed(2));
         }
         let total = 0;
         let count = 0;
