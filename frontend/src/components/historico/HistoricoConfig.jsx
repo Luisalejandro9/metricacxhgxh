@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Copy, Check, Bookmark, UploadCloud, AlertTriangle, Shield, CheckCircle2, Terminal } from 'lucide-react';
+import { Save, Copy, Check, UploadCloud, AlertTriangle, Shield, CheckCircle2 } from 'lucide-react';
 
 export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) {
   const [url, setUrl] = useState(config.supabaseUrl || '');
@@ -8,14 +8,12 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
   const [viewToken, setViewToken] = useState(config.viewToken || '');
   const [email, setEmail] = useState(config.pulsoEmail || 'luis.acosta@konecta.com');
 
-  const [copiedBookmarklet, setCopiedBookmarklet] = useState(false);
-  const [copiedConsole, setCopiedConsole] = useState(false);
+  const [copiedDataScript, setCopiedDataScript] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [pasteJson, setPasteJson] = useState('');
   const [isSubmittingPaste, setIsSubmittingPaste] = useState(false);
   const [pasteResult, setPasteResult] = useState(null);
 
-  const bookmarkLinkRef = useRef(null);
 
   useEffect(() => {
     setUrl(config.supabaseUrl || '');
@@ -38,67 +36,34 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
-  // Código JS puro del script de captura con la ruta REAL de Pulso: produDiaria/obtenerUltimoIntervalo
-  const getRawScriptCode = () => {
-    const C = {
-      u: url.trim().replace(/\/$/, ''),
-      k: anonKey.trim(),
-      t: ingestToken.trim(),
-      e: email.trim()
-    };
-
-    return `(async()=>{
-  const C = ${JSON.stringify(C)};
+  // Script auxiliar: obtiene los datos de Pulso y copia únicamente el JSON estructurado para el Plan B.
+  // No envía información directamente a Supabase.
+  const getCopyDataScript = () => {
+    const e = email.trim();
+    return `(async()=> {
   const g = p => fetch('/api/api/'+p, {credentials:'include', cache:'no-store'})
     .then(r => { if(!r.ok) throw new Error(p+' '+r.status); return r.json(); });
-  let d;
   try {
     const rawI = await g('produDiaria/obtenerUltimoIntervalo'),
           i = Array.isArray(rawI) ? rawI[0] : rawI,
-          p = await g('produDiariaPorEquipo?email='+C.e),
-          l = await g('getRelDiaria?mail='+C.e).catch(()=>[]);
-    d = {i,p,l};
-    const r = await fetch(C.u+'/rest/v1/rpc/ingest', {
-      method:'POST',
-      headers:{'Content-Type':'application/json', apikey:C.k, Authorization:'Bearer '+C.k},
-      body: JSON.stringify({p_token:C.t, p_info:i, p_produ:p, p_rel:l})
-    });
-    alert('Pulso histórico: ' + await r.text());
+          p = await g('produDiariaPorEquipo?email='+encodeURIComponent(${JSON.stringify(e)})),
+          l = await g('getRelDiaria?mail='+encodeURIComponent(${JSON.stringify(e)})).catch(()=>[]);
+    const d = {i,p,l};
+    await navigator.clipboard.writeText(JSON.stringify(d));
+    alert('Datos copiados en formato JSON. Volvé a Métrica CXH y pegá el contenido en Plan B.');
   } catch(e) {
-    if (d) { try { await navigator.clipboard.writeText(JSON.stringify(d)); } catch(_){} }
-    alert('No se pudo enviar ('+e.message+'). Si hay datos, quedaron en el portapapeles: pégalos en la web.');
+    alert('No se pudieron copiar los datos de Pulso: '+e.message);
   }
 })()`;
   };
 
-  const getBookmarkletHref = () => {
-    return `javascript:${encodeURIComponent(getRawScriptCode())}`;
-  };
-
-  // Asignar href imperativamente al DOM nativo para evitar que React bloquee 'javascript:'
-  useEffect(() => {
-    if (bookmarkLinkRef.current) {
-      bookmarkLinkRef.current.setAttribute('href', getBookmarkletHref());
-    }
-  }, [url, anonKey, ingestToken, email]);
-
-  const handleCopyBookmarklet = async () => {
+  const handleCopyDataScript = async () => {
     try {
-      await navigator.clipboard.writeText(getBookmarkletHref());
-      setCopiedBookmarklet(true);
-      setTimeout(() => setCopiedBookmarklet(false), 2500);
+      await navigator.clipboard.writeText(getCopyDataScript());
+      setCopiedDataScript(true);
+      setTimeout(() => setCopiedDataScript(false), 2500);
     } catch (err) {
-      console.error('Error al copiar bookmarklet:', err);
-    }
-  };
-
-  const handleCopyConsoleScript = async () => {
-    try {
-      await navigator.clipboard.writeText(getRawScriptCode());
-      setCopiedConsole(true);
-      setTimeout(() => setCopiedConsole(false), 2500);
-    } catch (err) {
-      console.error('Error al copiar script:', err);
+      console.error('Error al copiar script de preparación de datos:', err);
     }
   };
 
@@ -235,114 +200,40 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
         </form>
       </div>
 
-      {/* 2. Bookmarklet y Métodos de Captura */}
+      {/* 2. Preparar datos para el Plan B */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Métodos de Carga */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', padding: '24px', borderRadius: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <Bookmark size={18} color="var(--primary)" />
+            <Copy size={18} color="var(--primary)" />
             <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-              Carga desde Pulso (2 Métodos)
+              Preparar datos para Plan B
             </h3>
           </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Elige el método que te resulte más cómodo para capturar las métricas de Pulso:
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+            Copiá este script auxiliar. En Pulso, abrí la consola del navegador, pegalo y ejecutalo: solo consulta los datos y copia el JSON con la estructura requerida ({'{'}i, p, l{'}'}). No realiza la carga a Supabase. Después volvé a esta web y pegá el JSON en Plan B.
           </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Método A: Marcador */}
-            <div style={{ background: 'var(--bg-input)', padding: '14px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary-light)', marginBottom: '8px', textTransform: 'uppercase' }}>
-                Opción 1: Arrastrar a Marcadores
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 10px 0' }}>
-                Arrastra este botón a tu barra de favoritos. Luego, haz clic en él cuando estés en Pulso.
-              </p>
-              <a
-                ref={bookmarkLinkRef}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('¡Arrastra este botón a tu barra de marcadores del navegador!\n\n(O usa la Opción 2 de abajo si prefieres copiar el script).');
-                }}
-                draggable="true"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  padding: '12px 18px',
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  borderRadius: '6px',
-                  fontWeight: '800',
-                  fontSize: '12px',
-                  letterSpacing: '0.04em',
-                  boxShadow: '0 4px 14px var(--primary-glow)',
-                  cursor: 'grab',
-                  border: '1px solid rgba(255,255,255,0.2)'
-                }}
-                title="Arrastra este enlace a tu barra de marcadores"
-              >
-                📥 Cargar Pulso (Arrastrar a Marcadores)
-              </a>
-            </div>
-
-            {/* Método B: Consola F12 (100% infalible) */}
-            <div style={{ background: 'var(--bg-input)', padding: '14px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-success)', marginBottom: '8px', textTransform: 'uppercase' }}>
-                Opción 2: Copiar Script para Consola F12 (Más Directo)
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 10px 0' }}>
-                Pulsa el botón, ve a Pulso, abre la consola con <code>F12</code>, pega con <code>Ctrl+V</code> y presiona <code>Enter</code>.
-              </p>
-              <button
-                type="button"
-                onClick={handleCopyConsoleScript}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: copiedConsole ? 'var(--accent-success)' : 'var(--bg-card)',
-                  border: '1px solid var(--border-light)',
-                  color: copiedConsole ? '#ffffff' : 'var(--text-main)',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                {copiedConsole ? <Check size={16} /> : <Terminal size={16} color="var(--accent-success)" />}
-                {copiedConsole ? '¡Script Copiado! Ve a Pulso > F12 > Consola y Pega' : 'Copiar Script para Consola (F12)'}
-              </button>
-            </div>
-
-            {/* Copiar Bookmarklet como texto */}
-            <button
-              type="button"
-              onClick={handleCopyBookmarklet}
-              style={{
-                padding: '8px',
-                background: 'transparent',
-                border: '1px dashed var(--border-light)',
-                color: 'var(--text-dim)',
-                borderRadius: '4px',
-                fontSize: '11px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              {copiedBookmarklet ? <Check size={12} color="var(--accent-success)" /> : <Copy size={12} />}
-              {copiedBookmarklet ? 'URL del Marcador Copiada' : 'Copiar URL completa del Bookmarklet (para crear favorito manual)'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleCopyDataScript}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: copiedDataScript ? 'var(--accent-success)' : 'var(--bg-input)',
+              border: '1px solid var(--border-light)',
+              color: copiedDataScript ? '#ffffff' : 'var(--text-main)',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            {copiedDataScript ? <Check size={16} /> : <Copy size={16} />}
+            {copiedDataScript ? 'Script copiado' : 'Copiar script para obtener JSON'}
+          </button>
         </div>
 
         {/* Plan B: Pegar Datos de Portapapeles */}
