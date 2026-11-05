@@ -72,7 +72,7 @@ export default function HistoricoChart({ allRecords }) {
     );
     const lastAgentDay = new Map();
     ordered.forEach((snapshot) => {
-      const day = String(snapshot.fecha || '').split('T')[0];
+      const day = String(snapshot.fecha || '').split(/[T ]/)[0];
       snapshot.records.forEach((r) => {
         if (!r.agente || r.agente === 'TOTAL EQUIPO') return;
         lastAgentDay.set(day + '|' + r.agente, { day, agente: r.agente, ...r });
