@@ -50,8 +50,11 @@ export default function HistoricoTable({ records, lastSnapshotInfo }) {
     }
 
     result.sort((a, b) => {
-      let valA = a[sortField];
-      let valB = b[sortField];
+      const aMetrics = getPulsoMetrics(a);
+      const bMetrics = getPulsoMetrics(b);
+      const field = sortField === 'gestionados' ? 'gestionados_corregidos' : sortField === 'gxh' ? 'gxh_corregido' : sortField === 'pct_cierre' ? 'pct_cierre_corregido' : sortField === 'resolucion' ? 'resolucion_corregida' : sortField;
+      let valA = aMetrics[field];
+      let valB = bMetrics[field];
 
       if (valA === null || valA === undefined) valA = -999999;
       if (valB === null || valB === undefined) valB = -999999;
