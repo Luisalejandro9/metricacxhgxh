@@ -310,11 +310,11 @@ export default function HistoricoChart({ allRecords }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={18} color="var(--primary)" />
             <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-              Evolución Temporal ({metricMeta.label})
+              Evolución Diaria ({metricMeta.label})
             </h3>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
-            {snapshotsMap.length} Cargas Registradas
+            {snapshotsMap.length} Días Registrados
           </span>
         </div>
 
