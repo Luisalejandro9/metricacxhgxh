@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import TechStatusDashboard from './components/TechStatusDashboard';
+import PulsoHistorico from './components/historico/PulsoHistorico';
 import AutoUpdater from './components/AutoUpdater';
 import { runPassiveSentinelCheck } from './lib/incidentSentinel';
 import { useTheme } from './hooks/useTheme';
@@ -486,6 +487,11 @@ function App() {
         />
 
         {/* TECHNICAL STATUS DASHBOARD ROUTE */}
+        <Route
+          path="/historico"
+          element={<PulsoHistorico theme={theme} toggleTheme={toggleTheme} />}
+        />
+
         <Route 
           path="/status" 
           element={<TechStatusDashboard onExit={() => window.location.href = '/'} />} 

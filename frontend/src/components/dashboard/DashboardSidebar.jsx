@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Database,
   LogOut,
   ShieldCheck,
   Pause,
@@ -88,6 +89,22 @@ function DashboardSidebar({
             </button>
           )}
         </div>
+        <button
+          className="btn-logout"
+          onClick={() => window.location.href = '/historico'}
+          style={{
+            marginTop: '8px',
+            width: '100%',
+            color: 'var(--primary-light)',
+            borderColor: 'var(--primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}
+        >
+          <Database size={12} strokeWidth={2} /> Histórico Pulso
+        </button>
       </section>
 
       <section className="timer-section">

@@ -612,6 +612,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
           <button 
             className="btn btn-secondary" 
+            style={{ width: '100%', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }} 
+            onClick={() => navigate('/historico')}
+          >
+            <Database size={14} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
+          </button>
+
+          <button 
+            className="btn btn-secondary" 
             style={{ width: '100%', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }} 
             onClick={() => navigate('/status')}
           >
