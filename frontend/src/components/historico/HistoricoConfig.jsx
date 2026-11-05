@@ -366,3 +366,4 @@ export default function HistoricoConfig({ config, onSaveConfig, onIngestData }) 
     </div>
   );
 }
+

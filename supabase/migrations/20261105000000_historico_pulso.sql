@@ -134,3 +134,4 @@ begin
     ) t
   ), '[]'::jsonb);
 end $$;
+
