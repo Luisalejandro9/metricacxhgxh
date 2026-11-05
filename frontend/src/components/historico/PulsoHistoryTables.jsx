@@ -38,22 +38,22 @@ export default function PulsoHistoryTables({ allRecords = [] }) {
       const eligible = s.records.filter(r => r.agente && r.agente !== 'TOTAL EQUIPO');
       // Preserve the latest available snapshot for each agent/day, as in Tracker daily history.
       eligible.forEach(r => selectedByDay.set(day + '|' + r.agente, { ...r, day, intervalo: s.intervalo }));
-      const totals = eligible.reduce((a,r) => ({ managed:a.managed+net(r), closed:a.closed+val(r,'cerrados'), discarded:a.discarded+val(r,'descartados'), working:a.working+val(r,'working_s') }), {managed:0,closed:0,discarded:0,working:0});
+      const totals = eligible.reduce((a,r) => ({ managed:a.managed+net(r), closed:a.closed+val(r,'cerrados'), discarded:a.discarded+val(r,'descartados'), serviceFan:a.serviceFan+val(r,'service_fan'), working:a.working+val(r,'working_s') }), {managed:0,closed:0,discarded:0,serviceFan:0,working:0});
       teamByDay.set(day, { day, ...totals });
     });
     const selected = [...selectedByDay.values()].filter(r => r.agente === selectedAgent).sort((a,b)=>a.day.localeCompare(b.day));
-    let accum = { managed:0, closed:0, discarded:0, working:0 };
+    let accum = { managed:0, closed:0, discarded:0, serviceFan:0, working:0 };
     const accumRows = selected.map(r => {
-      accum = { managed:accum.managed+net(r), closed:accum.closed+val(r,'cerrados'), discarded:accum.discarded+val(r,'descartados'), working:accum.working+val(r,'working_s') };
+      accum = { managed:accum.managed+net(r), closed:accum.closed+val(r,'cerrados'), discarded:accum.discarded+val(r,'descartados'), serviceFan:accum.serviceFan+val(r,'service_fan'), working:accum.working+val(r,'working_s') };
       return { ...r, ...accum,
         closeRate: accum.managed ? accum.closed/accum.managed*100 : null,
-        resoRate: accum.managed ? (accum.managed-accum.discarded)/accum.managed*100 : null,
+        resoRate: accum.managed ? (accum.managed-accum.discarded-accum.serviceFan)/accum.managed*100 : null,
         gxh: accum.working ? accum.managed/(accum.working/3600) : null
       };
     }).reverse();
     const teamRows = [...teamByDay.values()].sort((a,b)=>a.day.localeCompare(b.day)).map((r,i,rows) => {
-      const total = rows.slice(0,i+1).reduce((a,x)=>({managed:a.managed+x.managed,closed:a.closed+x.closed,discarded:a.discarded+x.discarded,working:a.working+x.working}),{managed:0,closed:0,discarded:0,working:0});
-      return {...r,...total,closeRate:total.managed?total.closed/total.managed*100:null,resoRate:total.managed?(total.managed-total.discarded)/total.managed*100:null,gxh:total.working?total.managed/(total.working/3600):null};
+      const total = rows.slice(0,i+1).reduce((a,x)=>({managed:a.managed+x.managed,closed:a.closed+x.closed,discarded:a.discarded+x.discarded,serviceFan:a.serviceFan+x.serviceFan,working:a.working+x.working}),{managed:0,closed:0,discarded:0,working:0});
+      return {...r,...total,closeRate:total.managed?total.closed/total.managed*100:null,resoRate:total.managed?(total.managed-total.discarded-total.serviceFan)/total.managed*100:null,gxh:total.working?total.managed/(total.working/3600):null};
     }).reverse();
     return { selected: selected.reverse(), accumRows, teamRows };
   }, [allRecords, selectedAgent]);
