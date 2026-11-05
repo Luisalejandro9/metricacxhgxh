@@ -15,6 +15,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import HistoricoTable from './HistoricoTable';
 import HistoricoChart from './HistoricoChart';
+import PulsoHistoryTables from './PulsoHistoryTables';
 import '../../App.css';
 
 export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
@@ -26,7 +27,7 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
   const navigate = useNavigate();
 
   // Estado de Datos
-  const [activeTab, setActiveTab] = useState('tabla'); // 'tabla' | 'evolucion'
+  const [activeTab, setActiveTab] = useState('tabla'); // tabla | historial | evolucion
   const [allRecords, setAllRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -284,6 +285,29 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
           </button>
 
           <button
+            onClick={() => setActiveTab('historial')}
+            style={{
+              padding: '12px 20px',
+              background: activeTab === 'historial' ? 'var(--bg-card)' : 'transparent',
+              color: activeTab === 'historial' ? 'var(--text-bright)' : 'var(--text-muted)',
+              borderTop: activeTab === 'historial' ? '2px solid var(--primary)' : '2px solid transparent',
+              borderLeft: activeTab === 'historial' ? '1px solid var(--border-light)' : 'none',
+              borderRight: activeTab === 'historial' ? '1px solid var(--border-light)' : 'none',
+              borderBottom: 'none',
+              cursor: 'pointer',
+              fontWeight: '800',
+              fontSize: '12px',
+              letterSpacing: '0.04em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textTransform: 'uppercase'
+            }}
+          >
+            <Layers size={15} /> Historial de registros y acumulados
+          </button>
+
+          <button
             onClick={() => setActiveTab('evolucion')}
             style={{
               padding: '12px 20px',
@@ -313,6 +337,8 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
         {activeTab === 'tabla' && (
           <HistoricoTable records={latestRecords} lastSnapshotInfo={latestSnapshotInfo} />
         )}
+
+        {activeTab === 'historial' && <PulsoHistoryTables allRecords={allRecords} />}
 
         {activeTab === 'evolucion' && (
           <HistoricoChart allRecords={allRecords} />
