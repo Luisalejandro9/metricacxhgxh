@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 
 const cell = { padding: '10px 12px', borderBottom: '1px solid var(--border-light)', whiteSpace: 'nowrap' };
 const head = { ...cell, textAlign: 'left', color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' };
@@ -20,9 +21,13 @@ function DataTable({ title, columns, rows, rowKey }) {
   </section>;
 }
 
-export default function PulsoHistoryTables({ allRecords = [] }) {
+export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, ingestToken = '', onDateSaved }) {
   const agents = useMemo(() => [...new Set(allRecords.map(r => r.agente).filter(a => a && a !== 'TOTAL EQUIPO'))].sort((a,b) => a.localeCompare(b)), [allRecords]);
   const [selectedAgent, setSelectedAgent] = useState('');
+  const [editingDay, setEditingDay] = useState(null);
+  const [editDate, setEditDate] = useState('');
+  const [dateSaveMessage, setDateSaveMessage] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
   const history = useMemo(() => {
     const snapshots = new Map();
     allRecords.forEach(r => {
@@ -39,7 +44,7 @@ export default function PulsoHistoryTables({ allRecords = [] }) {
       // Preserve the latest available snapshot for each agent/day, as in Tracker daily history.
       eligible.forEach(r => selectedByDay.set(day + '|' + r.agente, { ...r, day, intervalo: s.intervalo }));
       const totals = eligible.reduce((a,r) => ({ managed:a.managed+net(r), closed:a.closed+val(r,'cerrados'), discarded:a.discarded+val(r,'descartados'), serviceFan:a.serviceFan+val(r,'service_fan'), working:a.working+val(r,'working_s') }), {managed:0,closed:0,discarded:0,serviceFan:0,working:0});
-      teamByDay.set(day, { day, ...totals });
+      teamByDay.set(day, { day, snapshot_id: s.records[0]?.snapshot_id, ...totals });
     });
     const selected = [...selectedByDay.values()].filter(r => r.agente === selectedAgent).sort((a,b)=>a.day.localeCompare(b.day));
     let accum = { managed:0, closed:0, discarded:0, serviceFan:0, working:0 };
@@ -75,8 +80,23 @@ export default function PulsoHistoryTables({ allRecords = [] }) {
     {label:'Dif. G/h acum.',render:r=>r.gxh===null?'—':fmt(r.gxh)},
     {label:'TMO promedio',render:r=>fmt(r.working&&r.managed? r.working/r.managed/60:0)+' min'}
   ];
+  const saveTeamDate = async (row) => {
+    if (!isAdmin || !row?.snapshot_id || !editDate || !ingestToken) return;
+    setSavingDate(true); setDateSaveMessage('');
+    try {
+      const { error } = await supabase.rpc('corregir_fecha_snapshot', { p_token: ingestToken.trim(), p_snapshot_id: row.snapshot_id, p_fecha: editDate });
+      if (error) throw error;
+      setDateSaveMessage('Fecha corregida. Acumulados actualizados.'); setEditingDay(null);
+      if (onDateSaved) await onDateSaved();
+    } catch (error) { setDateSaveMessage(error.message || 'No se pudo corregir la fecha.'); }
+    finally { setSavingDate(false); }
+  };
   const teamCols = [
-    {label:'Fecha',key:'day'},{label:'Gestionados netos acum.',key:'managed'},
+    {label:'Fecha',render:r=> isAdmin ? (editingDay === r.day ? <span style={{display:'inline-flex',gap:6,alignItems:'center'}}>
+      <input type="date" value={editDate} onChange={e=>setEditDate(e.target.value)} aria-label="Nueva fecha del corte" />
+      <button type="button" disabled={savingDate || !editDate || editDate === r.day} onClick={()=>saveTeamDate(r)}>Guardar</button>
+      <button type="button" onClick={()=>setEditingDay(null)}>Cancelar</button>
+    </span> : <span style={{display:'inline-flex',gap:7,alignItems:'center'}}>{r.day}<button type="button" onClick={()=>{setEditingDay(r.day);setEditDate(r.day);setDateSaveMessage('')}} title="Corregir fecha">✎</button></span> : r.day},{label:'Gestionados netos acum.',key:'managed'},
     {label:'Cerrados acum.',key:'closed'},{label:'Cierre acum.',render:r=>r.closeRate===null?'—':fmt(r.closeRate,1)+'%'},
     {label:'Resolución neta acum.',render:r=>r.resoRate===null?'—':fmt(r.resoRate,1)+'%'},
     {label:'GxH acum.',render:r=>r.gxh===null?'—':fmt(r.gxh)}
@@ -93,6 +113,6 @@ export default function PulsoHistoryTables({ allRecords = [] }) {
       <DataTable title={'Historial de registros — '+selectedAgent} columns={dailyCols} rows={history.selected} rowKey={(r,i)=>r.day+i}/>
       <DataTable title={'Historial de acumulados — '+selectedAgent} columns={accumCols} rows={history.accumRows} rowKey={(r,i)=>r.day+i}/>
     </> : <div style={{padding:'16px',color:'var(--text-muted)'}}>Seleccioná un agente para consultar sus registros diarios y acumulados.</div>}
-    <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>
+    <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>{dateSaveMessage && <div role="status" style={{marginTop:8,fontSize:12,color:"var(--text-muted)"}}>{dateSaveMessage}</div>}
   </div>;
 }

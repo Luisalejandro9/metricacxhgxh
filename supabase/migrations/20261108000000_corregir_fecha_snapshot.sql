@@ -20,7 +20,7 @@ begin
   end if;
 
   update snapshots
-  set fecha_hora_carga = to_char(p_fecha, 'DD/MM/YYYY')
+  set fecha_hora_carga = to_char(p_fecha, 'YYYY-MM-DD')
   where id = p_snapshot_id;
 
   if not found then
