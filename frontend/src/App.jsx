@@ -394,19 +394,20 @@ function App() {
 
   // Render modern high-fidelity loading screen
   if (loading && !networkError) return (
-    <div className="login-overlay active">
-      <div className="login-bg">
+    <div className="login-overlay active session-sync-overlay">
+      <div className="login-bg session-sync-background">
         <div className="bg-shape bg-shape-1"></div>
         <div className="bg-shape bg-shape-2"></div>
         <div className="bg-shape bg-shape-3"></div>
       </div>
-      <div className="login-card" style={{ maxWidth: '400px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-          <div className="spinner" style={{ width: '50px', height: '50px', border: '4px solid rgba(99, 102, 241, 0.1)', borderTopColor: 'var(--primary-light)' }}></div>
-          <h2 style={{ fontSize: '20px', color: 'var(--text-bright)' }}>Sincronizando sesión...</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>Cargando tus credenciales y preparando tu espacio de trabajo.</p>
+      <section className="session-sync-panel" role="status" aria-live="polite">
+        <div className="session-sync-emblem" aria-hidden="true">
+          <div className="spinner session-sync-spinner"></div>
         </div>
-      </div>
+        <h2>Sincronizando sesión</h2>
+        <p>Preparando tu espacio de trabajo</p>
+        <div className="session-sync-progress" aria-hidden="true"><span /></div>
+      </section>
     </div>
   );
 
