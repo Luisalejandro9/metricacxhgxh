@@ -22,6 +22,27 @@ function DataTable({ title, columns, rows, rowKey }) {
 }
 
 export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, ingestToken = '', onDateSaved }) {
+  const [teamRowsFromDb, setTeamRowsFromDb] = useState([]);
+  const [teamRowsError, setTeamRowsError] = useState('');
+  const [teamRowsLoading, setTeamRowsLoading] = useState(false);
+
+  const fetchTeamRows = React.useCallback(async () => {
+    setTeamRowsLoading(true);
+    setTeamRowsError('');
+    try {
+      const { data, error } = await supabase.rpc('leer_acumulado_pulso');
+      if (error) throw error;
+      setTeamRowsFromDb(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error al leer acumulado general Pulso:', error);
+      setTeamRowsError(error.message || 'No se pudo cargar el acumulado general.');
+      setTeamRowsFromDb([]);
+    } finally {
+      setTeamRowsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchTeamRows(); }, [fetchTeamRows]);
   const agents = useMemo(() => [...new Set(allRecords.map(r => r.agente).filter(a => a && a !== 'TOTAL EQUIPO'))].sort((a,b) => a.localeCompare(b)), [allRecords]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [editingDay, setEditingDay] = useState(null);
@@ -56,38 +77,9 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
         gxh: accum.working ? accum.managed/(accum.working/3600) : null
       };
     }).reverse();
-    const teamTotals = { managed: 0, closed: 0, discarded: 0, serviceFan: 0, working: 0 };
-    const teamRows = [...teamByDay.values()]
-      .sort((a,b) => a.day.localeCompare(b.day))
-      .map((r) => {
-        // Acumular cada componente por separado evita NaN cuando un campo no llega
-        // en algún corte y mantiene la resolución neta basada en los totales reales.
-        teamTotals.managed += Number(r.managed) || 0;
-        teamTotals.closed += Number(r.closed) || 0;
-        teamTotals.discarded += Number(r.discarded) || 0;
-        teamTotals.serviceFan += Number(r.serviceFan) || 0;
-        teamTotals.working += Number(r.working) || 0;
-        const managed = teamTotals.managed;
-        const discarded = teamTotals.discarded;
-        const serviceFan = teamTotals.serviceFan;
-        const resoRate = managed > 0
-          ? ((managed - discarded - serviceFan) / managed) * 100
-          : null;
-        return {
-          ...r,
-          managed,
-          closed: teamTotals.closed,
-          discarded,
-          serviceFan,
-          working: teamTotals.working,
-          closeRate: managed > 0 ? (teamTotals.closed / managed) * 100 : null,
-          resoRate: Number.isFinite(resoRate) ? resoRate : null,
-          gxh: teamTotals.working > 0 ? managed / (teamTotals.working / 3600) : null
-        };
-      })
-      .reverse();
+    const teamRows = teamRowsFromDb;
     return { selected: selected.reverse(), accumRows, teamRows };
-  }, [allRecords, selectedAgent]);
+  }, [allRecords, selectedAgent, teamRowsFromDb]);
 
   const dailyCols = [
     {label:'Fecha',key:'day'},{label:'Intervalo',key:'intervalo'},
@@ -139,6 +131,9 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       <DataTable title={'Historial de registros — '+selectedAgent} columns={dailyCols} rows={history.selected} rowKey={(r,i)=>r.day+i}/>
       <DataTable title={'Historial de acumulados — '+selectedAgent} columns={accumCols} rows={history.accumRows} rowKey={(r,i)=>r.day+i}/>
     </> : <div style={{padding:'16px',color:'var(--text-muted)'}}>Seleccioná un agente para consultar sus registros diarios y acumulados.</div>}
-    <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>{dateSaveMessage && <div role="status" style={{marginTop:8,fontSize:12,color:"var(--text-muted)"}}>{dateSaveMessage}</div>}
+    {teamRowsError && <div role="alert" style={{...card,padding:12,color:'var(--accent-error)'}}>{teamRowsError}</div>}
+    <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>
+    {teamRowsLoading && <div style={{fontSize:11,color:'var(--text-muted)'}}>Actualizando acumulado general...</div>}
+    {dateSaveMessage && <div role="status" style={{marginTop:8,fontSize:12,color:"var(--text-muted)"}}>{dateSaveMessage}</div>}
   </div>;
 }
