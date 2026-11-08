@@ -62,9 +62,9 @@
   --radius-lg: 0px;
   --radius-full: 0px;
 
-  --font-main: 'Code', 'Code Bold', 'Code Pro', 'Space Grotesk', 'Inter', -apple-system, sans-serif;
-  --font-heading: 'Code', 'Code Bold', 'Code Pro', 'Space Grotesk', 'Inter', sans-serif;
-  --font-mono: 'Code', 'Code Bold', 'JetBrains Mono', monospace;
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   
   --transition: all 0.15s ease-in-out;
 }
@@ -1144,3 +1144,40 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.4;
   margin: 0;
 }
+
+/* Executive minimal cyberpunk finish — preserve layout and existing colors */
+body { font-family: var(--font-main); letter-spacing: -0.012em; }
+h1,h2,h3,h4,h5,h6 { font-family: var(--font-heading); letter-spacing: -0.025em; text-transform: none; }
+button,input,select,textarea { font-family: var(--font-main); }
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline: 1px solid var(--primary-light); outline-offset: 2px; }
+.history-table th { font-family: var(--font-heading); letter-spacing: .075em; }
+.history-table td { font-variant-numeric: tabular-nums; }
+.swiss-section-header { letter-spacing: .11em; border-bottom-width: 1px; }
+.metric-card:hover,.glass-hover:hover { box-shadow: inset 0 0 0 1px var(--primary-glow); }
+
+/* Session sync is intentionally a quiet status module, not a square card */
+.login-overlay.active .login-card:has(.spinner) {
+  width: min(100%, 420px); max-width: 420px !important; padding: 0 !important;
+  border: 0 !important; background: transparent !important; box-shadow: none !important;
+  text-align: center !important;
+}
+.login-overlay.active .login-card:has(.spinner) h2 {
+  font-family: var(--font-heading); font-size: 16px !important; font-weight: 600;
+  letter-spacing: .015em; text-transform: none; color: var(--text-bright);
+}
+.login-overlay.active .login-card:has(.spinner) p {
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+  text-transform: none !important; letter-spacing: 0 !important;
+  font-size: 12px !important; line-height: 1.6; color: var(--text-muted);
+}
+.login-overlay.active .login-card:has(.spinner) .spinner {
+  width: 34px !important; height: 34px !important; border-width: 2px !important;
+  border-color: var(--border-strong) !important; border-top-color: var(--primary-light) !important;
+  box-shadow: 0 0 14px var(--primary-glow);
+}
+.login-overlay.active .login-card:has(.spinner)::after {
+  content: ""; display: block; width: 148px; height: 2px; margin: 16px auto 0;
+  background: var(--border-light); border-top: 1px solid var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
