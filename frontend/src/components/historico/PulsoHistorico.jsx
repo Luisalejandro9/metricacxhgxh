@@ -32,6 +32,9 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [snapshotDate, setSnapshotDate] = useState('');
+  const [isSavingSnapshotDate, setIsSavingSnapshotDate] = useState(false);
+  const [snapshotDateMessage, setSnapshotDateMessage] = useState(null);
 
   // Lectura de Métricas vía RPC 'leer' usando el cliente Supabase
   const fetchData = useCallback(async () => {
@@ -71,6 +74,48 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
       responsable: first.responsable
     };
   }, [allRecords]);
+
+  // El selector permite corregir el día de referencia sin cambiar la hora de captura.
+  const getDateInputValue = (value) => {
+    if (!value) return '';
+    const isoMatch = String(value).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+    if (isoMatch) return isoMatch[0];
+    const localMatch = String(value).match(/^(\\d{2})[\\/-](\\d{2})[\\/-](\\d{4})/);
+    if (localMatch) return `${localMatch[3]}-${localMatch[2]}-${localMatch[1]}`;
+    return '';
+  };
+
+  useEffect(() => {
+    setSnapshotDate(getDateInputValue(latestSnapshotInfo?.fecha_hora_carga));
+    setSnapshotDateMessage(null);
+  }, [latestSnapshotInfo?.snapshot_id, latestSnapshotInfo?.fecha_hora_carga]);
+
+  const handleSaveSnapshotDate = async () => {
+    if (!isAdmin || !latestSnapshotInfo?.snapshot_id || !snapshotDate) return;
+    const token = localStorage.getItem('pulso_ingest_token')?.trim();
+    if (!token) {
+      setSnapshotDateMessage({ type: 'error', text: 'Falta el Token de Carga. Configuralo en Admin > Carga & Configuración Pulso.' });
+      return;
+    }
+
+    setIsSavingSnapshotDate(true);
+    setSnapshotDateMessage(null);
+    try {
+      const { error } = await supabase.rpc('corregir_fecha_snapshot', {
+        p_token: token,
+        p_snapshot_id: latestSnapshotInfo.snapshot_id,
+        p_fecha: snapshotDate
+      });
+      if (error) throw error;
+      setSnapshotDateMessage({ type: 'success', text: 'Fecha del corte actualizada correctamente.' });
+      await fetchData();
+    } catch (err) {
+      console.error('Error al corregir fecha de carga:', err);
+      setSnapshotDateMessage({ type: 'error', text: err.message || 'No se pudo actualizar la fecha.' });
+    } finally {
+      setIsSavingSnapshotDate(false);
+    }
+  };
 
   // Filtrar registros que pertenecen únicamente al snapshot más reciente
   const latestRecords = useMemo(() => {
@@ -235,6 +280,35 @@ export default function PulsoHistorico({ theme, toggleTheme, user, profile }) {
           </div>
         )}
       </section>
+
+      {isAdmin && latestSnapshotInfo && (
+        <section style={{ margin: '16px 28px 0', padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 240px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-bright)' }}>Corregir fecha del corte</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Cambia el día al que corresponden estos datos; no modifica las métricas ni el intervalo.</div>
+          </div>
+          <input
+            type="date"
+            value={snapshotDate}
+            onChange={(e) => setSnapshotDate(e.target.value)}
+            aria-label="Fecha correspondiente al corte"
+            style={{ padding: '8px 10px', border: '1px solid var(--border-light)', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }}
+          />
+          <button
+            type="button"
+            onClick={handleSaveSnapshotDate}
+            disabled={isSavingSnapshotDate || !snapshotDate || snapshotDate === getDateInputValue(latestSnapshotInfo.fecha_hora_carga)}
+            style={{ padding: '8px 14px', border: 'none', borderRadius: '4px', background: 'var(--primary)', color: '#fff', fontWeight: '700', fontSize: '12px', cursor: isSavingSnapshotDate ? 'wait' : 'pointer', opacity: isSavingSnapshotDate || !snapshotDate || snapshotDate === getDateInputValue(latestSnapshotInfo.fecha_hora_carga) ? 0.55 : 1 }}
+          >
+            {isSavingSnapshotDate ? 'Guardando...' : 'Guardar fecha'}
+          </button>
+          {snapshotDateMessage && (
+            <div style={{ flexBasis: '100%', fontSize: '12px', color: snapshotDateMessage.type === 'success' ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+              {snapshotDateMessage.text}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* MENSAJES DE ERROR GLOBALES */}
       {errorMsg && (
