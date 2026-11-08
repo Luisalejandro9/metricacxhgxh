@@ -133,9 +133,7 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       <DataTable title={'Historial de acumulados — '+selectedAgent} columns={accumCols} rows={history.accumRows} rowKey={(r,i)=>r.day+i}/>
     </> : <div style={{padding:'16px',color:'var(--text-muted)'}}>Seleccioná un agente para consultar sus registros diarios y acumulados.</div>}
     {teamRowsError && <div role="alert" style={{...card,padding:12,color:'var(--accent-error)'}}>{teamRowsError}</div>}
-    {teamRowsError && <div role="alert" style={{...card,padding:12,color:'var(--accent-error)'}}>{teamRowsError}</div>}
     <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>
-    {teamRowsLoading && <div style={{fontSize:11,color:'var(--text-muted)'}}>Actualizando acumulado general...</div>}
     {teamRowsLoading && <div style={{fontSize:11,color:'var(--text-muted)'}}>Actualizando acumulado general...</div>}
     {dateSaveMessage && <div role="status" style={{marginTop:8,fontSize:12,color:"var(--text-muted)"}}>{dateSaveMessage}</div>}
   </div>;
