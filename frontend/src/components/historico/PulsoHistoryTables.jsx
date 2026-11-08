@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 const cell = { padding: '10px 12px', borderBottom: '1px solid var(--border-light)', whiteSpace: 'nowrap' };
@@ -78,7 +78,7 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       };
     }).reverse();
     const teamRows = teamRowsFromDb;
-    return { selected: selected.reverse(), accumRows, teamRows };
+    return { selected: selected.reverse(), accumRows, teamRows: teamRowsFromDb };
   }, [allRecords, selectedAgent, teamRowsFromDb]);
 
   const dailyCols = [
@@ -106,6 +106,7 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       if (error) throw error;
       setDateSaveMessage('Fecha corregida. Acumulados actualizados.'); setEditingDay(null);
       if (onDateSaved) await onDateSaved();
+      await fetchTeamRows();
     } catch (error) { setDateSaveMessage(error.message || 'No se pudo corregir la fecha.'); }
     finally { setSavingDate(false); }
   };
@@ -132,7 +133,9 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       <DataTable title={'Historial de acumulados — '+selectedAgent} columns={accumCols} rows={history.accumRows} rowKey={(r,i)=>r.day+i}/>
     </> : <div style={{padding:'16px',color:'var(--text-muted)'}}>Seleccioná un agente para consultar sus registros diarios y acumulados.</div>}
     {teamRowsError && <div role="alert" style={{...card,padding:12,color:'var(--accent-error)'}}>{teamRowsError}</div>}
+    {teamRowsError && <div role="alert" style={{...card,padding:12,color:'var(--accent-error)'}}>{teamRowsError}</div>}
     <DataTable title="Acumulado general del equipo Pulso" columns={teamCols} rows={history.teamRows} rowKey={r=>r.day}/>
+    {teamRowsLoading && <div style={{fontSize:11,color:'var(--text-muted)'}}>Actualizando acumulado general...</div>}
     {teamRowsLoading && <div style={{fontSize:11,color:'var(--text-muted)'}}>Actualizando acumulado general...</div>}
     {dateSaveMessage && <div role="status" style={{marginTop:8,fontSize:12,color:"var(--text-muted)"}}>{dateSaveMessage}</div>}
   </div>;
