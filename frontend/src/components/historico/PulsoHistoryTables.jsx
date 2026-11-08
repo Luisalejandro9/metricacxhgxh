@@ -56,10 +56,36 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
         gxh: accum.working ? accum.managed/(accum.working/3600) : null
       };
     }).reverse();
-    const teamRows = [...teamByDay.values()].sort((a,b)=>a.day.localeCompare(b.day)).map((r,i,rows) => {
-      const total = rows.slice(0,i+1).reduce((a,x)=>({managed:a.managed+x.managed,closed:a.closed+x.closed,discarded:a.discarded+x.discarded,serviceFan:a.serviceFan+x.serviceFan,working:a.working+x.working}),{managed:0,closed:0,discarded:0,serviceFan:0,working:0});
-      return {...r,...total,closeRate:total.managed?total.closed/total.managed*100:null,resoRate:total.managed?(total.managed-total.discarded-total.serviceFan)/total.managed*100:null,gxh:total.working?total.managed/(total.working/3600):null};
-    }).reverse();
+    const teamTotals = { managed: 0, closed: 0, discarded: 0, serviceFan: 0, working: 0 };
+    const teamRows = [...teamByDay.values()]
+      .sort((a,b) => a.day.localeCompare(b.day))
+      .map((r) => {
+        // Acumular cada componente por separado evita NaN cuando un campo no llega
+        // en algún corte y mantiene la resolución neta basada en los totales reales.
+        teamTotals.managed += Number(r.managed) || 0;
+        teamTotals.closed += Number(r.closed) || 0;
+        teamTotals.discarded += Number(r.discarded) || 0;
+        teamTotals.serviceFan += Number(r.serviceFan) || 0;
+        teamTotals.working += Number(r.working) || 0;
+        const managed = teamTotals.managed;
+        const discarded = teamTotals.discarded;
+        const serviceFan = teamTotals.serviceFan;
+        const resoRate = managed > 0
+          ? ((managed - discarded - serviceFan) / managed) * 100
+          : null;
+        return {
+          ...r,
+          managed,
+          closed: teamTotals.closed,
+          discarded,
+          serviceFan,
+          working: teamTotals.working,
+          closeRate: managed > 0 ? (teamTotals.closed / managed) * 100 : null,
+          resoRate: Number.isFinite(resoRate) ? resoRate : null,
+          gxh: teamTotals.working > 0 ? managed / (teamTotals.working / 3600) : null
+        };
+      })
+      .reverse();
     return { selected: selected.reverse(), accumRows, teamRows };
   }, [allRecords, selectedAgent]);
 
@@ -98,7 +124,7 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       <button type="button" onClick={()=>setEditingDay(null)}>Cancelar</button>
     </span> : <span style={{display:'inline-flex',gap:7,alignItems:'center'}}>{r.day}<button type="button" onClick={()=>{setEditingDay(r.day);setEditDate(r.day);setDateSaveMessage('')}} title="Corregir fecha">✎</button></span> : r.day},{label:'Gestionados netos acum.',key:'managed'},
     {label:'Cerrados acum.',key:'closed'},{label:'Cierre acum.',render:r=>r.closeRate===null?'—':fmt(r.closeRate,1)+'%'},
-    {label:'Resolución neta acum.',render:r=>r.resoRate===null?'—':fmt(r.resoRate,1)+'%'},
+    {label:'Resolución neta acum.',render:r=>Number.isFinite(Number(r.resoRate))?fmt(r.resoRate,1)+'%':'—'},
     {label:'GxH acum.',render:r=>r.gxh===null?'—':fmt(r.gxh)}
   ];
 
