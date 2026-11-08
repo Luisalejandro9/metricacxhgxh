@@ -57,7 +57,7 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
       };
     }).reverse();
     const teamRows = [...teamByDay.values()].sort((a,b)=>a.day.localeCompare(b.day)).map((r,i,rows) => {
-      const total = rows.slice(0,i+1).reduce((a,x)=>({managed:a.managed+x.managed,closed:a.closed+x.closed,discarded:a.discarded+x.discarded,serviceFan:a.serviceFan+x.serviceFan,working:a.working+x.working}),{managed:0,closed:0,discarded:0,working:0});
+      const total = rows.slice(0,i+1).reduce((a,x)=>({managed:a.managed+x.managed,closed:a.closed+x.closed,discarded:a.discarded+x.discarded,serviceFan:a.serviceFan+x.serviceFan,working:a.working+x.working}),{managed:0,closed:0,discarded:0,serviceFan:0,working:0});
       return {...r,...total,closeRate:total.managed?total.closed/total.managed*100:null,resoRate:total.managed?(total.managed-total.discarded-total.serviceFan)/total.managed*100:null,gxh:total.working?total.managed/(total.working/3600):null};
     }).reverse();
     return { selected: selected.reverse(), accumRows, teamRows };
