@@ -21,15 +21,15 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
       <div className="login-bg"></div>
  
       <div className="login-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.15em', color: 'var(--primary)', textTransform: 'uppercase' }}>
-            00 / CONTROL DE ACCESO
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', color: 'var(--primary)', textTransform: 'uppercase' }}>
+            Portal de Acceso
           </span>
           {toggleTheme && (
             <button 
               className="theme-toggle-btn" 
               onClick={toggleTheme}
-              title={theme === 'dark' ? 'Cambiar a Tema Claro (Suizo)' : 'Cambiar a Tema Oscuro'}
+              title={theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Tema Oscuro'}
             >
               {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
               <span>{theme === 'dark' ? 'CLARO' : 'OSCURO'}</span>
@@ -37,8 +37,8 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
           )}
         </div>
 
-        <h1>SOPORTE MÉTRICAS</h1>
-        <p>TRACKER DE PERFORMANCE DIARIO</p>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-bright)', marginBottom: '4px' }}>Soporte Métricas</h1>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', borderBottom: '1px solid var(--border-light)', paddingBottom: '10px' }}>Tracker de Performance Diario</p>
  
         {/* Displays connection or credential errors during login */}
         {authError && authError !== 'bloqueo_dns' && (

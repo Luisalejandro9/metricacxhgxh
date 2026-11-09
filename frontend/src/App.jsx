@@ -392,22 +392,14 @@ function App() {
 
   // Removed standby / DNS blocked full-screen recovery screen to allow normal rendering of Login screen with custom alerts
 
-  // Render clean professional loading screen
+  // Render clean executive loading screen
   if (loading && !networkError) return (
-    <div className="login-overlay active session-sync-overlay">
-      <div className="login-bg session-sync-background">
-        <div className="bg-shape bg-shape-1"></div>
-        <div className="bg-shape bg-shape-2"></div>
-        <div className="bg-shape bg-shape-3"></div>
+    <div className="login-overlay active">
+      <div className="login-card" style={{ maxWidth: '380px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '40px 32px' }}>
+        <div className="spinner" style={{ width: '42px', height: '42px', borderWidth: '3px' }} aria-hidden="true"></div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-bright)', margin: 0 }}>Sincronizando sesión</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0, borderBottom: 'none', paddingBottom: 0, textTransform: 'none', letterSpacing: 'normal' }}>Preparando tu espacio de trabajo...</p>
       </div>
-      <section className="session-sync-panel" role="status" aria-live="polite">
-        <div className="session-sync-emblem" aria-hidden="true">
-          <div className="spinner session-sync-spinner"></div>
-        </div>
-        <h2>Sincronizando sesión</h2>
-        <p>Preparando tu espacio de trabajo</p>
-        <div className="session-sync-progress" aria-hidden="true"><span /></div>
-      </section>
     </div>
   );
 

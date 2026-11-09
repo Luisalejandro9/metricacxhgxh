@@ -1,96 +1,95 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
 
-/* --- SWISS INTERNATIONAL DESIGN SYSTEM --- */
+/* --- EXECUTIVE PROFESSIONAL DESIGN SYSTEM --- */
 
 :root,
 [data-theme="dark"] {
-  /* Dark Theme Palette (Default Matte Obsidian Swiss) */
-  --bg-main: #09090b;
-  --bg-card: #121318;
-  --bg-sidebar: #0e0f14;
-  --bg-hover: #1c1e26;
-  --bg-input: #16171e;
+  /* Dark Theme Palette — Refined Corporate Dark */
+  --bg-main: #0f1117;
+  --bg-card: #181b23;
+  --bg-sidebar: #141720;
+  --bg-hover: #1f2330;
+  --bg-input: #1a1d27;
   
-  --primary: #3b82f6;        /* Neutral Swiss Cobalt Blue */
+  --primary: #3b82f6;
   --primary-light: #60a5fa;
   --primary-dark: #1d4ed8;
-  --primary-glow: rgba(59, 130, 246, 0.2);
+  --primary-glow: rgba(59, 130, 246, 0.15);
   
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
   --accent-info: #3b82f6;
 
-  --text-main: #f4f4f5;
+  --text-main: #e4e4e7;
   --text-muted: #a1a1aa;
   --text-dim: #71717a;
   --text-bright: #ffffff;
-  --text-inverse: #09090b;
+  --text-inverse: #0f1117;
 
-  --border-light: #27272a;
-  --border-strong: #3f3f46;
+  --border-light: #2a2d38;
+  --border-strong: #3a3d4a;
   --border-focus: #3b82f6;
   
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
   --shadow-glow: none;
 
-  /* STRICT SWISS ZERO RADIUS */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-full: 0px;
+  /* Professional rounded corners */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
 
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-heading: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   
   --transition: all 0.15s ease-in-out;
 }
 
 [data-theme="light"] {
-  /* Light Theme Palette (Swiss International Architectural Paper White) */
-  --bg-main: #f4f4f0;
+  /* Light Theme Palette — Clean Corporate Light */
+  --bg-main: #f5f5f7;
   --bg-card: #ffffff;
-  --bg-sidebar: #eaeae5;
-  --bg-hover: #e4e4df;
+  --bg-sidebar: #eeeef1;
+  --bg-hover: #e8e8ec;
   --bg-input: #ffffff;
   
-  --primary: #2563eb;        /* Neutral Swiss Blue */
+  --primary: #2563eb;
   --primary-light: #3b82f6;
   --primary-dark: #1e40af;
-  --primary-glow: rgba(37, 99, 235, 0.15);
+  --primary-glow: rgba(37, 99, 235, 0.1);
   
   --accent-success: #059669;
   --accent-warning: #d97706;
   --accent-error: #dc2626;
   --accent-info: #2563eb;
 
-  --text-main: #09090b;
+  --text-main: #1f2937;
   --text-muted: #4b5563;
   --text-dim: #6b7280;
-  --text-bright: #000000;
+  --text-bright: #111827;
   --text-inverse: #ffffff;
 
-  --border-light: #d4d4d8;
-  --border-strong: #09090b;
-  --border-focus: #09090b;
+  --border-light: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-focus: #2563eb;
 
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
   --shadow-glow: none;
 }
 
-/* MANDATORY RULE: ALL BORDERS MUST BE ABSOLUTELY SQUARE */
+/* Global box model reset */
 *,
 *::before,
 *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  border-radius: 0px !important;
 }
 
 html, body {
@@ -156,6 +155,7 @@ input, select, textarea {
   background: var(--bg-input);
   color: var(--text-main);
   border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   transition: var(--transition);
 }
@@ -164,10 +164,12 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
 }
 
-/* Glass & Card Classes adapted to Swiss Grid */
+/* Glass & Card Classes adapted to Executive Grid */
 .glass {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .glass-hover:hover {
@@ -183,12 +185,12 @@ input:focus, select:focus, textarea:focus {
   gap: 6px;
   padding: 6px 12px;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   background: var(--bg-card);
   color: var(--text-main);
   border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
 }
@@ -1181,96 +1183,29 @@ textarea:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SESSION SYNC LOADING SCREEN
-   Clean, centered loading indicator for session bootstrap.
+   CIRCULAR SPINNER & LOADING STATES
+   Clean circular indicators for all loading states.
    ═══════════════════════════════════════════════════════════ */
 
-.session-sync-overlay {
-  background: var(--bg-main) !important;
-}
-
-.session-sync-background {
-  opacity: 0.08;
-}
-
-.session-sync-panel {
-  position: relative;
-  z-index: 2;
-  width: min(90vw, 360px);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  text-align: center;
-}
-
-.session-sync-emblem {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 4px;
-}
-
-/* Remove decorative inner border */
-.session-sync-emblem::after {
-  display: none;
-}
-
+.spinner,
 .session-sync-spinner {
-  width: 32px !important;
-  height: 32px !important;
-  border-width: 3px !important;
-  border-color: var(--border-light) !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  border: 3px solid var(--border-light) !important;
   border-top-color: var(--primary) !important;
-  box-shadow: none;
+  animation: spin 0.8s linear infinite !important;
+  margin: 0 auto;
+  box-shadow: none !important;
 }
 
-.session-sync-panel h2 {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text-bright);
-  text-transform: none;
-}
-
-.session-sync-panel p {
-  margin: 0;
-  font-family: var(--font-main);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-muted);
-  letter-spacing: 0;
-}
-
-.session-sync-progress {
-  width: 160px;
-  height: 2px;
-  margin-top: 4px;
-  overflow: hidden;
-  background: var(--border-light);
-}
-
-.session-sync-progress span {
-  display: block;
-  width: 36%;
-  height: 100%;
-  background: var(--primary);
-  animation: syncProgress 1.6s ease-in-out infinite;
-}
-
-@keyframes syncProgress {
-  from { transform: translateX(-110%); }
-  to { transform: translateX(390%); }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .session-sync-progress span { animation: none; }
-  .spinner { animation-duration: 2.4s; }
+  .spinner,
+  .session-sync-spinner {
+    animation-duration: 2s !important;
+  }
 }
