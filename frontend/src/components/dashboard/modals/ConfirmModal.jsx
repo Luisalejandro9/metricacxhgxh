@@ -45,8 +45,9 @@ function ConfirmModal({ show, title, message, confirmText = 'Confirmar', type = 
             className="btn"
             style={{
               flex: 1,
-              backgroundColor: type === 'danger' ? 'var(--accent-error)' : 'var(--primary)',
-              color: 'white',
+              backgroundColor: type === 'danger' ? 'var(--accent-error)' : 'var(--btn-primary-bg)',
+              color: type === 'danger' ? '#ffffff' : 'var(--btn-primary-text)',
+              border: type === 'danger' ? '1px solid var(--accent-error)' : '1px solid var(--btn-primary-border)',
               fontWeight: '700'
             }}
             onClick={onConfirm}

@@ -117,8 +117,8 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
         editingDay === r.day ? (
           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} aria-label="Nueva fecha del corte" />
-            <button type="button" disabled={savingDate || !editDate || editDate === r.day} onClick={() => saveTeamDate(r)}>Guardar</button>
-            <button type="button" onClick={() => setEditingDay(null)}>Cancelar</button>
+            <button type="button" className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={savingDate || !editDate || editDate === r.day} onClick={() => saveTeamDate(r)}>Guardar</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setEditingDay(null)}>Cancelar</button>
           </span>
         ) : (
           <span style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}>

@@ -259,13 +259,13 @@ function DashboardStats({
         </div>
 
         {/* --- 3. SECCIÓN DE BONIFICACIONES (TOP ROW) --- */}
-        <div className="metric-card large-card bonus-card-top" style={{ border: '1px solid var(--primary)' }}>
-          <div className="swiss-section-header" style={{ marginBottom: '8px', borderBottomColor: 'var(--primary)' }}>
+        <div className="metric-card large-card bonus-card-top">
+          <div className="swiss-section-header" style={{ marginBottom: '8px' }}>
             <Zap size={14} strokeWidth={2} /> BONIFICACIONES DIARIAS Y MES
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-strong)', padding: '6px 8px', textAlign: 'center' }}>
+            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '6px 8px', textAlign: 'center' }}>
               <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 TOTAL HOY
               </div>
@@ -274,8 +274,8 @@ function DashboardStats({
               </div>
             </div>
 
-            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--primary)', padding: '6px 8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '6px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 BONO ACUM. MES
               </div>
               <div style={{ fontSize: '20px', fontFamily: 'var(--font-mono)', fontWeight: '900', letterSpacing: '0.08em', color: accumulatedBonusTotal >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
@@ -468,17 +468,14 @@ function DashboardStats({
             flex: 1,
             minWidth: '220px',
             height: '52px',
-            fontWeight: '800',
-            fontSize: '15px',
-            letterSpacing: '0.08em',
+            fontWeight: '700',
+            fontSize: '14px',
+            letterSpacing: '0.05em',
             textTransform: 'uppercase',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '10px',
-            border: '1px solid var(--border-strong)',
-            background: 'var(--bg-card)',
-            color: 'var(--text-bright)'
+            gap: '10px'
           }}
           title="Descargar archivo CSV con el detalle de métricas registradas en la sesión"
         >

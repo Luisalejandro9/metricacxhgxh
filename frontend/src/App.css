@@ -23,7 +23,7 @@
 .sidebar-header {
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -46,9 +46,9 @@
 
 .sidebar-header .subtitle {
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -139,31 +139,34 @@
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
 }
 
-.btn-primary:hover {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary.active {
   background: var(--accent-error);
+  color: #ffffff;
   border-color: var(--accent-error);
 }
 
 .btn-secondary {
-  background: var(--bg-card);
-  color: var(--text-main);
-  border: 1px solid var(--border-strong);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
 }
 
-.btn-secondary:hover {
-  background: var(--bg-hover);
+.btn-secondary:hover:not(:disabled) {
+  background: var(--btn-secondary-hover);
   color: var(--text-bright);
-  border-color: var(--text-main);
+  border-color: var(--border-strong);
 }
 
 .action-section {
@@ -180,18 +183,18 @@
 
 .btn-action {
   flex-grow: 1;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  background: var(--btn-action-bg);
+  border: 1px solid var(--btn-action-border);
   border-radius: var(--radius-sm);
-  color: var(--text-main);
+  color: var(--btn-action-text);
   text-align: left;
   justify-content: space-between;
   padding: 12px 14px;
 }
 
 .btn-action:hover:not(:disabled) {
-  border-color: var(--primary);
-  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  background: var(--btn-action-hover);
   color: var(--text-bright);
 }
 
@@ -213,7 +216,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: var(--text-muted);
 }
 
 .btn-subtract {
@@ -242,9 +245,9 @@
 
 .standards-section h3 {
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
   margin-bottom: 12px;
   text-transform: uppercase;
 }
@@ -502,9 +505,9 @@
 }
 
 .btn-google:hover {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
+  background: var(--border-strong);
+  color: var(--text-bright);
+  border-color: var(--text-muted);
 }
 
 .btn-google img {
@@ -543,7 +546,7 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .time-inputs {

@@ -30,6 +30,22 @@
   --border-light: #2a2d38;
   --border-strong: #3a3d4a;
   --border-focus: #3b82f6;
+
+  /* Executive Button Palette */
+  --btn-primary-bg: #e2e8f0;       /* Gris claro ejecutivo en modo oscuro */
+  --btn-primary-text: #0f172a;     /* Texto oscuro de alto contraste */
+  --btn-primary-hover: #f8fafc;
+  --btn-primary-border: #cbd5e1;
+
+  --btn-secondary-bg: #181b23;
+  --btn-secondary-text: #e4e4e7;
+  --btn-secondary-hover: #1f2330;
+  --btn-secondary-border: #3a3d4a;
+
+  --btn-action-bg: #181b23;
+  --btn-action-text: #e4e4e7;
+  --btn-action-hover: #1f2330;
+  --btn-action-border: #2a2d38;
   
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
@@ -77,6 +93,22 @@
   --border-strong: #d1d5db;
   --border-focus: #2563eb;
 
+  /* Executive Button Palette */
+  --btn-primary-bg: #0f172a;       /* Slate oscuro ejecutivo en modo claro */
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #1e293b;
+  --btn-primary-border: #0f172a;
+
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-text: #1f2937;
+  --btn-secondary-hover: #f1f5f9;
+  --btn-secondary-border: #d1d5db;
+
+  --btn-action-bg: #ffffff;
+  --btn-action-text: #1f2937;
+  --btn-action-hover: #f8fafc;
+  --btn-action-border: #e5e7eb;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -120,16 +152,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .swiss-section-header {
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  border-bottom: 2px solid var(--primary);
-  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 6px;
 }
 
 button {
@@ -196,9 +228,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .theme-toggle-btn:hover {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
+  background: var(--bg-hover);
+  color: var(--text-bright);
+  border-color: var(--border-strong);
 }
 
 /* Sharp Scrollbars */
