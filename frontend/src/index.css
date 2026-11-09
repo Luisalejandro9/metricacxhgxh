@@ -1,25 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
 
-/* --- LOCAL CODE FONT DECLARATIONS --- */
-@font-face {
-  font-family: 'Code';
-  src: local('Code'), local('Code Bold'), local('Code-Bold'), local('Code Light'), local('Code-Light'), local('CodePro'), local('Code Pro'), local('CodeBold');
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'Code';
-  src: local('Code Bold'), local('Code-Bold'), local('CodeBold'), local('Code Pro Bold'), local('Code');
-  font-weight: 700;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'Code';
-  src: local('Code Bold'), local('Code-Bold'), local('CodeBold'), local('Code Pro Bold'), local('Code');
-  font-weight: 800;
-  font-style: normal;
-}
-
 /* --- SWISS INTERNATIONAL DESIGN SYSTEM --- */
 
 :root,
@@ -1145,82 +1125,152 @@ input:focus, select:focus, textarea:focus {
   margin: 0;
 }
 
-/* Executive minimal cyberpunk finish — preserve layout and existing colors */
-body { font-family: var(--font-main); letter-spacing: -0.012em; }
-h1,h2,h3,h4,h5,h6 { font-family: var(--font-heading); letter-spacing: -0.025em; text-transform: none; }
-button,input,select,textarea { font-family: var(--font-main); }
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline: 1px solid var(--primary-light); outline-offset: 2px; }
-.history-table th { font-family: var(--font-heading); letter-spacing: .075em; }
-.history-table td { font-variant-numeric: tabular-nums; }
-.swiss-section-header { letter-spacing: .11em; border-bottom-width: 1px; }
-.metric-card:hover,.glass-hover:hover { box-shadow: inset 0 0 0 1px var(--primary-glow); }
+/* ═══════════════════════════════════════════════════════════
+   EXECUTIVE PROFESSIONAL REFINEMENTS
+   Clean typography, focus states, and polished UI details.
+   ═══════════════════════════════════════════════════════════ */
 
-/* Session sync is intentionally a quiet status module, not a square card */
-.login-overlay.active .login-card:has(.spinner) {
-  width: min(100%, 420px); max-width: 420px !important; padding: 0 !important;
-  border: 0 !important; background: transparent !important; box-shadow: none !important;
-  text-align: center !important;
+/* Professional body typography */
+body {
+  font-family: var(--font-main);
+  letter-spacing: -0.01em;
 }
-.login-overlay.active .login-card:has(.spinner) h2 {
-  font-family: var(--font-heading); font-size: 16px !important; font-weight: 600;
-  letter-spacing: .015em; text-transform: none; color: var(--text-bright);
-}
-.login-overlay.active .login-card:has(.spinner) p {
-  margin: 0 !important; padding: 0 !important; border: 0 !important;
-  text-transform: none !important; letter-spacing: 0 !important;
-  font-size: 12px !important; line-height: 1.6; color: var(--text-muted);
-}
-.login-overlay.active .login-card:has(.spinner) .spinner {
-  width: 34px !important; height: 34px !important; border-width: 2px !important;
-  border-color: var(--border-strong) !important; border-top-color: var(--primary-light) !important;
-  box-shadow: 0 0 14px var(--primary-glow);
-}
-.login-overlay.active .login-card:has(.spinner)::after {
-  content: ""; display: block; width: 148px; height: 2px; margin: 16px auto 0;
-  background: var(--border-light); border-top: 1px solid var(--primary);
-  box-shadow: 0 0 8px var(--primary-glow);
-}
-@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 
-/* Explicit production component styles for the session sync screen */
-.session-sync-overlay { background: var(--bg-main) !important; }
-.session-sync-background { opacity: .12; }
+/* Heading refinement — sentence case, tighter tracking */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+/* Consistent font on interactive elements */
+button, input, select, textarea {
+  font-family: var(--font-main);
+}
+
+/* Accessible focus rings */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Table headings keep uppercase treatment */
+.history-table th {
+  font-family: var(--font-heading);
+  letter-spacing: 0.07em;
+}
+
+/* Tabular figures for numeric data alignment */
+.history-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lighter section header accent */
+.swiss-section-header {
+  letter-spacing: 0.1em;
+  border-bottom-width: 1px;
+}
+
+/* Subtle hover lift on metric cards */
+.metric-card:hover,
+.glass-hover:hover {
+  border-color: var(--border-strong);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SESSION SYNC LOADING SCREEN
+   Clean, centered loading indicator for session bootstrap.
+   ═══════════════════════════════════════════════════════════ */
+
+.session-sync-overlay {
+  background: var(--bg-main) !important;
+}
+
+.session-sync-background {
+  opacity: 0.08;
+}
+
 .session-sync-panel {
-  position: relative; z-index: 2; width: min(90vw, 380px); padding: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 11px;
-  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  position: relative;
+  z-index: 2;
+  width: min(90vw, 360px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   text-align: center;
 }
+
 .session-sync-emblem {
-  width: 52px; height: 52px; display: grid; place-items: center;
-  margin-bottom: 5px; position: relative;
-  border: 1px solid var(--border-strong);
-  background: color-mix(in srgb, var(--bg-card) 68%, transparent);
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
 }
+
+/* Remove decorative inner border */
 .session-sync-emblem::after {
-  content: ""; position: absolute; inset: 5px;
-  border: 1px solid var(--primary); opacity: .5;
+  display: none;
 }
+
 .session-sync-spinner {
-  width: 27px !important; height: 27px !important; border-width: 2px !important;
-  border-color: var(--border-strong) !important; border-top-color: var(--primary-light) !important;
-  box-shadow: 0 0 14px var(--primary-glow);
+  width: 32px !important;
+  height: 32px !important;
+  border-width: 3px !important;
+  border-color: var(--border-light) !important;
+  border-top-color: var(--primary) !important;
+  box-shadow: none;
 }
+
 .session-sync-panel h2 {
-  margin: 0; font-family: var(--font-heading); font-size: 16px; font-weight: 600;
-  letter-spacing: .01em; color: var(--text-bright); text-transform: none;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-bright);
+  text-transform: none;
 }
+
 .session-sync-panel p {
-  margin: 0; font-family: var(--font-main); font-size: 12px; line-height: 1.6;
-  color: var(--text-muted); letter-spacing: 0;
+  margin: 0;
+  font-family: var(--font-main);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  letter-spacing: 0;
 }
+
 .session-sync-progress {
-  width: 154px; height: 2px; margin-top: 5px; overflow: hidden;
+  width: 160px;
+  height: 2px;
+  margin-top: 4px;
+  overflow: hidden;
   background: var(--border-light);
 }
+
 .session-sync-progress span {
-  display: block; width: 36%; height: 100%; background: var(--primary-light);
-  box-shadow: 0 0 10px var(--primary); animation: syncProgress 1.4s ease-in-out infinite;
+  display: block;
+  width: 36%;
+  height: 100%;
+  background: var(--primary);
+  animation: syncProgress 1.6s ease-in-out infinite;
 }
-@keyframes syncProgress { from { transform: translateX(-110%); } to { transform: translateX(390%); } }
-@media (prefers-reduced-motion: reduce) { .session-sync-progress span { animation: none; } }
+
+@keyframes syncProgress {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(390%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-sync-progress span { animation: none; }
+  .spinner { animation-duration: 2.4s; }
+}

@@ -392,7 +392,7 @@ function App() {
 
   // Removed standby / DNS blocked full-screen recovery screen to allow normal rendering of Login screen with custom alerts
 
-  // Render modern high-fidelity loading screen
+  // Render clean professional loading screen
   if (loading && !networkError) return (
     <div className="login-overlay active session-sync-overlay">
       <div className="login-bg session-sync-background">
