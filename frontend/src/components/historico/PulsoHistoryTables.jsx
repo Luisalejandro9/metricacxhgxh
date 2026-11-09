@@ -111,11 +111,24 @@ export default function PulsoHistoryTables({ allRecords = [], isAdmin = false, i
     finally { setSavingDate(false); }
   };
   const teamCols = [
-    {label:'Fecha',render:r=> isAdmin ? (editingDay === r.day ? <span style={{display:'inline-flex',gap:6,alignItems:'center'}}>
-      <input type="date" value={editDate} onChange={e=>setEditDate(e.target.value)} aria-label="Nueva fecha del corte" />
-      <button type="button" disabled={savingDate || !editDate || editDate === r.day} onClick={()=>saveTeamDate(r)}>Guardar</button>
-      <button type="button" onClick={()=>setEditingDay(null)}>Cancelar</button>
-    </span> : <span style={{display:'inline-flex',gap:7,alignItems:'center'}}>{r.day}<button type="button" onClick={()=>{setEditingDay(r.day);setEditDate(r.day);setDateSaveMessage('')}} title="Corregir fecha">✎</button></span> : r.day},{label:'Gestionados netos acum.',key:'managed'},
+    {
+      label: 'Fecha',
+      render: r => isAdmin ? (
+        editingDay === r.day ? (
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} aria-label="Nueva fecha del corte" />
+            <button type="button" disabled={savingDate || !editDate || editDate === r.day} onClick={() => saveTeamDate(r)}>Guardar</button>
+            <button type="button" onClick={() => setEditingDay(null)}>Cancelar</button>
+          </span>
+        ) : (
+          <span style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}>
+            {r.day}
+            <button type="button" onClick={() => { setEditingDay(r.day); setEditDate(r.day); setDateSaveMessage(''); }} title="Corregir fecha">✎</button>
+          </span>
+        )
+      ) : r.day
+    },
+    { label: 'Gestionados netos acum.', key: 'managed' },
     {label:'Cerrados acum.',key:'closed'},{label:'Cierre acum.',render:r=>r.closeRate===null?'—':fmt(r.closeRate,1)+'%'},
     {label:'Resolución neta acum.',render:r=>Number.isFinite(Number(r.resoRate))?fmt(r.resoRate,1)+'%':'—'},
     {label:'GxH acum.',render:r=>r.gxh===null?'—':fmt(r.gxh)}
