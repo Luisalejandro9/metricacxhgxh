@@ -591,7 +591,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           yAxisID: 'y',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(99, 102, 241, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+          pointBorderColor: 'rgba(99, 102, 241, 1)'
         },
         {
           label: 'TMO Gest. (min)',
@@ -601,13 +603,15 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           yAxisID: 'y1',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(16, 185, 129, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+          pointBorderColor: 'rgba(16, 185, 129, 1)'
         }
       ]
     };
   }, [filteredHistory]);
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -616,29 +620,47 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     plugins: {
       legend: {
-        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12, weight: '500' } }
+        position: 'top',
+        align: 'end',
+        labels: {
+          color: theme === 'light' ? '#334155' : '#e2e8f0',
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
+          font: { family: 'Inter', size: 12, weight: '600' }
+        },
+        onHover: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'pointer';
+        },
+        onLeave: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'default';
+        }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#f8fafc',
-        bodyColor: '#cbd5e1',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+        titleColor: theme === 'light' ? '#0f172a' : '#f8fafc',
+        bodyColor: theme === 'light' ? '#334155' : '#cbd5e1',
+        borderColor: theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 10,
+        cornerRadius: 6,
+        usePointStyle: true
       }
     },
     scales: {
       x: {
-        ticks: { color: '#94a3b8' },
-        grid: { color: 'rgba(255,255,255,0.05)' }
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
         type: 'linear',
         display: true,
         position: 'left',
         ticks: { color: 'rgba(99, 102, 241, 1)' },
-        grid: { color: 'rgba(255,255,255,0.05)' },
-        title: { display: true, text: 'GxH', color: '#94a3b8' }
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' },
+        title: { display: true, text: 'GxH', color: theme === 'light' ? '#64748b' : '#94a3b8' }
       },
       y1: {
         type: 'linear',
@@ -646,10 +668,10 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         position: 'right',
         ticks: { color: 'rgba(16, 185, 129, 1)' },
         grid: { drawOnChartArea: false },
-        title: { display: true, text: 'TMO (min)', color: '#94a3b8' }
+        title: { display: true, text: 'TMO (min)', color: theme === 'light' ? '#64748b' : '#94a3b8' }
       },
     },
-  };
+  }), [theme]);
 
   const chartDataReso = useMemo(() => {
     const sorted = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -660,14 +682,16 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       }),
       datasets: [
         {
-          label: '% Resolución',
+          label: '% Resolución Real',
           data: sorted.map(d => parseFloat(d.resolution_rate)),
           borderColor: 'rgba(236, 72, 153, 1)',
           backgroundColor: 'rgba(236, 72, 153, 0.2)',
           yAxisID: 'y',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(236, 72, 153, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(236, 72, 153, 1)',
+          pointBorderColor: 'rgba(236, 72, 153, 1)'
         },
         {
           label: 'Técnicos Enviados',
@@ -677,13 +701,15 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           yAxisID: 'y1',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(234, 179, 8, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(234, 179, 8, 1)',
+          pointBorderColor: 'rgba(234, 179, 8, 1)'
         }
       ]
     };
   }, [filteredHistory]);
 
-  const chartOptionsReso = {
+  const chartOptionsReso = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -692,29 +718,47 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     plugins: {
       legend: {
-        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12, weight: '500' } }
+        position: 'top',
+        align: 'end',
+        labels: {
+          color: theme === 'light' ? '#334155' : '#e2e8f0',
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
+          font: { family: 'Inter', size: 12, weight: '600' }
+        },
+        onHover: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'pointer';
+        },
+        onLeave: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'default';
+        }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#f8fafc',
-        bodyColor: '#cbd5e1',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+        titleColor: theme === 'light' ? '#0f172a' : '#f8fafc',
+        bodyColor: theme === 'light' ? '#334155' : '#cbd5e1',
+        borderColor: theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 10,
+        cornerRadius: 6,
+        usePointStyle: true
       }
     },
     scales: {
       x: {
-        ticks: { color: '#94a3b8' },
-        grid: { color: 'rgba(255,255,255,0.05)' }
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
         type: 'linear',
         display: true,
         position: 'left',
         ticks: { color: 'rgba(236, 72, 153, 1)' },
-        grid: { color: 'rgba(255,255,255,0.05)' },
-        title: { display: true, text: '% Resolución', color: '#94a3b8' }
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' },
+        title: { display: true, text: '% Resolución', color: theme === 'light' ? '#64748b' : '#94a3b8' }
       },
       y1: {
         type: 'linear',
@@ -722,12 +766,12 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         position: 'right',
         ticks: { color: 'rgba(234, 179, 8, 1)' },
         grid: { drawOnChartArea: false },
-        title: { display: true, text: 'Técnicos', color: '#94a3b8' },
+        title: { display: true, text: 'Técnicos', color: theme === 'light' ? '#64748b' : '#94a3b8' },
         min: 0,
         suggestedMax: 10
       },
     },
-  };
+  }), [theme]);
 
   const chartDataGxhCerrados = useMemo(() => {
     const sorted = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -745,7 +789,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           yAxisID: 'y',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(99, 102, 241, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+          pointBorderColor: 'rgba(99, 102, 241, 1)'
         },
         {
           label: 'Casos Cerrados',
@@ -755,13 +801,15 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           yAxisID: 'y1',
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(14, 165, 233, 1)'
+          pointStyle: 'circle',
+          pointBackgroundColor: 'rgba(14, 165, 233, 1)',
+          pointBorderColor: 'rgba(14, 165, 233, 1)'
         }
       ]
     };
   }, [filteredHistory]);
 
-  const chartOptionsGxhCerrados = {
+  const chartOptionsGxhCerrados = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -770,29 +818,47 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     plugins: {
       legend: {
-        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12, weight: '500' } }
+        position: 'top',
+        align: 'end',
+        labels: {
+          color: theme === 'light' ? '#334155' : '#e2e8f0',
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
+          font: { family: 'Inter', size: 12, weight: '600' }
+        },
+        onHover: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'pointer';
+        },
+        onLeave: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'default';
+        }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#f8fafc',
-        bodyColor: '#cbd5e1',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+        titleColor: theme === 'light' ? '#0f172a' : '#f8fafc',
+        bodyColor: theme === 'light' ? '#334155' : '#cbd5e1',
+        borderColor: theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 10,
+        cornerRadius: 6,
+        usePointStyle: true
       }
     },
     scales: {
       x: {
-        ticks: { color: '#94a3b8' },
-        grid: { color: 'rgba(255,255,255,0.05)' }
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
         type: 'linear',
         display: true,
         position: 'left',
         ticks: { color: 'rgba(99, 102, 241, 1)' },
-        grid: { color: 'rgba(255,255,255,0.05)' },
-        title: { display: true, text: 'GxH', color: '#94a3b8' }
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' },
+        title: { display: true, text: 'GxH', color: theme === 'light' ? '#64748b' : '#94a3b8' }
       },
       y1: {
         type: 'linear',
@@ -800,11 +866,11 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         position: 'right',
         ticks: { color: 'rgba(14, 165, 233, 1)' },
         grid: { drawOnChartArea: false },
-        title: { display: true, text: 'Casos Cerrados', color: '#94a3b8' },
+        title: { display: true, text: 'Casos Cerrados', color: theme === 'light' ? '#64748b' : '#94a3b8' },
         min: 0
       },
     },
-  };
+  }), [theme]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });

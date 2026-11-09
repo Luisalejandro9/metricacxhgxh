@@ -188,6 +188,7 @@ export default function HistoricoChart({ allRecords }) {
           tension: 0.3,
           pointRadius: 5,
           pointHoverRadius: 8,
+          pointStyle: 'circle',
           pointBackgroundColor: '#60a5fa',
           pointBorderColor: '#1d4ed8',
           borderWidth: 2
@@ -202,9 +203,21 @@ export default function HistoricoChart({ allRecords }) {
     plugins: {
       legend: {
         position: 'top',
+        align: 'end',
         labels: {
           color: '#f4f4f5',
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
           font: { family: 'Inter, sans-serif', weight: '600', size: 12 }
+        },
+        onHover: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'pointer';
+        },
+        onLeave: (e) => {
+          if (e.native?.target) e.native.target.style.cursor = 'default';
         }
       },
       tooltip: {
@@ -260,10 +273,10 @@ export default function HistoricoChart({ allRecords }) {
               onChange={(e) => setSelectedAgent(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '9px 12px',
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-light)',
-                borderRadius: '4px',
+                borderRadius: 'var(--radius-sm)',
                 color: 'var(--text-main)',
                 fontSize: '13px',
                 fontWeight: '600'
@@ -290,10 +303,10 @@ export default function HistoricoChart({ allRecords }) {
               onChange={(e) => setSelectedMetric(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '9px 12px',
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-light)',
-                borderRadius: '4px',
+                borderRadius: 'var(--radius-sm)',
                 color: 'var(--text-main)',
                 fontSize: '13px',
                 fontWeight: '600'
