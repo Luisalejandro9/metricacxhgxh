@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build --prefix frontend",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/supabase/:match*",
+      "destination": "https://oyhlhdlubralrgjbgtqw.supabase.co/:match*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

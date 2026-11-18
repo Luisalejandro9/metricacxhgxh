@@ -8,8 +8,8 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
         <div className="login-card" style={{ border: '2px solid var(--accent-error)' }}>
           <h1 style={{ color: 'var(--accent-error)' }}>¡ERROR DE CONFIGURACIÓN!</h1>
           <p>Faltan las variables de entorno <strong>(VITE_SUPABASE_URL / ANON_KEY)</strong>.</p>
-          <p>Debes configurarlas en el panel de Netlify &rarr; Environment Variables.</p>
-          <div style={{ marginTop: 20, fontSize: 12, opacity: 0.6 }}>Si acabas de configurarlas, espera un minuto o haz un "Trigger Deploy".</div>
+          <p>Debes configurarlas en el panel de Vercel o Netlify &rarr; Environment Variables.</p>
+          <div style={{ marginTop: 20, fontSize: 12, opacity: 0.6 }}>Si acabas de configurarlas, realiza un "Redeploy" para que tomen efecto.</div>
         </div>
       </div>
     );
