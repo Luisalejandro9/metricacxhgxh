@@ -228,6 +228,31 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     setTimeout(() => setMessage({ type: null, text: '' }), 4000);
   };
 
+  const handleDeleteUserData = async (targetUser) => {
+    if (!targetUser) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc('clear_user_data_and_sessions', {
+        target_user_id: targetUser.id
+      });
+
+      if (error) throw error;
+
+      showMessage('success', `Datos de ${targetUser.email} limpiados y sesión cerrada de forma remota.`);
+      setDeleteConfirmModal({ show: false, targetUser: null });
+      setViewingUserDetails(null);
+      await fetchData(true);
+    } catch (error) {
+      console.error('Error resetting user data:', error);
+      const detailStr = error.details ? ` | Detalles: ${error.details}` : '';
+      const hintStr = error.hint ? ` | Sugerencia: ${error.hint}` : '';
+      const codeStr = error.code ? ` (Código: ${error.code})` : '';
+      showMessage('error', `Error al limpiar datos: ${error.message || error}${detailStr}${hintStr}${codeStr}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSetAdminRole = async (targetUser, makeAdmin) => {
     if (!targetUser?.id || targetUser.id === user?.id) return;
     setRoleUpdatingUserId(targetUser.id);
@@ -254,7 +279,10 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     }
   };
 
-  const [countdown, setCountdown] = useState(15);
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -717,6 +745,31 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 >
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
+                  {u.role !== 'admin' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmModal({ show: true, targetUser: u });
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'rgba(239, 68, 68, 0.6)',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
+                      title="Limpiar datos e historial y cerrar sesión"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
               <div onClick={() => setSelectedUserEmail('all')} style={{
