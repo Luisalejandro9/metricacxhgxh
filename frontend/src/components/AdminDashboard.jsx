@@ -94,7 +94,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     return data || 'guardado';
   };
 
-
   // Dynamic Standards State
   const [standards, setStandards] = useState({
     GXH_GREEN: 4.00,
@@ -229,32 +228,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     setTimeout(() => setMessage({ type: null, text: '' }), 4000);
   };
 
-  const handleDeleteUserData = async (targetUser) => {
-    if (!targetUser) return;
-    setIsDeleting(true);
-    try {
-      const { data, error } = await supabase.rpc('clear_user_data_and_sessions', {
-        target_user_id: targetUser.id
-      });
-
-      if (error) throw error;
-
-      showMessage('success', `Datos de ${targetUser.email} limpiados y sesión cerrada de forma remota.`);
-      setDeleteConfirmModal({ show: false, targetUser: null });
-      setViewingUserDetails(null);
-      await fetchData(true);
-    } catch (error) {
-      console.error('Error resetting user data:', error);
-      const detailStr = error.details ? ` | Detalles: ${error.details}` : '';
-      const hintStr = error.hint ? ` | Sugerencia: ${error.hint}` : '';
-      const codeStr = error.code ? ` (Código: ${error.code})` : '';
-      showMessage('error', `Error al limpiar datos: ${error.message || error}${detailStr}${hintStr}${codeStr}`);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-
   const handleSetAdminRole = async (targetUser, makeAdmin) => {
     if (!targetUser?.id || targetUser.id === user?.id) return;
     setRoleUpdatingUserId(targetUser.id);
@@ -281,10 +254,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     }
   };
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
+  const [countdown, setCountdown] = useState(15);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -666,8 +636,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
               <h1 style={{ margin: 0, fontSize: '18px' }}>Admin Panel</h1>
             </div>
             {toggleTheme && (
-              <button 
-                className="theme-toggle-btn" 
+              <button
+                className="theme-toggle-btn"
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Cambiar a Tema Claro (Suizo)' : 'Cambiar a Tema Oscuro'}
               >
@@ -689,17 +659,17 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             <ArrowLeft size={16} /> Panel Usuario
           </button>
 
-          <button 
-            className="btn btn-secondary" 
-            style={{ width: '100%', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }} 
+          <button
+            className="btn btn-secondary"
+            style={{ width: '100%', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
             onClick={() => navigate('/historico')}
           >
             <Database size={14} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
           </button>
 
-          <button 
-            className="btn btn-secondary" 
-            style={{ width: '100%', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }} 
+          <button
+            className="btn btn-secondary"
+            style={{ width: '100%', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
             onClick={() => navigate('/status')}
           >
             <Activity size={14} style={{ color: '#10b981' }} /> Diagnóstico / Estado de Red
@@ -707,23 +677,23 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className={`btn ${activeTab === 'monitor' ? 'btn-primary' : 'btn-secondary'}`} 
+              <button
+                className={`btn ${activeTab === 'monitor' ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
                 onClick={() => setActiveTab('monitor')}
               >
                 📊 Monitorear
               </button>
-              <button 
-                className={`btn ${activeTab === 'config' ? 'btn-primary' : 'btn-secondary'}`} 
+              <button
+                className={`btn ${activeTab === 'config' ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
                 onClick={() => setActiveTab('config')}
               >
                 ⚙️ Configurar
               </button>
             </div>
-            <button 
-              className={`btn ${activeTab === 'pulso_config' ? 'btn-primary' : 'btn-secondary'}`} 
+            <button
+              className={`btn ${activeTab === 'pulso_config' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={() => setActiveTab('pulso_config')}
             >
@@ -747,48 +717,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 >
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
-                  {u.role === 'admin' ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-success)', fontSize: 10, fontWeight: 800 }}>
-                      <ShieldCheck size={12} /> ADMIN
-                    </span>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRoleConfirmUser(u);
-                      }}
-                      disabled={!u.is_enabled || roleUpdatingUserId === u.id}
-                      style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      title={u.is_enabled ? 'Otorgar permisos de administrador' : 'El perfil está deshabilitado'}
-                    >
-                      {roleUpdatingUserId === u.id ? <Activity size={13} className="spinning" /> : <UserRoundCog size={13} />}
-                    </button>
-                  )}
-                  {u.role !== 'admin' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmModal({ show: true, targetUser: u });
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'rgba(239, 68, 68, 0.6)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '4px',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
-                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
-                      title="Limpiar datos e historial y cerrar sesión"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
                 </div>
               ))}
               <div onClick={() => setSelectedUserEmail('all')} style={{
