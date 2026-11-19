@@ -745,6 +745,23 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 >
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
+                  {u.role === 'admin' ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-success)', fontSize: 10, fontWeight: 800 }}>
+                      <ShieldCheck size={12} /> ADMIN
+                    </span>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRoleConfirmUser(u);
+                      }}
+                      disabled={!u.is_enabled || roleUpdatingUserId === u.id}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title={u.is_enabled ? 'Otorgar permisos de administrador' : 'El perfil está deshabilitado'}
+                    >
+                      {roleUpdatingUserId === u.id ? <Activity size={13} className="spinning" /> : <UserRoundCog size={13} />}
+                    </button>
+                  )}
                   {u.role !== 'admin' && (
                     <button
                       onClick={(e) => {
