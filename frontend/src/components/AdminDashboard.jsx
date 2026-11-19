@@ -11,7 +11,9 @@ import {
   AlertCircle,
   Sun,
   Moon,
-  Activity
+  Activity,
+  ShieldCheck,
+  UserRoundCog
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
@@ -207,6 +209,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState('all');
   const [viewingUserDetails, setViewingUserDetails] = useState(null);
+  const [roleUpdatingUserId, setRoleUpdatingUserId] = useState(null);
+  const [roleConfirmUser, setRoleConfirmUser] = useState(null);
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
@@ -247,6 +251,33 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       showMessage('error', `Error al limpiar datos: ${error.message || error}${detailStr}${hintStr}${codeStr}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+
+  const handleSetAdminRole = async (targetUser, makeAdmin) => {
+    if (!targetUser?.id || targetUser.id === user?.id) return;
+    setRoleUpdatingUserId(targetUser.id);
+    try {
+      const { data, error } = await supabase.rpc('set_profile_admin_role', {
+        p_target_user_id: targetUser.id,
+        p_make_admin: makeAdmin
+      });
+      if (error) throw error;
+      if (!data?.id) throw new Error('Supabase no devolvió el perfil actualizado.');
+
+      setUsers(current => current.map(item => item.id === data.id
+        ? { ...item, role: data.role, is_enabled: data.is_enabled }
+        : item));
+      showMessage('success', makeAdmin
+        ? `${data.email} ahora tiene permisos de administrador.`
+        : `Se retiraron los permisos de administrador a ${data.email}.`);
+      setRoleConfirmUser(null);
+    } catch (error) {
+      console.error('Error updating profile role:', error);
+      showMessage('error', error.message || 'No se pudo actualizar el rol.');
+    } finally {
+      setRoleUpdatingUserId(null);
     }
   };
 
@@ -716,6 +747,23 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 >
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
+                  {u.role === 'admin' ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-success)', fontSize: 10, fontWeight: 800 }}>
+                      <ShieldCheck size={12} /> ADMIN
+                    </span>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRoleConfirmUser(u);
+                      }}
+                      disabled={!u.is_enabled || roleUpdatingUserId === u.id}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title={u.is_enabled ? 'Otorgar permisos de administrador' : 'El perfil está deshabilitado'}
+                    >
+                      {roleUpdatingUserId === u.id ? <Activity size={13} className="spinning" /> : <UserRoundCog size={13} />}
+                    </button>
+                  )}
                   {u.role !== 'admin' && (
                     <button
                       onClick={(e) => {
@@ -804,6 +852,25 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         getStatusClass={getStatusClass}
         onDeleteClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u })}
       />
+
+      {roleConfirmUser && (
+        <div role="presentation" onClick={() => setRoleConfirmUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'rgba(0,0,0,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="role-confirm-title" onClick={event => event.stopPropagation()} className="login-card" style={{ width: '100%', maxWidth: 440, padding: 26 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <ShieldCheck size={22} style={{ color: 'var(--primary-light)' }} />
+              <h2 id="role-confirm-title" style={{ margin: 0, fontSize: 19 }}>Otorgar administración</h2>
+            </div>
+            <p style={{ color: 'var(--text-main)', lineHeight: 1.55 }}>¿Confirmas que <strong>{roleConfirmUser.email}</strong> pase a tener permisos de administrador?</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>Podrá acceder al panel administrativo y gestionar configuraciones y perfiles.</p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => setRoleConfirmUser(null)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => handleSetAdminRole(roleConfirmUser, true)}>
+                <ShieldCheck size={15} />{roleUpdatingUserId === roleConfirmUser.id ? 'Guardando…' : 'Confirmar'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <DeleteConfirmModal
         show={deleteConfirmModal.show}
