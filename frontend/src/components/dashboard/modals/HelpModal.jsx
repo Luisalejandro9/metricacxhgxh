@@ -6,7 +6,7 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
 
   const standards = STANDARDS || {
     GXH_GREEN: 4.00,
-    CLOSED_GREEN: 78.8,
+    CLOSED_GREEN: 81.0,
     RESOLUTION_GREEN: 84.0,
     TIME_PER_CASE: 950
   };
@@ -14,7 +14,7 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
   return (
     <div className="modal-overlay active">
       <div className="modal" style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
-        
+
         {/* Cabecera */}
         <div className="modal-header" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -42,20 +42,20 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <span style={{ background: 'var(--primary)', color: '#fff', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>1</span>
                 <div>
-                  <strong>Al iniciar tu turno:</strong> Presiona <span style={{ color: 'var(--primary-light)', fontWeight: '700' }}>"Iniciar Tiempo"</span> para que el reloj empiece a contar tus horas.
+                  <strong>Al ingresar un caso:</strong> Presiona <span style={{ color: 'var(--primary-light)', fontWeight: '700' }}>"Iniciar Tiempo"</span> para que el reloj empiece a contar tu tiempo atendiendo ( sin el avail ).
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <span style={{ background: 'var(--primary)', color: '#fff', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>2</span>
                 <div>
-                  <strong>Durante la atención:</strong> Suma cada llamada o caso con los botones de la barra lateral:
+                  <strong>Durante la atención:</strong> Suma cada caso con los botones de la barra lateral:
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '6px', marginTop: '6px' }}>
                     <div style={{ background: 'var(--bg-card)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
                       <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>+ Gestionado:</span> Cada cliente atendido.
                     </div>
                     <div style={{ background: 'var(--bg-card)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
-                      <span style={{ fontWeight: '700', color: 'var(--accent-success)' }}>✓ Cerrado:</span> Lo resolviste tú.
+                      <span style={{ fontWeight: '700', color: 'var(--accent-success)' }}>✓ Cerrado:</span> Lo llegaste a cerrar sin transferir.
                     </div>
                     <div style={{ background: 'var(--bg-card)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
                       <span style={{ fontWeight: '700', color: 'var(--accent-warning)' }}>⚡ TCO Enviado:</span> Mandaste técnico.
@@ -91,7 +91,7 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg-card)', borderRadius: '6px' }}>
                 <div>
-                  <strong>% Cierre:</strong> Qué porcentaje de casos lograste solucionar.
+                  <strong>% Cierre:</strong> Qué porcentaje de casos lograste cerrar.
                 </div>
                 <div style={{ color: 'var(--accent-success)', fontWeight: '800', fontSize: '12px' }}>
                   Meta: ≥ {standards.CLOSED_GREEN}%
@@ -119,15 +119,15 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-success)' }}></span>
-                  <span><strong>Verde:</strong> Cobras bono completo.</span>
+                  <span><strong>Verde:</strong> Empezas a sumar +1 , +2 , +3 ...</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-warning)' }}></span>
-                  <span><strong>Amarillo:</strong> Cerca de la meta.</span>
+                  <span><strong>Amarillo:</strong> No sumas ni restas = 0</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-error)' }}></span>
-                  <span><strong>Rojo:</strong> Por debajo de la meta.</span>
+                  <span><strong>Rojo:</strong> Estas restando y/o penalizando</span>
                 </div>
               </div>
             </div>
