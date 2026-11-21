@@ -127,7 +127,7 @@ function ConfigPanel({
         <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
             <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', margin: 0 }}>
-              ⚡ Tabla de Bonificaciones por % Resolución
+              Tabla de Bonificaciones por % Resolución
             </h3>
             <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => addTier('resolution_bonus_tiers')}>
               + Agregar Rango

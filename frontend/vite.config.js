@@ -38,6 +38,10 @@ export default defineConfig({
         target: 'https://oyhlhdlubralrgjbgtqw.supabase.co',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/supabase/, '')
+      },
+      '/auth/v1': {
+        target: 'https://oyhlhdlubralrgjbgtqw.supabase.co',
+        changeOrigin: true
       }
     }
   }

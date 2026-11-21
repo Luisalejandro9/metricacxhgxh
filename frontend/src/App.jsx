@@ -189,7 +189,21 @@ function App() {
           return;
         }
 
-        // --- 2. Standard Supabase Session Check ---
+        // --- 2. Check for OAuth code or access token in URL ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+          try {
+            const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (!exchangeError && exchangeData?.session) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          } catch (codeErr) {
+            console.warn('OAuth code exchange:', codeErr);
+          }
+        }
+
+        // --- 3. Standard Supabase Session Check ---
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
@@ -337,14 +351,6 @@ function App() {
     try {
       setAuthError(null);
       setNetworkError(false);
-      
-      // Check if Supabase is reachable before trying to redirect to auth
-      const isReachable = await checkSupabaseConnection();
-      if (!isReachable) {
-        console.warn('Conexión con Supabase fallida antes del redireccionamiento OAuth.');
-        setAuthError('bloqueo_dns');
-        return;
-      }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -356,7 +362,7 @@ function App() {
     } catch (err) {
       console.error('Error al iniciar sesión:', err.message);
       // If Supabase is blocked during login, show the network banner
-      if (err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network')) {
+      if (err.message?.toLowerCase().includes('fetch') || err.message?.toLowerCase().includes('network')) {
         setAuthError('bloqueo_dns');
       } else {
         setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');

@@ -66,7 +66,7 @@ function DashboardSidebar({
             </button>
           )}
         </div>
-        <div className="subtitle">01 / PERFORMANCE TRACKER</div>
+        <div className="subtitle">CONTROL DE RENDIMIENTO</div>
       </header>
 
       <section className="user-info">
@@ -111,7 +111,7 @@ function DashboardSidebar({
       </section>
 
       <section className="timer-section">
-        <div className="swiss-section-header">01 / TIMER DE TRABAJO</div>
+        <div className="swiss-section-header">TIMER DE JORNADA</div>
         <div className="timer-display">{formatTime(timerSeconds)}</div>
         <div className="timer-controls">
           <button className={`btn btn-primary ${isTimerRunning ? 'active' : ''}`} onClick={toggleTimer}>
@@ -125,7 +125,7 @@ function DashboardSidebar({
       </section>
 
       <section className="action-section">
-        <div className="swiss-section-header">02 / REGISTRO RÁPIDO</div>
+        <div className="swiss-section-header">REGISTRO OPERATIVO</div>
 
         <div className="action-row">
           <button className="btn btn-subtract" onClick={() => closedCount > 0 && setClosedCount(c => c - 1)} disabled={!isTimerRunning || closedCount === 0}>
@@ -163,7 +163,7 @@ function DashboardSidebar({
       </section>
 
       <section className="standards-section">
-        <h3>03 / ESTÁNDARES REQUERIDOS</h3>
+        <h3>ESTÁNDARES DEL SERVICIO</h3>
         <div className="standard-row"><span>GxH (Verde)</span> <span>≥ {standards.GXH_GREEN}</span></div>
         <div className="standard-row"><span>GxH (Mínimo)</span> <span>≥ {standards.GXH_YELLOW}</span></div>
         <div className="standard-row"><span>TMO (máx)</span> <span>{formatTmoMin(standards.TIME_PER_CASE)}</span></div>

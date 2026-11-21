@@ -7,6 +7,14 @@
       "destination": "https://oyhlhdlubralrgjbgtqw.supabase.co/:match*"
     },
     {
+      "source": "/auth/v1/:match*",
+      "destination": "https://oyhlhdlubralrgjbgtqw.supabase.co/auth/v1/:match*"
+    },
+    {
+      "source": "/api/auth-callback",
+      "destination": "/api/auth-callback.js"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

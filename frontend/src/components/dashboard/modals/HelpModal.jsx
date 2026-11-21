@@ -12,7 +12,7 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
           <button className="btn-close" onClick={onClose}><X /></button>
         </div>
         <div style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6' }}>
-          <p style={{ marginBottom: '15px' }}>¡Bienvenido al Contador CxH / GxH! Esta herramienta está diseñada para ayudarte a registrar, calcular y alcanzar tus objetivos operativos y tus bonificaciones del mes de forma sencilla.</p>
+          <p style={{ marginBottom: '15px' }}>Plataforma diseñada para el registro, cálculo y seguimiento de objetivos operativos y bonificaciones mensuales de forma continua.</p>
           
           <h3 style={{ color: 'var(--primary-light)', marginTop: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>Glosario de Términos</h3>
           <ul style={{ marginBottom: '20px', paddingLeft: '20px' }}>
@@ -40,11 +40,11 @@ function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
           </ol>
           
           <div style={{ padding: '15px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '13px' }}>
-            <strong>Bono Mensual Acumulado:</strong> Se muestra en el panel izquierdo y representa tu porcentaje de bono estimado basándose en tus métricas acumuladas de todo el mes. ¡Mantenlo siempre en verde!
+            <strong>Bono Mensual Acumulado:</strong> Se muestra en el panel izquierdo y representa tu porcentaje de bono estimado basándose en tus métricas acumuladas de todo el mes. Mantén el indicador dentro del rango objetivo.
           </div>
         </div>
         <div className="modal-footer" style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn btn-primary" onClick={onClose}>¡Entendido!</button>
+          <button className="btn btn-primary" onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>

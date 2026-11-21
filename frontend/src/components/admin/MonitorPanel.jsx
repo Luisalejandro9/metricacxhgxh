@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, Activity, TrendingUp, History, ChevronRight } from 'lucide-react';
+import { Search, RefreshCw, Activity, TrendingUp, History, ChevronRight, Calendar, UserX } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 
 function MonitorPanel({
@@ -12,50 +12,131 @@ function MonitorPanel({
   setViewingUserDetails,
   isRefreshing,
   fetchData,
-  selectedMonth,
-  setSelectedMonth,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate,
+  handleResetToCurrentMonth,
   searchTerm,
   setSearchTerm,
   formatLastUpdated,
-  getStatusClass
+  getStatusClass,
+  selectedUserEmail,
+  excludedUserIds,
+  clearExcludedUsers
 }) {
+  const excludedUsersList = users.filter(u => excludedUserIds?.includes(u.id));
+
   return (
     <>
-      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <h2 style={{ fontSize: '32px', margin: 0 }}>Admin Panel</h2>
-            <div className="live-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239, 68, 68, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-              <div className="pulse-dot"></div>
-              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--accent-error)', letterSpacing: '0.1em' }}>EN VIVO</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 style={{ fontSize: '26px', margin: 0, fontWeight: '700' }}>Panel de Monitoreo</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-secondary)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-success)' }}></span>
+              <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-main)', letterSpacing: '0.05em' }}>TIEMPO REAL</span>
             </div>
           </div>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Gestionando {users.length} operadores activos</p>
+          <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '13px' }}>
+            {users.length} operadores registrados en la plataforma
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', maxWidth: '650px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>MES DE CONSULTA</span>
-            <input type="month" className="filter-input" style={{ height: '45px', borderRadius: '12px' }} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-          </div>
-          <div style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 'bold' }}>BUSCAR OPERADOR</span>
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-              <input type="text" placeholder="Filtrar por operador..." className="filter-input" style={{ width: '100%', paddingLeft: '40px', height: '45px', borderRadius: '12px' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        {/* CONTROLES DE FILTRO: RANGO DE FECHA Y BÚSQUEDA */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {/* Filtro Rango de Fechas (Desde - Hasta) */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'var(--bg-card)', padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '700' }}>DESDE</span>
+              <input
+                type="date"
+                className="filter-input"
+                style={{ height: '34px', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid var(--border-strong)', background: 'var(--bg-main)', color: 'var(--text-bright)' }}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '10px', color: 'transparent' }}>REFRESH</span>
-            <button className="btn btn-secondary" onClick={() => fetchData(true)} disabled={isRefreshing} style={{ height: '45px', width: '45px', padding: 0, borderRadius: '12px' }}>
-              <RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '700' }}>HASTA</span>
+              <input
+                type="date"
+                className="filter-input"
+                style={{ height: '34px', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid var(--border-strong)', background: 'var(--bg-main)', color: 'var(--text-bright)' }}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              title="Restablecer al mes actual"
+              onClick={handleResetToCurrentMonth}
+              style={{ height: '34px', alignSelf: 'flex-end', padding: '0 8px', fontSize: '10px', fontWeight: '700' }}
+            >
+              Mes Actual
             </button>
           </div>
+
+          {/* Búsqueda por Operador */}
+          <div style={{ position: 'relative', minWidth: '180px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <input
+              type="text"
+              placeholder="Buscar operador..."
+              className="filter-input"
+              style={{ width: '100%', paddingLeft: '32px', height: '38px', borderRadius: '8px', fontSize: '11px' }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => fetchData(true)}
+            disabled={isRefreshing}
+            title="Actualizar datos"
+            style={{ height: '38px', width: '38px', padding: 0, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <RefreshCw size={15} className={isRefreshing ? 'spinning' : ''} />
+          </button>
         </div>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div className="grid-secondary" style={{ marginBottom: '30px' }}>
+      {/* BANNER INFORMATIVO DE EXCLUSIÓN GLOBAL ACTIVA */}
+      {selectedUserEmail === 'all' && excludedUserIds?.length > 0 && (
+        <div style={{
+          padding: '10px 14px',
+          background: 'rgba(234, 179, 8, 0.08)',
+          border: '1px solid rgba(234, 179, 8, 0.35)',
+          borderRadius: '6px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '12px',
+          flexWrap: 'wrap',
+          gap: '8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <UserX size={15} style={{ color: 'var(--accent-warning)' }} />
+            <span>
+              <strong>Vista global filtrada:</strong> Se están excluyendo {excludedUserIds.length} {excludedUserIds.length === 1 ? 'perfil' : 'perfiles'} (
+              {excludedUsersList.map(u => u.email).join(', ')}) del cálculo consolidado.
+            </span>
+          </div>
+          <button
+            className="btn btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '10px', fontWeight: '700' }}
+            onClick={clearExcludedUsers}
+          >
+            Quitar Exclusión
+          </button>
+        </div>
+      )}
+
+      {/* TARJETAS DE RESUMEN */}
+      <div className="grid-secondary" style={{ marginBottom: '24px' }}>
         <div className="metric-card">
           <span className="metric-label">Gestionados Acum.</span>
           <div className="metric-value medium">{statsSummary.totalManaged}</div>
@@ -76,20 +157,20 @@ function MonitorPanel({
         </div>
       </div>
 
-      {/* MONITOR JORNADA ACTUAL (LIVE) */}
-      <div className="metric-card" style={{ padding: '0', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)', background: 'rgba(99, 102, 241, 0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Activity size={16} className="text-primary" />
-            <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Monitor de Jornada Actual (Hoy)</span>
+      {/* MONITOR DE JORNADA ACTUAL */}
+      <div className="metric-card" style={{ padding: '0', marginBottom: '24px', border: '1px solid var(--border-light)' }}>
+        <div className="table-header" style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={15} className="text-primary" />
+            <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Monitor de Jornada Actual</span>
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--accent-success)', fontWeight: 'bold' }}>AUTOSINCRONIZADO</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sincronización en vivo</div>
         </div>
         <div className="table-container" style={{ maxHeight: '350px' }}>
           <table className="history-table admin-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
+                <th style={{ textAlign: 'left', paddingLeft: '20px' }}>Operador</th>
                 <th>Gest.</th>
                 <th>Cerr.</th>
                 <th>TCO</th>
@@ -101,12 +182,12 @@ function MonitorPanel({
             </thead>
             <tbody>
               {metricsToday.length === 0 ? (
-                <tr><td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-dim)' }}>No hay actividad registrada para hoy.</td></tr>
+                <tr><td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)' }}>No hay actividad registrada para la fecha actual.</td></tr>
               ) : metricsToday.map((item) => {
                 const email = users.find(u => u.id === item.user_id)?.email || 'N/A';
                 return (
                   <tr key={item.id}>
-                    <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
+                    <td style={{ textAlign: 'left', paddingLeft: '20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{email.split('@')[0]}</span>
                         <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{email}</span>
@@ -127,10 +208,13 @@ function MonitorPanel({
         </div>
       </div>
 
-      {/* ANALYTICS ROW */}
-      <div style={{ marginBottom: '32px' }}>
-        <div className="metric-card" style={{ padding: '24px' }}>
-          <span className="metric-label"><TrendingUp size={14} style={{ marginRight: 5 }} /> Tendencia Histórica de Gestión</span>
+      {/* GRÁFICO DE TENDENCIA */}
+      <div style={{ marginBottom: '24px' }}>
+        <div className="metric-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <TrendingUp size={14} className="text-primary" />
+            <span className="metric-label" style={{ margin: 0 }}>Tendencia de Gestión en el Período</span>
+          </div>
           <div style={{ height: '180px' }}>
             <Line
               data={trendChartData}
@@ -149,20 +233,20 @@ function MonitorPanel({
         </div>
       </div>
 
-      {/* UNIFIED HISTORY TABLE (Drill-down) */}
+      {/* TABLA HISTORIAL UNIFICADO */}
       <div className="metric-card" style={{ padding: '0' }}>
-        <div className="table-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--border-light)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <History size={16} className="text-secondary" />
+        <div className="table-header" style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <History size={15} className="text-secondary" />
             <span className="metric-label" style={{ margin: 0, color: 'var(--text-bright)' }}>Historial Unificado de Operadores</span>
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Haz clic en un operador para ver su detalle</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Haz clic en un operador para ver su detalle</div>
         </div>
         <div className="table-container" style={{ maxHeight: '500px' }}>
           <table className="history-table admin-table clickable-rows">
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', paddingLeft: '32px' }}>Operador</th>
+                <th style={{ textAlign: 'left', paddingLeft: '20px' }}>Operador</th>
                 <th>Días Reg.</th>
                 <th>Total Gest.</th>
                 <th>Total Cerr.</th>
@@ -170,15 +254,15 @@ function MonitorPanel({
                 <th>% Reso Med.</th>
                 <th>G/h Med.</th>
                 <th>Dif. Cierre</th>
-                <th>Acción</th>
+                <th>Detalle</th>
               </tr>
             </thead>
             <tbody>
               {unifiedHistory.length === 0 ? (
-                <tr><td colSpan="9" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)' }}>Iniciando base de datos...</td></tr>
+                <tr><td colSpan="9" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-dim)' }}>No hay registros para los filtros seleccionados.</td></tr>
               ) : unifiedHistory.map((u) => (
                 <tr key={u.id} onClick={() => setViewingUserDetails(u)} style={{ cursor: 'pointer' }}>
-                  <td style={{ textAlign: 'left', paddingLeft: '32px' }}>
+                  <td style={{ textAlign: 'left', paddingLeft: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontWeight: '700', color: 'var(--text-bright)' }}>{u.email.split('@')[0]}</span>
                       <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{u.email}</span>
@@ -194,8 +278,8 @@ function MonitorPanel({
                     {u.closingBalance > 0 ? `+${u.closingBalance}` : u.closingBalance}
                   </td>
                   <td style={{ color: 'var(--primary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>
-                      Ver <ChevronRight size={14} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', fontSize: '11px' }}>
+                      Ver <ChevronRight size={13} />
                     </div>
                   </td>
                 </tr>

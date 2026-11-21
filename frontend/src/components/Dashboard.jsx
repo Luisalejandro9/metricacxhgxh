@@ -913,7 +913,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
       
       setTimeout(() => {
-        showMessage('success', '¡Métricas de espectador guardadas localmente!');
+        showMessage('success', 'Métricas de espectador guardadas localmente.');
         setLastSavedAt(new Date());
         setHistory(demoList);
         setIsSaving(false);
@@ -926,7 +926,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     if (error) {
       handleSupabaseError(error, 'Error al guardar métricas');
     } else {
-      showMessage('success', '¡Métricas guardadas correctamente!');
+      showMessage('success', 'Métricas guardadas correctamente.');
       setLastSavedAt(new Date());
       setNetworkError(false);
       await fetchHistory();

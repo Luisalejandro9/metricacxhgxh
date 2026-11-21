@@ -161,9 +161,9 @@ export default function HalfHourlyLogSection({
       {/* HEADER DE SECCIÓN */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 className="section-title" style={{ margin: 0 }}>04 / REGISTROS AUTOMÁTICOS CADA 30 MINUTOS (HORA REAL)</h2>
+          <h2 className="section-title" style={{ margin: 0 }}>REGISTRO POR INTERVALOS (30 MIN)</h2>
           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', letterSpacing: '0.04em' }}>
-            CORTE CRONOLÓGICO ACTIVO DE LA MEDIA HORA ACTUAL
+            CORTE CRONOLÓGICO DE LA MEDIA HORA ACTUAL
           </div>
         </div>
 
@@ -355,7 +355,7 @@ export default function HalfHourlyLogSection({
                 <Eye size={18} style={{ color: 'var(--primary)' }} />
                 <div>
                   <h2 style={{ fontSize: '15px', margin: 0, letterSpacing: '0.04em' }}>
-                    04 / PREVIEW DE CORTES DEL DÍA ({getTodayStr()})
+                    VISTA PREVIA DE CORTES DEL DÍA ({getTodayStr()})
                   </h2>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                     Listado cronológico de cortes registrados a partir del inicio de actividad

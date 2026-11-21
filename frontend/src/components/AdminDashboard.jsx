@@ -3,8 +3,6 @@ import { supabase } from '../lib/supabase';
 import {
   Database,
   ArrowLeft,
-  Trophy,
-  Zap,
   Mail,
   Trash2,
   CheckCircle2,
@@ -13,7 +11,12 @@ import {
   Moon,
   Activity,
   ShieldCheck,
-  UserRoundCog
+  UserRoundCog,
+  UserX,
+  UserCheck,
+  BarChart3,
+  Settings,
+  UploadCloud
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
@@ -45,8 +48,9 @@ const DEFAULT_RESOLUTION_TIERS = [
 function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
-  // Navigation Tab State
-  const [activeTab, setActiveTab] = useState('monitor'); // 'monitor' or 'config' or 'pulso_config'
+  // Navigation Tab State ('monitor', 'config', 'pulso_config')
+  const [activeTab, setActiveTab] = useState('monitor');
+
   // Pulso Config State (Admin Only)
   const [pulsoConfig, setPulsoConfig] = useState(() => {
     try {
@@ -132,7 +136,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
           .maybeSingle();
 
         if (error) {
-          console.warn('Error loading app_config (falling back to default standards):', error.message);
+          console.warn('Error al cargar app_config:', error.message);
         } else if (data) {
           setStandards({
             GXH_GREEN: parseFloat(data.gxh_green),
@@ -148,7 +152,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
           });
         }
       } catch (e) {
-        console.error('Failed to load standards:', e);
+        console.error('Error al obtener estándares:', e);
       } finally {
         setIsLoadingStandards(false);
       }
@@ -211,10 +215,39 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   const [roleUpdatingUserId, setRoleUpdatingUserId] = useState(null);
   const [roleConfirmUser, setRoleConfirmUser] = useState(null);
 
-  const [selectedMonth, setSelectedMonth] = useState(() => {
+  // --- FILTRO DE EXCLUSIÓN DE DIRECTORIO (MOSTRAR GLOBAL EXCEPTO...) ---
+  const [excludedUserIds, setExcludedUserIds] = useState([]);
+
+  const toggleExcludeUser = (userId) => {
+    setExcludedUserIds(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const clearExcludedUsers = () => {
+    setExcludedUserIds([]);
+  };
+
+  // --- FILTRO DE RANGO DE FECHA (POR EJEMPLO 05/10/2026 AL 23/10/2026) ---
+  const [startDate, setStartDate] = useState(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   });
+
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  });
+
+  const handleResetToCurrentMonth = () => {
+    const d = new Date();
+    const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const end = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   const [deleteConfirmModal, setDeleteConfirmModal] = useState({
     show: false,
@@ -243,7 +276,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       setViewingUserDetails(null);
       await fetchData(true);
     } catch (error) {
-      console.error('Error resetting user data:', error);
+      console.error('Error al limpiar datos del usuario:', error);
       const detailStr = error.details ? ` | Detalles: ${error.details}` : '';
       const hintStr = error.hint ? ` | Sugerencia: ${error.hint}` : '';
       const codeStr = error.code ? ` (Código: ${error.code})` : '';
@@ -272,7 +305,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         : `Se retiraron los permisos de administrador a ${data.email}.`);
       setRoleConfirmUser(null);
     } catch (error) {
-      console.error('Error updating profile role:', error);
+      console.error('Error al actualizar rol del perfil:', error);
       showMessage('error', error.message || 'No se pudo actualizar el rol.');
     } finally {
       setRoleUpdatingUserId(null);
@@ -305,7 +338,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       setAllMetrics(metricsData || []);
 
     } catch (error) {
-      console.error('Error fetching admin data:', error.message);
+      console.error('Error al cargar datos administrativos:', error.message);
       if (error.message.toLowerCase().includes('fetch')) {
         setNetworkError(true);
       }
@@ -333,28 +366,43 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     return () => { supabase.removeChannel(channel); };
   }, [setNetworkError]);
 
-  const monthFilteredMetrics = useMemo(() => {
-    return allMetrics.filter(m => m.date.startsWith(selectedMonth));
-  }, [allMetrics, selectedMonth]);
+  // Filtrado por Rango de Fecha (startDate a endDate)
+  const dateFilteredMetrics = useMemo(() => {
+    return allMetrics.filter(m => {
+      if (!m.date) return false;
+      if (startDate && m.date < startDate) return false;
+      if (endDate && m.date > endDate) return false;
+      return true;
+    });
+  }, [allMetrics, startDate, endDate]);
 
+  // Métricas con filtrado de usuario seleccionado, exclusión de perfiles y término de búsqueda
   const filteredMetrics = useMemo(() => {
-    let filtered = [...monthFilteredMetrics];
+    let filtered = [...dateFilteredMetrics];
     if (selectedUserEmail !== 'all') {
       const userObj = users.find(u => u.email === selectedUserEmail);
       if (userObj) filtered = filtered.filter(m => m.user_id === userObj.id);
+    } else if (excludedUserIds.length > 0) {
+      // Exclusión en modo Global
+      filtered = filtered.filter(m => !excludedUserIds.includes(m.user_id));
     }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(m => users.find(u => u.id === m.user_id)?.email.toLowerCase().includes(term));
     }
     return filtered;
-  }, [monthFilteredMetrics, selectedUserEmail, users, searchTerm]);
+  }, [dateFilteredMetrics, selectedUserEmail, users, searchTerm, excludedUserIds]);
 
   const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
 
+  // Historial unificado considerando exclusión de usuarios en modo global
   const unifiedHistory = useMemo(() => {
-    return users.map(u => {
-      const userRows = monthFilteredMetrics.filter(m => m.user_id === u.id);
+    const targetUsers = selectedUserEmail === 'all'
+      ? users.filter(u => !excludedUserIds.includes(u.id))
+      : users.filter(u => u.email === selectedUserEmail);
+
+    return targetUsers.map(u => {
+      const userRows = dateFilteredMetrics.filter(m => m.user_id === u.id);
       if (userRows.length === 0) return null;
 
       const totalManaged = userRows.reduce((s, m) => s + (m.cases_managed || 0), 0);
@@ -403,7 +451,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         })
       };
     }).filter(Boolean);
-  }, [monthFilteredMetrics, users, standards]);
+  }, [dateFilteredMetrics, users, standards, selectedUserEmail, excludedUserIds]);
 
   const statsSummary = useMemo(() => {
     if (filteredMetrics.length === 0) return { totalManaged: 0, totalClosed: 0, totalTechs: 0, avgEfficiency: "0.0" };
@@ -417,11 +465,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       avgEfficiency: totalManaged > 0 ? ((totalClosed / totalManaged) * 100).toFixed(1) : "0.0"
     };
   }, [filteredMetrics]);
-
-  const leaderboard = useMemo(() => {
-    const list = unifiedHistory.sort((a, b) => parseFloat(b.efficiency) - parseFloat(a.efficiency));
-    return list.slice(0, 5);
-  }, [unifiedHistory]);
 
   const allWorkDays = useMemo(() => {
     return [...new Set(filteredMetrics.map(m => m.date))].sort();
@@ -550,7 +593,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
           gxh_bonus_tiers: payload.gxh_bonus_tiers,
           resolution_bonus_tiers: payload.resolution_bonus_tiers
         });
-        showMessage('success', '¡Configuración de espectador guardada localmente!');
+        showMessage('success', 'Configuración de espectador guardada localmente.');
         setIsSavingConfig(false);
         return;
       }
@@ -561,7 +604,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
       if (error) throw error;
 
-      showMessage('success', '¡Configuración actualizada correctamente!');
+      showMessage('success', 'Configuración actualizada exitosamente.');
       setStandards({
         GXH_GREEN: payload.gxh_green,
         GXH_YELLOW: payload.gxh_yellow,
@@ -575,7 +618,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         resolution_bonus_tiers: payload.resolution_bonus_tiers
       });
     } catch (err) {
-      console.error('Error saving config:', err);
+      console.error('Error al guardar configuración:', err);
       showMessage('error', `Error al guardar: ${err.message}`);
     } finally {
       setIsSavingConfig(false);
@@ -583,7 +626,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   };
 
   const resetConfigToDefault = () => {
-    if (window.confirm('¿Estás seguro de restablecer todos los valores a los predeterminados de fábrica?')) {
+    if (window.confirm('¿Restablecer todos los valores a los predeterminados?')) {
       setFormConfig({
         gxh_green: 4.00,
         gxh_yellow: 3.50,
@@ -593,10 +636,10 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         closed_yellow: 76.8,
         time_per_case: 950,
         time_per_managed: 950,
-        gxh_bonus_tiers: [...DEFAULT_GXH_TIERS],
-        resolution_bonus_tiers: [...DEFAULT_RESOLUTION_TIERS]
+        gxh_bonus_tiers: DEFAULT_GXH_TIERS,
+        resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
       });
-      showMessage('info', 'Valores restablecidos a predeterminados. Haz clic en Guardar para aplicar.');
+      showMessage('info', 'Valores restablecidos a predeterminados. Presiona Guardar para aplicar.');
     }
   };
 
@@ -604,7 +647,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     return (
       <div className="login-overlay">
         <div className="login-card" style={{ textAlign: 'center', padding: '40px' }}>
-          <RefreshCw size={48} className="spinning text-primary" style={{ marginBottom: 20 }} />
+          <Activity size={32} className="spinning text-primary" style={{ marginBottom: 16 }} />
           <p>Verificando credenciales de administrador...</p>
         </div>
       </div>
@@ -613,68 +656,56 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
   if (!profile || profile.role !== 'admin' || !profile.is_enabled) {
     return (
-      <div className="login-overlay access-denied-bg">
-        <div className="login-card" style={{ textAlign: 'center', maxWidth: '400px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto 24px' }}>
-            <div className="pulse-circle" style={{ position: 'absolute', inset: '-10px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', animation: 'ping 2s infinite' }}></div>
-            <AlertCircle size={64} className="text-secondary" style={{ color: 'var(--accent-error)', position: 'relative' }} />
-          </div>
-          <h1 style={{ fontSize: '28px', color: 'var(--text-bright)', marginBottom: '10px' }}>¡No tienes acceso!</h1>
-          <p style={{ color: 'var(--text-dim)', marginBottom: '30px', lineHeight: '1.5' }}>Tu cuenta no cuenta con permisos administrativos o ha sido desahibilitada.</p>
+      <div className="login-overlay">
+        <div className="login-card" style={{ textAlign: 'center', maxWidth: '400px', border: '1px solid var(--accent-error)' }}>
+          <AlertCircle size={48} style={{ color: 'var(--accent-error)', margin: '0 auto 16px' }} />
+          <h1 style={{ fontSize: '22px', color: 'var(--text-bright)', marginBottom: '10px' }}>Acceso No Autorizado</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.5' }}>Tu cuenta no tiene permisos administrativos o ha sido deshabilitada.</p>
 
-          <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px' }}>
-            <p style={{ fontSize: '12px', margin: 0, color: 'var(--text-dim)' }}>Redirigiendo automáticamente en</p>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: 'var(--accent-error)' }}>{countdown}s</div>
+          <div style={{ background: 'var(--bg-secondary)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-light)', marginBottom: '20px' }}>
+            <p style={{ fontSize: '11px', margin: 0, color: 'var(--text-muted)' }}>Redirigiendo automáticamente en</p>
+            <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--accent-error)' }}>{countdown}s</div>
           </div>
 
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{ width: '100%' }}>
-            <ArrowLeft size={16} /> Volver al Dashboard Ahora
+            <ArrowLeft size={15} /> Volver al Dashboard
           </button>
         </div>
-        <style>{`
-          .access-denied-bg {
-             background: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, #0a0b14 100%);
-          }
-          @keyframes ping {
-            0% { transform: scale(1); opacity: 1; }
-            70%, 100% { transform: scale(1.6); opacity: 0; }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
     <div className="app-layout">
-      {/* MESSAGES */}
+      {/* Mensajes de notificación */}
       {message.text && (
         <div className={`mensaje activo mensaje-${message.type}`} style={{ zIndex: 4000 }}>
-          {message.type === 'success' && <CheckCircle2 size={18} style={{ marginRight: 10, verticalAlign: 'middle' }} />}
-          {message.type === 'error' && <AlertCircle size={18} style={{ marginRight: 10, verticalAlign: 'middle' }} />}
+          {message.type === 'success' && <CheckCircle2 size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />}
+          {message.type === 'error' && <AlertCircle size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />}
           {message.text}
         </div>
       )}
 
-      {/* SIDEBAR */}
+      {/* BARRA LATERAL (SIDEBAR) */}
       <aside className="sidebar">
         <header className="sidebar-header">
           <div className="sidebar-header-top">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Database className="text-primary" size={20} />
-              <h1 style={{ margin: 0, fontSize: '18px' }}>Admin Panel</h1>
+              <Database className="text-primary" size={18} />
+              <h1 style={{ margin: 0, fontSize: '17px' }}>Panel de Administración</h1>
             </div>
             {toggleTheme && (
               <button
                 className="theme-toggle-btn"
                 onClick={toggleTheme}
-                title={theme === 'dark' ? 'Cambiar a Tema Claro (Suizo)' : 'Cambiar a Tema Oscuro'}
+                title={theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Tema Oscuro'}
               >
                 {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 <span>{theme === 'dark' ? 'CLARO' : 'OSCURO'}</span>
               </button>
             )}
           </div>
-          <div className="subtitle">00 / CONTROL CENTRAL</div>
+          <div className="subtitle">PANEL DE CONTROL</div>
         </header>
 
         <section className="user-info">
@@ -682,42 +713,42 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
           <div style={{ fontSize: '10px', background: 'var(--primary)', color: '#ffffff', padding: '2px 8px', fontWeight: 'bold', textTransform: 'uppercase' }}>ADMINISTRADOR</div>
         </section>
 
-        <nav className="action-section" style={{ gap: '12px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
-          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '8px' }} onClick={() => navigate('/dashboard')}>
-            <ArrowLeft size={16} /> Panel Usuario
+        <nav className="action-section" style={{ gap: '10px', flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
+          <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '4px' }} onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={14} /> Panel Usuario
           </button>
 
           <button
             className="btn btn-secondary"
-            style={{ width: '100%', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
+            style={{ width: '100%', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
             onClick={() => navigate('/historico')}
           >
-            <Database size={14} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
+            <Database size={13} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
           </button>
 
           <button
             className="btn btn-secondary"
-            style={{ width: '100%', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
+            style={{ width: '100%', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
             onClick={() => navigate('/status')}
           >
-            <Activity size={14} style={{ color: '#10b981' }} /> Diagnóstico / Estado de Red
+            <Activity size={13} style={{ color: '#10b981' }} /> Diagnóstico y Estado de Red
           </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 className={`btn ${activeTab === 'monitor' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 onClick={() => setActiveTab('monitor')}
               >
-                📊 Monitorear
+                <BarChart3 size={13} /> Monitoreo
               </button>
               <button
                 className={`btn ${activeTab === 'config' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold' }}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 onClick={() => setActiveTab('config')}
               >
-                ⚙️ Configurar
+                <Settings size={13} /> Configuración
               </button>
             </div>
             <button
@@ -725,83 +756,165 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
               style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={() => setActiveTab('pulso_config')}
             >
-              📥 Carga & Configuración Pulso
+              <UploadCloud size={13} /> Carga y Configuración Pulso
             </button>
           </div>
 
           <div>
-            <h3 className="metric-label" style={{ fontSize: '11px', marginBottom: '12px' }}>
-              <Mail size={11} style={{ marginRight: 5 }} /> Directorio
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {users.map(u => (
-                <div key={u.id} className={`user-list-item ${selectedUserEmail === u.email ? 'active' : ''}`} onClick={() => setSelectedUserEmail(u.email)}
-                  style={{
-                    padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid',
-                    background: selectedUserEmail === u.email ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                    borderColor: selectedUserEmail === u.email ? 'var(--primary-light)' : 'transparent',
-                    color: selectedUserEmail === u.email ? 'var(--text-bright)' : 'var(--text-dim)'
-                  }}
-                >
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }}>{u.email}</span>
-                  {u.role === 'admin' ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-success)', fontSize: 10, fontWeight: 800 }}>
-                      <ShieldCheck size={12} /> ADMIN
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h3 className="metric-label" style={{ fontSize: '11px', margin: 0 }}>
+                <Mail size={11} style={{ marginRight: 5 }} /> Directorio
+              </h3>
+              {excludedUserIds.length > 0 && selectedUserEmail === 'all' && (
+                <span style={{ fontSize: '10px', color: 'var(--accent-warning)', fontWeight: 'bold' }}>
+                  {excludedUserIds.length} excluido{excludedUserIds.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {users.map(u => {
+                const isExcluded = excludedUserIds.includes(u.id);
+                const isSelected = selectedUserEmail === u.email;
+
+                return (
+                  <div
+                    key={u.id}
+                    className={`user-list-item ${isSelected ? 'active' : ''}`}
+                    onClick={() => setSelectedUserEmail(u.email)}
+                    style={{
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      border: '1px solid',
+                      background: isSelected ? 'rgba(99, 102, 241, 0.12)' : isExcluded && selectedUserEmail === 'all' ? 'rgba(234, 179, 8, 0.05)' : 'transparent',
+                      borderColor: isSelected ? 'var(--primary-light)' : isExcluded && selectedUserEmail === 'all' ? 'rgba(234, 179, 8, 0.3)' : 'transparent',
+                      color: isSelected ? 'var(--text-bright)' : isExcluded && selectedUserEmail === 'all' ? 'var(--text-muted)' : 'var(--text-dim)',
+                      opacity: isExcluded && selectedUserEmail === 'all' ? 0.75 : 1
+                    }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.is_enabled ? 'var(--accent-success)' : 'var(--text-dim)' }}></div>
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flexGrow: 1,
+                      textDecoration: isExcluded && selectedUserEmail === 'all' ? 'line-through' : 'none'
+                    }}>
+                      {u.email}
                     </span>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRoleConfirmUser(u);
-                      }}
-                      disabled={!u.is_enabled || roleUpdatingUserId === u.id}
-                      style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      title={u.is_enabled ? 'Otorgar permisos de administrador' : 'El perfil está deshabilitado'}
-                    >
-                      {roleUpdatingUserId === u.id ? <Activity size={13} className="spinning" /> : <UserRoundCog size={13} />}
-                    </button>
-                  )}
-                  {u.role !== 'admin' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmModal({ show: true, targetUser: u });
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'rgba(239, 68, 68, 0.6)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '4px',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
-                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
-                      title="Limpiar datos e historial y cerrar sesión"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <div onClick={() => setSelectedUserEmail('all')} style={{
-                padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', textAlign: 'center', marginTop: '5px',
-                background: selectedUserEmail === 'all' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)',
-                border: '1px solid', borderColor: selectedUserEmail === 'all' ? 'var(--primary-light)' : 'var(--border-light)'
-              }}>
-                Mostrar Global
+
+                    {/* Botón para Excluir / Incluir en vista Global */}
+                    {selectedUserEmail === 'all' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExcludeUser(u.id);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: isExcluded ? 'var(--accent-warning)' : 'var(--text-dim)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px'
+                        }}
+                        title={isExcluded ? 'Volver a incluir en el registro global' : 'Excluir del registro global conjunto'}
+                      >
+                        {isExcluded ? <UserCheck size={13} /> : <UserX size={13} />}
+                      </button>
+                    )}
+
+                    {u.role === 'admin' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--accent-success)', fontSize: 10, fontWeight: 700 }}>
+                        <ShieldCheck size={12} />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRoleConfirmUser(u);
+                        }}
+                        disabled={!u.is_enabled || roleUpdatingUserId === u.id}
+                        style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title={u.is_enabled ? 'Otorgar permisos de administrador' : 'El perfil está deshabilitado'}
+                      >
+                        {roleUpdatingUserId === u.id ? <Activity size={12} className="spinning" /> : <UserRoundCog size={12} />}
+                      </button>
+                    )}
+
+                    {u.role !== 'admin' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmModal({ show: true, targetUser: u });
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'rgba(239, 68, 68, 0.6)',
+                          cursor: 'pointer',
+                          padding: '3px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-error)'}
+                        onMouseOut={(e) => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
+                        title="Limpiar datos e historial del usuario"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div
+                onClick={() => setSelectedUserEmail('all')}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  textAlign: 'center',
+                  marginTop: '6px',
+                  background: selectedUserEmail === 'all' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.03)',
+                  border: '1px solid',
+                  borderColor: selectedUserEmail === 'all' ? 'var(--primary-light)' : 'var(--border-light)',
+                  fontWeight: selectedUserEmail === 'all' ? '700' : '500'
+                }}
+              >
+                {selectedUserEmail === 'all' && excludedUserIds.length > 0
+                  ? `Mostrar Global (Excepto ${excludedUserIds.length} ${excludedUserIds.length === 1 ? 'perfil' : 'perfiles'})`
+                  : 'Mostrar Global (Todos)'}
               </div>
+
+              {excludedUserIds.length > 0 && selectedUserEmail === 'all' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ width: '100%', padding: '4px', fontSize: '10px', marginTop: '2px' }}
+                  onClick={clearExcludedUsers}
+                >
+                  Restablecer (Incluir todos)
+                </button>
+              )}
             </div>
           </div>
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* CONTENIDO PRINCIPAL */}
       <main className="main-content">
         {activeTab === 'config' ? (
           <ConfigPanel
@@ -833,12 +946,18 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             setViewingUserDetails={setViewingUserDetails}
             isRefreshing={isRefreshing}
             fetchData={fetchData}
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            handleResetToCurrentMonth={handleResetToCurrentMonth}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             formatLastUpdated={formatLastUpdated}
             getStatusClass={getStatusClass}
+            selectedUserEmail={selectedUserEmail}
+            excludedUserIds={excludedUserIds}
+            clearExcludedUsers={clearExcludedUsers}
           />
         )}
       </main>
@@ -853,17 +972,17 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
       {roleConfirmUser && (
         <div role="presentation" onClick={() => setRoleConfirmUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'rgba(0,0,0,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="role-confirm-title" onClick={event => event.stopPropagation()} className="login-card" style={{ width: '100%', maxWidth: 440, padding: 26 }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="role-confirm-title" onClick={event => event.stopPropagation()} className="login-card" style={{ width: '100%', maxWidth: 440, padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <ShieldCheck size={22} style={{ color: 'var(--primary-light)' }} />
-              <h2 id="role-confirm-title" style={{ margin: 0, fontSize: 19 }}>Otorgar administración</h2>
+              <ShieldCheck size={20} style={{ color: 'var(--primary-light)' }} />
+              <h2 id="role-confirm-title" style={{ margin: 0, fontSize: 18 }}>Otorgar Rol Administrador</h2>
             </div>
-            <p style={{ color: 'var(--text-main)', lineHeight: 1.55 }}>¿Confirmas que <strong>{roleConfirmUser.email}</strong> pase a tener permisos de administrador?</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>Podrá acceder al panel administrativo y gestionar configuraciones y perfiles.</p>
-            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+            <p style={{ color: 'var(--text-main)', lineHeight: 1.5 }}>¿Confirmas otorgar permisos de administrador a <strong>{roleConfirmUser.email}</strong>?</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>Tendrá acceso total a las configuraciones, auditorías y directorio del sistema.</p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => setRoleConfirmUser(null)}>Cancelar</button>
               <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => handleSetAdminRole(roleConfirmUser, true)}>
-                <ShieldCheck size={15} />{roleUpdatingUserId === roleConfirmUser.id ? 'Guardando…' : 'Confirmar'}
+                <ShieldCheck size={14} />{roleUpdatingUserId === roleConfirmUser.id ? 'Guardando...' : 'Confirmar'}
               </button>
             </div>
           </section>
@@ -879,15 +998,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       />
 
       <style>{`
-        .pulse-dot {
-          width: 8px; height: 8px; background: var(--accent-error); border-radius: 50%;
-          box-shadow: 0 0 0 rgba(239, 68, 68, 0.4); animation: pulse-ring 1.5s infinite;
-        }
-        @keyframes pulse-ring {
-          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
         .clickable-rows tbody tr:hover {
            background: rgba(99, 102, 241, 0.05) !important;
         }
