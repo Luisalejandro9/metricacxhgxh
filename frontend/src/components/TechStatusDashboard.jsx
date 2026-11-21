@@ -64,7 +64,6 @@ export function TechStatusDashboard({ onExit }) {
   const [cacheStats, setCacheStats] = useState({
     timerState: false,
     countsToday: 0,
-    halfHourlyLogs: 0,
     totalBytes: 0,
   });
 
@@ -106,22 +105,15 @@ export function TechStatusDashboard({ onExit }) {
       const todayStr = new Date().toISOString().split('T')[0];
       const timerState = !!localStorage.getItem('gxh_timer_state');
       const countsStr = localStorage.getItem(`gxh_counts_${todayStr}`);
-      const logsStr = localStorage.getItem(`gxh_half_hourly_logs_${todayStr}`);
 
       let countsCount = 0;
       if (countsStr) {
         try { countsCount = Object.keys(JSON.parse(countsStr)).length; } catch {}
       }
 
-      let logsCount = 0;
-      if (logsStr) {
-        try { logsCount = JSON.parse(logsStr).length; } catch {}
-      }
-
       setCacheStats({
         timerState,
         countsToday: countsCount,
-        halfHourlyLogs: logsCount,
         totalBytes: total,
       });
     } catch {
@@ -364,7 +356,7 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
 
 [ 5. CACHÉ OFFLINE LOCALSTORAGE ]
 - Total en Caché: ${(cacheStats.totalBytes / 1024).toFixed(1)} KB almacenados
-- Timer Activo: ${cacheStats.timerState ? 'SÍ' : 'NO'} | Cortes 30 min: ${cacheStats.halfHourlyLogs}
+- Timer Activo: ${cacheStats.timerState ? 'SÍ' : 'NO'} | Métricas Hoy: ${cacheStats.countsToday} campos
 ═══════════════════════════════════════════════════════════
 `.trim();
 
@@ -678,20 +670,16 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
                   <strong>{cacheStats.timerState ? 'GUARDADO' : 'INACTIVO'}</strong>
                 </div>
                 <div className="tech-cache-item">
-                  <span>Cortes 30m</span>
-                  <strong>{cacheStats.halfHourlyLogs} cortes</strong>
-                </div>
-                <div className="tech-cache-item">
                   <span>Métricas Hoy</span>
                   <strong>{cacheStats.countsToday} campos</strong>
                 </div>
-                <div className="tech-cache-item highlight" style={{ gridColumn: 'span 3' }}>
+                <div className="tech-cache-item highlight" style={{ gridColumn: 'span 2' }}>
                   <span>Espacio Total Utilizado en Caché</span>
                   <strong>{(cacheStats.totalBytes / 1024).toFixed(1)} KB</strong>
                 </div>
               </div>
               <div className="tech-info-note">
-                El contador y los registros cada 30 minutos se guardan localmente para no perder datos ante cortes temporales de conexión.
+                El contador y las métricas se guardan localmente para no perder datos ante cortes temporales de conexión.
               </div>
             </div>
           </div>

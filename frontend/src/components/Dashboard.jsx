@@ -11,7 +11,6 @@ import EditTimeModal from './dashboard/modals/EditTimeModal';
 import EditRecordModal from './dashboard/modals/EditRecordModal';
 import DashboardSidebar from './dashboard/DashboardSidebar';
 import DashboardStats from './dashboard/DashboardStats';
-import HalfHourlyLogSection from './dashboard/HalfHourlyLogSection';
 import HistoryTables from './dashboard/HistoryTables';
 import DashboardCharts from './dashboard/DashboardCharts';
 
@@ -509,7 +508,6 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         const localDate = new Date();
         const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
         localStorage.removeItem(`gxh_counts_${dateStr}`);
-        localStorage.removeItem(`gxh_half_hourly_logs_${dateStr}`);
         showMessage('info', 'Contadores reiniciados.');
       },
       'danger',
@@ -1134,14 +1132,6 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           getGxHBonus={getGxHBonus}
           getResolucionBonus={getResolucionBonus}
           calculateRecordBonus={calculateRecordBonus}
-        />
-
-        <HalfHourlyLogSection
-          closedCount={closedCount}
-          managedCount={managedCount}
-          techniciansCount={techniciansCount}
-          timerSeconds={timerSeconds}
-          stats={stats}
         />
 
         <HistoryTables
