@@ -41,7 +41,7 @@ function DeleteConfirmModal({
           color: 'var(--text-muted)',
           lineHeight: '1.6'
         }}>
-          Estás a punto de eliminar de forma permanente todo el historial de métricas de <strong>{targetUser.email}</strong>. Su cuenta de acceso seguirá activa para que pueda ingresar en el futuro.
+          Se eliminarán permanentemente las métricas y el perfil de <strong>{targetUser.email}</strong> del directorio, y se cerrarán sus sesiones activas. La cuenta de autenticación no se elimina.
         </p>
         <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.1)', marginBottom: '25px', fontSize: '12px', color: 'var(--accent-error)', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
           <LogOut size={16} />
