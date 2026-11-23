@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, RefreshCw, Activity, TrendingUp, History, ChevronRight, Calendar, UserX } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
+import DashboardCharts from '../dashboard/DashboardCharts';
 
 function MonitorPanel({
   users,
@@ -23,7 +24,10 @@ function MonitorPanel({
   getStatusClass,
   selectedUserEmail,
   excludedUserIds,
-  clearExcludedUsers
+  clearExcludedUsers,
+  chartHistory = [],
+  theme = 'dark',
+  chartScopeLabel = 'Global'
 }) {
   const excludedUsersList = users.filter(u => excludedUserIds?.includes(u.id));
 
@@ -208,30 +212,13 @@ function MonitorPanel({
         </div>
       </div>
 
-      {/* GRÁFICO DE TENDENCIA */}
-      <div style={{ marginBottom: '24px' }}>
-        <div className="metric-card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-            <TrendingUp size={14} className="text-primary" />
-            <span className="metric-label" style={{ margin: 0 }}>Tendencia de Gestión en el Período</span>
-          </div>
-          <div style={{ height: '180px' }}>
-            <Line
-              data={trendChartData}
-              options={{
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  }
-                },
-                plugins: { legend: { display: false } }
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      {/* ANÁLISIS AVANZADO GLOBAL / POR OPERADOR */}
+      <DashboardCharts
+        history={chartHistory}
+        standards={standards}
+        theme={theme}
+        scopeLabel={chartScopeLabel}
+      />
 
       {/* TABLA HISTORIAL UNIFICADO */}
       <div className="metric-card" style={{ padding: '0' }}>
