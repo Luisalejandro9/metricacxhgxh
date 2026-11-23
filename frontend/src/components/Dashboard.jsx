@@ -657,7 +657,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     scales: {
       x: {
-        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        title: { display: true, text: 'FECHA', color: theme === 'light' ? '#64748b' : '#94a3b8', font: { size: 10, weight: '600' } },
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8', maxRotation: 0, autoSkip: true },
         grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
@@ -763,7 +764,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     scales: {
       x: {
-        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        title: { display: true, text: 'FECHA', color: theme === 'light' ? '#64748b' : '#94a3b8', font: { size: 10, weight: '600' } },
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8', maxRotation: 0, autoSkip: true },
         grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
@@ -867,7 +869,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     },
     scales: {
       x: {
-        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8' },
+        title: { display: true, text: 'FECHA', color: theme === 'light' ? '#64748b' : '#94a3b8', font: { size: 10, weight: '600' } },
+        ticks: { color: theme === 'light' ? '#64748b' : '#94a3b8', maxRotation: 0, autoSkip: true },
         grid: { color: theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' }
       },
       y: {
