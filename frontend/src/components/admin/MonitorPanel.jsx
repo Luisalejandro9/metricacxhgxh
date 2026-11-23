@@ -218,6 +218,8 @@ function MonitorPanel({
         standards={standards}
         theme={theme}
         scopeLabel={chartScopeLabel}
+        dateRange={{ start: startDate, end: endDate }}
+        hideDateControls
       />
 
       {/* TABLA HISTORIAL UNIFICADO */}
