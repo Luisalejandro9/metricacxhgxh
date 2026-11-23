@@ -6,7 +6,9 @@ function UserDetailsModal({
   onClose,
   standards,
   getStatusClass,
-  onDeleteClick
+  onDeleteClick,
+  isSuperAdmin = false,
+  isProtectedAccount = false
 }) {
   if (!viewingUserDetails) return null;
 
@@ -91,7 +93,7 @@ function UserDetailsModal({
         </div>
 
         <footer style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
-          {viewingUserDetails.role !== 'admin' ? (
+          {(!isProtectedAccount && (viewingUserDetails.role !== 'admin' || isSuperAdmin)) ? (
             <button
               className="btn"
               style={{
@@ -110,7 +112,7 @@ function UserDetailsModal({
               <span>Limpiar Datos y Cerrar Sesión</span>
             </button>
           ) : (
-            <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>CUENTA DE ADMINISTRADOR PROTEGIDA</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>{isProtectedAccount ? 'ADMINISTRADOR TOTAL PROTEGIDO' : 'ACCIÓN RESERVADA A ADMINISTRADORES TOTALES'}</div>
           )}
           <button className="btn btn-primary" onClick={onClose}>Cerrar Detalle</button>
         </footer>
