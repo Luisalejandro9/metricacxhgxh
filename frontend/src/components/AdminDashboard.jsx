@@ -28,6 +28,14 @@ import UserDetailsModal from './admin/modals/UserDetailsModal';
 import DeleteConfirmModal from './admin/modals/DeleteConfirmModal';
 import HistoricoConfig from './historico/HistoricoConfig';
 
+const SUPER_ADMIN_EMAILS = new Set([
+  'luis.acosta@konecta.com',
+  'lacosta161999@gmail.com'
+]);
+
+const isProtectedSuperAdmin = (target) =>
+  SUPER_ADMIN_EMAILS.has(String(target?.email || '').trim().toLowerCase());
+
 const DEFAULT_GXH_TIERS = [
   { min: 4.50, bonus: 2.0 },
   { min: 4.00, bonus: 1.0 },
@@ -214,6 +222,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   const [viewingUserDetails, setViewingUserDetails] = useState(null);
   const [roleUpdatingUserId, setRoleUpdatingUserId] = useState(null);
   const [roleConfirmUser, setRoleConfirmUser] = useState(null);
+  const [roleConfirmMakeAdmin, setRoleConfirmMakeAdmin] = useState(true);
 
   // --- FILTRO DE EXCLUSIÓN DE DIRECTORIO (MOSTRAR GLOBAL EXCEPTO...) ---
   const [excludedUserIds, setExcludedUserIds] = useState([]);
@@ -262,7 +271,11 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   };
 
   const handleDeleteUserData = async (targetUser) => {
-    if (!targetUser) return;
+    if (!targetUser || isProtectedSuperAdmin(targetUser)) return;
+    if (targetUser.role === 'admin' && !isSuperAdmin) {
+      showMessage('error', 'Solo los administradores totales pueden limpiar datos de otros administradores.');
+      return;
+    }
     setIsDeleting(true);
     try {
       const { data, error } = await supabase.rpc('clear_user_data_and_sessions', {
@@ -287,7 +300,11 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   };
 
   const handleSetAdminRole = async (targetUser, makeAdmin) => {
-    if (!targetUser?.id || targetUser.id === user?.id) return;
+    if (!targetUser?.id || targetUser.id === user?.id || isProtectedSuperAdmin(targetUser)) return;
+    if (targetUser.role === 'admin' && !isSuperAdmin) {
+      showMessage('error', 'Solo los administradores totales pueden modificar el rol de otro administrador.');
+      return;
+    }
     setRoleUpdatingUserId(targetUser.id);
     try {
       const { data, error } = await supabase.rpc('set_profile_admin_role', {
@@ -497,6 +514,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
   const isProfileLoaded = profile !== undefined;
   const isAdmin = isProfileLoaded && profile && profile.role === 'admin' && profile.is_enabled;
+  const isSuperAdmin = Boolean(isAdmin && SUPER_ADMIN_EMAILS.has(String(profile?.email || user?.email || '').trim().toLowerCase()));
 
   useEffect(() => {
     if (isProfileLoaded && !isAdmin) {
@@ -835,13 +853,29 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                     )}
 
                     {u.role === 'admin' ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--accent-success)', fontSize: 10, fontWeight: 700 }}>
-                        <ShieldCheck size={12} />
-                      </span>
+                      isSuperAdmin && !isProtectedSuperAdmin(u) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRoleConfirmMakeAdmin(false);
+                            setRoleConfirmUser(u);
+                          }}
+                          disabled={!u.is_enabled || roleUpdatingUserId === u.id}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-warning)', cursor: u.is_enabled ? 'pointer' : 'not-allowed', opacity: u.is_enabled ? 1 : 0.45, padding: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Retirar permisos de administrador"
+                        >
+                          {roleUpdatingUserId === u.id ? <Activity size={12} className="spinning" /> : <UserRoundCog size={12} />}
+                        </button>
+                      ) : (
+                        <span title={isProtectedSuperAdmin(u) ? 'Administrador total protegido' : 'Administrador'} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--accent-success)', fontSize: 10, fontWeight: 700 }}>
+                          <ShieldCheck size={12} />
+                        </span>
+                      )
                     ) : (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          setRoleConfirmMakeAdmin(true);
                           setRoleConfirmUser(u);
                         }}
                         disabled={!u.is_enabled || roleUpdatingUserId === u.id}
@@ -852,7 +886,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                       </button>
                     )}
 
-                    {u.role !== 'admin' && (
+                    {(u.role !== 'admin' || (isSuperAdmin && !isProtectedSuperAdmin(u))) && !isProtectedSuperAdmin(u) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -970,6 +1004,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         onClose={() => setViewingUserDetails(null)}
         standards={standards}
         getStatusClass={getStatusClass}
+        isSuperAdmin={isSuperAdmin}
+        isProtectedAccount={isProtectedSuperAdmin(viewingUserDetails)}
         onDeleteClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u })}
       />
 
@@ -978,13 +1014,13 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
           <section role="dialog" aria-modal="true" aria-labelledby="role-confirm-title" onClick={event => event.stopPropagation()} className="login-card" style={{ width: '100%', maxWidth: 440, padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <ShieldCheck size={20} style={{ color: 'var(--primary-light)' }} />
-              <h2 id="role-confirm-title" style={{ margin: 0, fontSize: 18 }}>Otorgar Rol Administrador</h2>
+              <h2 id="role-confirm-title" style={{ margin: 0, fontSize: 18 }}>{roleConfirmMakeAdmin ? 'Otorgar Rol Administrador' : 'Retirar Rol Administrador'}</h2>
             </div>
-            <p style={{ color: 'var(--text-main)', lineHeight: 1.5 }}>¿Confirmas otorgar permisos de administrador a <strong>{roleConfirmUser.email}</strong>?</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>Tendrá acceso total a las configuraciones, auditorías y directorio del sistema.</p>
+            <p style={{ color: 'var(--text-main)', lineHeight: 1.5 }}>{roleConfirmMakeAdmin ? <>¿Confirmas otorgar permisos de administrador a <strong>{roleConfirmUser.email}</strong>?</> : <>¿Confirmas retirar los permisos de administrador a <strong>{roleConfirmUser.email}</strong>?</>}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>{roleConfirmMakeAdmin ? 'Tendrá acceso administrativo al sistema, sujeto a los límites de su nivel de administrador.' : 'El perfil conservará sus datos y métricas, pero volverá a tener permisos de usuario.'}</p>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => setRoleConfirmUser(null)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => handleSetAdminRole(roleConfirmUser, true)}>
+              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={roleUpdatingUserId === roleConfirmUser.id} onClick={() => handleSetAdminRole(roleConfirmUser, roleConfirmMakeAdmin)}>
                 <ShieldCheck size={14} />{roleUpdatingUserId === roleConfirmUser.id ? 'Guardando...' : 'Confirmar'}
               </button>
             </div>
