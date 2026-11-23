@@ -166,7 +166,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
   const currentSummary = useMemo(() => summarize(currentRows), [currentRows]);
   const previousSummary = useMemo(() => summarize(previousRows), [previousRows]);
   const currentGroups = useMemo(() => aggregateRows(currentRows, grouping), [currentRows, grouping]);
-  const previousGroups = useMemo(() => aggregateRows(previousRows, grouping), [previousRows, grouping]);
 
   const chartBase = {
     responsive: true,
@@ -198,7 +197,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
 
   const targetLine = (length, value) => Array(length).fill(value);
   const labels = currentGroups.map(group => group.label);
-  const comparisonValues = (field, length) => Array.from({ length }, (_, i) => previousGroups[i] ? previousGroups[i][field] : null);
   const gxhTarget = num(standards.GXH_GREEN) || 4;
   const resolutionTarget = num(standards.RESOLUTION_GREEN) || 84;
   const tmoTarget = (num(standards.TIME_PER_MANAGED) || 950) / 60;
@@ -210,8 +208,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
       ...(show.gxhTmo.b ? [makeDataset('TMO (min)', currentGroups.map(g => g.tmo), COLORS.green, COLORS.greenFill, 'y1')] : []),
       ...(show.gxhTmo.a ? [makeDataset(`Objetivo GxH · ${fmt(gxhTarget)}`, targetLine(labels.length, gxhTarget), 'rgba(99,102,241,.75)', 'transparent', 'y', true)] : []),
       ...(show.gxhTmo.b ? [makeDataset(`Objetivo TMO · ${fmt(tmoTarget)} min`, targetLine(labels.length, tmoTarget), 'rgba(16,185,129,.8)', 'transparent', 'y1', true)] : []),
-      ...(compare && show.gxhTmo.a ? [makeDataset('GxH período anterior', comparisonValues('gxh', labels.length), 'rgba(99,102,241,.55)', 'transparent', 'y', true)] : []),
-      ...(compare && show.gxhTmo.b ? [makeDataset('TMO período anterior', comparisonValues('tmo', labels.length), 'rgba(16,185,129,.55)', 'transparent', 'y1', true)] : [])
     ]
   };
   const chart2 = {
@@ -220,8 +216,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
       ...(show.resolution.a ? [makeDataset('Resolución (%)', currentGroups.map(g => g.resolution), COLORS.pink, COLORS.pinkFill)] : []),
       ...(show.resolution.b ? [makeDataset('Técnicos enviados', currentGroups.map(g => g.technicians), COLORS.yellow, COLORS.yellowFill, 'y1')] : []),
       ...(show.resolution.a ? [makeDataset(`Objetivo resolución · ${fmt(resolutionTarget, 1)}%`, targetLine(labels.length, resolutionTarget), 'rgba(236,72,153,.8)', 'transparent', 'y', true)] : []),
-      ...(compare && show.resolution.a ? [makeDataset('Resolución período anterior', comparisonValues('resolution', labels.length), 'rgba(236,72,153,.55)', 'transparent', 'y', true)] : []),
-      ...(compare && show.resolution.b ? [makeDataset('Técnicos período anterior', comparisonValues('technicians', labels.length), 'rgba(234,179,8,.55)', 'transparent', 'y1', true)] : [])
     ]
   };
   const chart3 = {
@@ -230,8 +224,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
       ...(show.closed.a ? [makeDataset('GxH', currentGroups.map(g => g.gxh), COLORS.purple, COLORS.purpleFill)] : []),
       ...(show.closed.b ? [makeDataset('Casos cerrados', currentGroups.map(g => g.closed), COLORS.cyan, COLORS.cyanFill, 'y1')] : []),
       ...(show.closed.a ? [makeDataset(`Objetivo GxH · ${fmt(gxhTarget)}`, targetLine(labels.length, gxhTarget), 'rgba(99,102,241,.75)', 'transparent', 'y', true)] : []),
-      ...(compare && show.closed.a ? [makeDataset('GxH período anterior', comparisonValues('gxh', labels.length), 'rgba(99,102,241,.55)', 'transparent', 'y', true)] : []),
-      ...(compare && show.closed.b ? [makeDataset('Cierres período anterior', comparisonValues('closed', labels.length), 'rgba(14,165,233,.55)', 'transparent', 'y1', true)] : [])
     ]
   };
 
@@ -279,7 +271,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
       <div>
         <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 18 }}>Análisis de productividad</h2>
-        <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Tendencias, objetivos y comparación histórica</p>
+        <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Tendencias y objetivos de productividad</p>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-dim)', fontSize: 12 }}>
         <input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} /> Comparar con período anterior
@@ -303,7 +295,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
           <option value="daily">Día</option><option value="weekly">Semana</option><option value="monthly">Mes</option>
         </select>
       </label>
-      <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 'auto' }}>{currentRows.length} registros · Comparación: {dateKey(range.previousStart)} a {dateKey(range.previousEnd)}</span>
+      <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 'auto' }}>{currentRows.length} registros en el período seleccionado</span>
     </div>
 
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
