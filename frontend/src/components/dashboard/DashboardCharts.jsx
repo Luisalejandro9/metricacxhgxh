@@ -117,7 +117,7 @@ function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty })
   </section>;
 }
 
-function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '' }) {
+function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '', dateRange = null, hideDateControls = false }) {
   const [initialDates] = useState(() => {
     const today = new Date();
     return {
@@ -147,15 +147,18 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     setEndDate(dateKey(end));
   };
 
+  const effectiveStartDate = dateRange?.start || startDate;
+  const effectiveEndDate = dateRange?.end || endDate;
+
   const range = useMemo(() => {
-    const start = parseDate(startDate);
-    const end = parseDate(endDate);
+    const start = parseDate(effectiveStartDate);
+    const end = parseDate(effectiveEndDate);
     const safeEnd = end < start ? start : end;
     const duration = Math.max(1, Math.round((safeEnd - start) / 86400000) + 1);
     const previousEnd = addDays(start, -1);
     const previousStart = addDays(previousEnd, -(duration - 1));
     return { start, end: safeEnd, previousStart, previousEnd, duration };
-  }, [startDate, endDate]);
+  }, [effectiveStartDate, effectiveEndDate]);
 
   const inRange = (row, start, end) => {
     const date = parseDate(row.date);
@@ -279,17 +282,19 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     </div>
 
     <div style={{ ...cardStyle, display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-      <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>PERÍODO
-        <select style={selectStyle} value={preset} onChange={e => setPresetRange(e.target.value)}>
-          <option value="month">Este mes</option><option value="7d">Últimos 7 días</option><option value="30d">Últimos 30 días</option><option value="custom">Personalizado</option>
-        </select>
-      </label>
-      <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>DESDE
-        <input style={selectStyle} type="date" value={startDate} onChange={e => { setPreset('custom'); setStartDate(e.target.value); }} />
-      </label>
-      <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>HASTA
-        <input style={selectStyle} type="date" value={endDate} min={startDate} onChange={e => { setPreset('custom'); setEndDate(e.target.value); }} />
-      </label>
+      {!hideDateControls && <>
+              <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>PERÍODO
+                <select style={selectStyle} value={preset} onChange={e => setPresetRange(e.target.value)}>
+                  <option value="month">Este mes</option><option value="7d">Últimos 7 días</option><option value="30d">Últimos 30 días</option><option value="custom">Personalizado</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>DESDE
+                <input style={selectStyle} type="date" value={startDate} onChange={e => { setPreset('custom'); setStartDate(e.target.value); }} />
+              </label>
+              <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>HASTA
+                <input style={selectStyle} type="date" value={endDate} min={startDate} onChange={e => { setPreset('custom'); setEndDate(e.target.value); }} />
+              </label>
+      </>}
       <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>AGRUPAR POR
         <select style={selectStyle} value={grouping} onChange={e => setGrouping(e.target.value)}>
           <option value="daily">Día</option><option value="weekly">Semana</option><option value="monthly">Mes</option>
