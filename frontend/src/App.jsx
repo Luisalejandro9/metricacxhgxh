@@ -488,11 +488,7 @@ function App() {
         {/* TECHNICAL STATUS DASHBOARD ROUTE */}
         <Route
           path="/historico"
-          element={
-            user ? 
-              <PulsoHistorico theme={theme} toggleTheme={toggleTheme} user={user} profile={profile} /> : 
-              <Navigate to="/" />
-          }
+          element={<Navigate to={user ? "/dashboard" : "/"} replace />}
         />
 
         <Route 
