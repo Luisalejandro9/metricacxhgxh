@@ -958,6 +958,9 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             selectedUserEmail={selectedUserEmail}
             excludedUserIds={excludedUserIds}
             clearExcludedUsers={clearExcludedUsers}
+            chartHistory={filteredMetrics}
+            theme={theme}
+            chartScopeLabel={selectedUserEmail === 'all' ? 'Global' : selectedUserEmail}
           />
         )}
       </main>
