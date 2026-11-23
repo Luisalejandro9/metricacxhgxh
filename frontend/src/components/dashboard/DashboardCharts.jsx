@@ -34,7 +34,8 @@ function DashboardCharts({
   return (
     <>
       <div style={{ marginTop: '20px', padding: '24px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-        <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia del Mes (GxH vs TMO)</h3>
+        <h3 style={{ margin: '0 0 5px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia del Mes (GxH vs TMO)</h3>
+        <p style={{ margin: '0 0 14px', color: 'var(--text-dim)', fontSize: '11px' }}>Eje X: fecha · Eje Y izquierdo: gestiones por hora · Eje Y derecho: TMO en minutos</p>
         <div style={{ height: '300px', width: '100%' }}>
           {filteredHistory.length > 0 ? (
             <Line data={chartData} options={chartOptions} />
@@ -45,7 +46,8 @@ function DashboardCharts({
       </div>
 
       <div style={{ marginTop: '20px', padding: '24px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-        <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia Resolución vs Técnicos</h3>
+        <h3 style={{ margin: '0 0 5px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia Resolución vs Técnicos</h3>
+        <p style={{ margin: '0 0 14px', color: 'var(--text-dim)', fontSize: '11px' }}>Eje X: fecha · Eje Y izquierdo: porcentaje de resolución · Eje Y derecho: técnicos enviados</p>
         <div style={{ height: '300px', width: '100%' }}>
           {filteredHistory.length > 0 ? (
             <Line data={chartDataReso} options={chartOptionsReso} />
@@ -56,7 +58,8 @@ function DashboardCharts({
       </div>
 
       <div style={{ marginTop: '20px', padding: '24px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-        <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia GxH vs Casos Cerrados</h3>
+        <h3 style={{ margin: '0 0 5px 0', color: 'var(--text-bright)', fontSize: '15px', fontWeight: '700' }}>Tendencia GxH vs Casos Cerrados</h3>
+        <p style={{ margin: '0 0 14px', color: 'var(--text-dim)', fontSize: '11px' }}>Eje X: fecha · Eje Y izquierdo: gestiones por hora · Eje Y derecho: casos cerrados</p>
         <div style={{ height: '300px', width: '100%' }}>
           {filteredHistory.length > 0 ? (
             <Line data={chartDataGxhCerrados} options={chartOptionsGxhCerrados} />
