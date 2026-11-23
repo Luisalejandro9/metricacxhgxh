@@ -130,6 +130,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const [startDate, setStartDate] = useState(initialDates.start);
   const [endDate, setEndDate] = useState(initialDates.end);
   const [grouping, setGrouping] = useState('daily');
+  const [heatMetric, setHeatMetric] = useState('gxh');
   const [compare, setCompare] = useState(true);
   const [show, setShow] = useState({
     gxhTmo: { a: true, b: true },
@@ -270,7 +271,13 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     });
     return new Map([...byDate.entries()].map(([date, rows]) => {
       const summary = summarize(rows);
-      return [date, { cases_per_hour: summary.gxh, cases_closed: summary.closed }];
+      return [date, {
+        cases_per_hour: summary.gxh,
+        cases_closed: summary.closed,
+        cases_managed: summary.managed,
+        close_rate: summary.closeRate,
+        resolution_rate: summary.resolution
+      }];
     }));
   }, [currentRows]);
   const heatDays = useMemo(() => {
@@ -278,7 +285,13 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     for (let d = new Date(range.start); d <= range.end; d = addDays(d, 1)) days.push({ date: dateKey(d), row: dailyMap.get(dateKey(d)) });
     return days;
   }, [range, dailyMap]);
-  const maxGxh = Math.max(1, ...heatDays.map(day => num(day.row?.cases_per_hour)));
+  const heatMetricConfig = {
+    gxh: { label: 'GxH', field: 'cases_per_hour', target: gxhTarget, unit: '' },
+    closeRate: { label: 'Cierre %', field: 'close_rate', target: num(standards.CLOSE_RATE_GREEN) || 80, unit: '%' },
+    resolution: { label: 'Resolución', field: 'resolution_rate', target: resolutionTarget, unit: '%' }
+  };
+  const selectedHeatMetric = heatMetricConfig[heatMetric];
+  const maxHeatValue = Math.max(1, ...heatDays.map(day => num(day.row?.[selectedHeatMetric.field])));
   const weekdayStats = useMemo(() => {
     const buckets = Array.from({ length: 7 }, (_, day) => ({ day, label: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][day], rows: [] }));
     currentRows.forEach(row => buckets[parseDate(row.date).getDay()].rows.push(row));
@@ -402,30 +415,43 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     <ChartCard title="Tendencia · GxH vs Casos Cerrados" subtitle="Eje X: tiempo · Eje Y izquierdo: gestiones por hora · Eje Y derecho: casos cerrados" data={chart3} options={optionsFor('Casos cerrados', 'GxH')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.closed.a} onChange={v => updateToggle('closed', 'a', v)}>GxH</MetricToggle><MetricToggle checked={show.closed.b} onChange={v => updateToggle('closed', 'b', v)}>Cerrados</MetricToggle></>} />
 
     <section style={{ ...cardStyle, marginTop: 18 }}>
-      <div style={{ marginBottom: 12 }}>
-        <h3 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 15 }}>Mapa de calor de productividad</h3>
-        <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Intensidad según GxH diario. Sin color indica que no hay registro.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div>
+          <h3 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 15 }}>Mapa de calor de productividad</h3>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Visualiza el desempeño diario según el indicador seleccionado.</p>
+        </div>
+        <label style={{ display: 'grid', gap: 4, color: 'var(--text-dim)', fontSize: 10 }}>
+          INDICADOR
+          <select value={heatMetric} onChange={e => setHeatMetric(e.target.value)} style={selectStyle}>
+            <option value="gxh">GxH</option>
+            <option value="closeRate">Cierre %</option>
+            <option value="resolution">Resolución %</option>
+          </select>
+        </label>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))', gap: 6 }}>
         {heatDays.map(day => {
-          const value = num(day.row?.cases_per_hour);
-          const intensity = day.row ? Math.max(.12, Math.min(.95, value / maxGxh)) : 0;
-          const targetRatio = gxhTarget > 0 ? value / gxhTarget : 0;
+          const value = num(day.row?.[selectedHeatMetric.field]);
+          const hasData = Boolean(day.row) && (heatMetric === 'gxh' ? num(day.row.cases_managed) > 0 : num(day.row.cases_managed) > 0);
+          const target = selectedHeatMetric.target;
+          const targetRatio = target > 0 ? value / target : 0;
+          const intensity = hasData ? Math.max(.12, Math.min(.95, value / maxHeatValue)) : 0;
           const traffic = targetRatio < 0.8
             ? { color: '239,68,68', text: '#fff1f2', label: 'Bajo objetivo' }
             : targetRatio < 1
               ? { color: '234,179,8', text: '#422006', label: 'Cerca del objetivo' }
               : { color: '34,197,94', text: '#052e16', label: 'Objetivo alcanzado' };
           const alpha = 0.35 + intensity * 0.55;
-          return <div key={day.date} title={day.row ? `${day.date} · GxH ${fmt(value)} · ${num(day.row.cases_closed)} cerrados · ${traffic.label} (${fmt(targetRatio * 100, 0)}% del objetivo)` : `${day.date} · Sin registro`} style={{ minHeight: 48, borderRadius: 7, display: 'grid', placeItems: 'center', background: day.row ? `rgba(${traffic.color},${alpha})` : 'var(--bg-app)', border: '1px solid var(--border-light)', color: day.row ? traffic.text : 'var(--text-dim)', fontSize: 11, fontWeight: 650 }}>
+          return <div key={day.date} title={hasData ? `${day.date} · ${selectedHeatMetric.label}: ${fmt(value)}${selectedHeatMetric.unit} · ${num(day.row.cases_managed)} gestionados · ${num(day.row.cases_closed)} cerrados · ${traffic.label} (${fmt(targetRatio * 100, 0)}% del objetivo)` : `${day.date} · Sin registro`} style={{ minHeight: 48, borderRadius: 7, display: 'grid', placeItems: 'center', background: hasData ? `rgba(${traffic.color},${alpha})` : 'var(--bg-app)', border: '1px solid var(--border-light)', color: hasData ? traffic.text : 'var(--text-dim)', fontSize: 11, fontWeight: 650 }}>
             {parseDate(day.date).getDate()}
           </div>;
         })}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, color: 'var(--text-dim)', fontSize: 10, marginTop: 10 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Bajo el 80% del objetivo</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#eab308' }} /> Entre 80% y 99% del objetivo</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Menos del 80% del objetivo</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#eab308' }} /> Entre 80% y 99%</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#22c55e' }} /> Objetivo alcanzado o superado</span>
+        <span style={{ color: 'var(--text-dim)' }}>Objetivo de {selectedHeatMetric.label}: {fmt(selectedHeatMetric.target)}{selectedHeatMetric.unit}</span>
       </div>
     </section>
 
