@@ -1,6 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, Activity, TrendingUp, History, ChevronRight, Calendar, UserX } from 'lucide-react';
-import { Line } from 'react-chartjs-2';
+import { Search, RefreshCw, Activity, History, ChevronRight, UserX } from 'lucide-react';
 import DashboardCharts from '../dashboard/DashboardCharts';
 
 function MonitorPanel({
@@ -8,7 +7,6 @@ function MonitorPanel({
   statsSummary,
   standards,
   metricsToday,
-  trendChartData,
   unifiedHistory,
   setViewingUserDetails,
   isRefreshing,
