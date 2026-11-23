@@ -117,7 +117,7 @@ function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty })
   </section>;
 }
 
-function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
+function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '' }) {
   const [initialDates] = useState(() => {
     const today = new Date();
     return {
@@ -270,7 +270,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
   return <div style={{ marginTop: 24 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
       <div>
-        <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 18 }}>Análisis de productividad</h2>
+        <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 18 }}>Análisis de productividad{scopeLabel ? ` · ${scopeLabel}` : ''}</h2>
         <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Tendencias y objetivos de productividad</p>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-dim)', fontSize: 12 }}>
