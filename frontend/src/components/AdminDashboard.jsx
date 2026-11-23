@@ -466,22 +466,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     };
   }, [filteredMetrics]);
 
-  const allWorkDays = useMemo(() => {
-    return [...new Set(filteredMetrics.map(m => m.date))].sort();
-  }, [filteredMetrics]);
-
-  const trendChartData = useMemo(() => {
-    const managedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s, m) => s + (m.cases_managed || 0), 0));
-    const closedData = allWorkDays.map(d => filteredMetrics.filter(m => m.date === d).reduce((s, m) => s + (m.cases_closed || 0), 0));
-    return {
-      labels: allWorkDays.map(d => d.split('-').slice(1).reverse().join('/')),
-      datasets: [
-        { label: 'Gestionados', data: managedData, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', tension: 0.4, fill: true },
-        { label: 'Cerrados', data: closedData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true }
-      ]
-    };
-  }, [filteredMetrics, allWorkDays]);
-
   const formatLastUpdated = (timestamp) => {
     if (!timestamp) return 'N/A';
     try {
@@ -941,7 +925,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             statsSummary={statsSummary}
             standards={standards}
             metricsToday={metricsToday}
-            trendChartData={trendChartData}
             unifiedHistory={unifiedHistory}
             setViewingUserDetails={setViewingUserDetails}
             isRefreshing={isRefreshing}
