@@ -240,17 +240,25 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     }
   });
 
-  const deltaLabel = (current, previous, inverse = false) => {
-    const delta = pctChange(current, previous);
-    if (delta === null) return 'Sin base comparable';
-    const favorable = inverse ? delta <= 0 : delta >= 0;
-    return `${delta > 0 ? '+' : ''}${fmt(delta, 1)}% vs período anterior`;
+  const fmtCompact = (value, digits = 2) => num(value).toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits
+  });
+  const signedValue = (value, digits = 2) => `${value > 0 ? '+' : ''}${fmtCompact(value, digits)}`;
+  const deltaLabel = (current, previous, unit, digits = 2) => {
+    const absoluteDelta = current - previous;
+    const percentDelta = pctChange(current, previous);
+    const absoluteText = `${signedValue(absoluteDelta, digits)} ${unit}`;
+    const percentText = percentDelta === null
+      ? 'sin base porcentual'
+      : `${signedValue(percentDelta, 1)}% vs período anterior`;
+    return `${absoluteText} · ${percentText}`;
   };
   const kpis = [
-    { label: 'GxH promedio', value: fmt(currentSummary.gxh), delta: deltaLabel(currentSummary.gxh, previousSummary.gxh), good: currentSummary.gxh >= previousSummary.gxh },
-    { label: 'TMO promedio', value: `${fmt(currentSummary.tmo)} min`, delta: deltaLabel(currentSummary.tmo, previousSummary.tmo, true), good: currentSummary.tmo <= previousSummary.tmo },
-    { label: 'Resolución', value: `${fmt(currentSummary.resolution, 1)}%`, delta: deltaLabel(currentSummary.resolution, previousSummary.resolution), good: currentSummary.resolution >= previousSummary.resolution },
-    { label: 'Casos cerrados', value: String(currentSummary.closed), delta: deltaLabel(currentSummary.closed, previousSummary.closed), good: currentSummary.closed >= previousSummary.closed }
+    { label: 'GxH promedio', value: fmt(currentSummary.gxh), delta: deltaLabel(currentSummary.gxh, previousSummary.gxh, 'GxH', 2), good: currentSummary.gxh >= previousSummary.gxh },
+    { label: 'TMO promedio', value: `${fmt(currentSummary.tmo)} min`, delta: deltaLabel(currentSummary.tmo, previousSummary.tmo, 'min', 2), good: currentSummary.tmo <= previousSummary.tmo },
+    { label: 'Resolución', value: `${fmt(currentSummary.resolution, 1)}%`, delta: deltaLabel(currentSummary.resolution, previousSummary.resolution, 'p.p.', 2), good: currentSummary.resolution >= previousSummary.resolution },
+    { label: 'Casos cerrados', value: String(currentSummary.closed), delta: deltaLabel(currentSummary.closed, previousSummary.closed, 'casos', 0), good: currentSummary.closed >= previousSummary.closed }
   ];
 
   const dailyMap = useMemo(() => {
