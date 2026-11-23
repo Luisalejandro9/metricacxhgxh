@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
@@ -281,8 +282,51 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const weekdayStats = useMemo(() => {
     const buckets = Array.from({ length: 7 }, (_, day) => ({ day, label: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][day], rows: [] }));
     currentRows.forEach(row => buckets[parseDate(row.date).getDay()].rows.push(row));
-    return buckets.map(bucket => ({ ...bucket, ...summarize(bucket.rows) }));
+    return buckets.map(bucket => {
+      const totals = summarize(bucket.rows);
+      const records = bucket.rows.length;
+      return {
+        ...bucket,
+        ...totals,
+        avgManaged: records ? totals.managed / records : 0,
+        avgClosed: records ? totals.closed / records : 0
+      };
+    });
   }, [currentRows]);
+
+  const weekdayInsights = useMemo(() => {
+    const activeDays = weekdayStats.filter(day => day.rows.length > 0);
+    if (!activeDays.length) return [];
+    const topBy = (field, direction = 'desc') => [...activeDays].sort((a, b) => direction === 'asc' ? a[field] - b[field] : b[field] - a[field])[0];
+    const mostManaged = topBy('managed');
+    const mostClosed = topBy('closed');
+    const bestClosedAverage = topBy('avgClosed');
+    const bestGxh = topBy('gxh');
+    const bestResolution = topBy('resolution');
+    const insights = [
+      {
+        title: 'Mayor volumen gestionado',
+        text: `${mostManaged.label} registra ${fmtCompact(mostManaged.managed, 0)} casos gestionados en total, en ${mostManaged.rows.length} registros.`
+      },
+      {
+        title: 'Mayor cantidad de cierres',
+        text: `${mostClosed.label} acumula ${fmtCompact(mostClosed.closed, 0)} casos cerrados en total, en ${mostClosed.rows.length} registros.`
+      },
+      {
+        title: 'Mejor promedio de cierres',
+        text: `${bestClosedAverage.label} promedia ${fmtCompact(bestClosedAverage.avgClosed, 2)} cierres por registro (${fmtCompact(bestClosedAverage.closed, 0)} en total).`
+      },
+      {
+        title: 'Mejor productividad',
+        text: `${bestGxh.label} alcanza el GxH promedio más alto: ${fmt(bestGxh.gxh)}.`
+      },
+      {
+        title: 'Mayor resolución',
+        text: `${bestResolution.label} presenta la mejor resolución promedio: ${fmt(bestResolution.resolution, 1)}%.`
+      }
+    ];
+    return insights;
+  }, [weekdayStats]);
 
   const updateToggle = (key, axis, value) => setShow(prev => ({ ...prev, [key]: { ...prev[key], [axis]: value } }));
   const selectStyle = { background: 'var(--bg-card)', color: 'var(--text-bright)', border: '1px solid var(--border-light)', borderRadius: 7, padding: '8px 10px', fontSize: 12 };
@@ -352,19 +396,42 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
 
     <section style={{ ...cardStyle, marginTop: 18 }}>
       <h3 style={{ margin: '0 0 5px', color: 'var(--text-bright)', fontSize: 15 }}>Rendimiento por día de la semana</h3>
-      <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Promedios ponderados según los registros del período seleccionado.</p>
+      <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Totales y promedios calculados sobre los registros del período seleccionado.</p>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 540, fontSize: 12 }}>
-          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'GxH promedio', 'Resolución', 'Cerrados'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620, fontSize: 12 }}>
+          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'Gestionados', 'GxH promedio', 'Resolución', 'Cerrados'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
           <tbody>{weekdayStats.map(day => <tr key={day.day} style={{ color: 'var(--text-bright)' }}>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.label}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length}</td>
+            <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmtCompact(day.managed, 0) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmt(day.gxh) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? `${fmt(day.resolution, 1)}%` : '—'}</td>
-            <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? day.closed : '—'}</td>
+            <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? fmtCompact(day.closed, 0) : '—'}</td>
           </tr>)}</tbody>
         </table>
       </div>
+    </section>
+
+    <section style={{ ...cardStyle, marginTop: 14, border: '1px solid rgba(99,102,241,.28)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+        <Sparkles size={16} style={{ color: '#a5b4fc' }} />
+        <h3 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 15 }}>Indicadores inteligentes</h3>
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '.05em' }}>ANÁLISIS AUTOMÁTICO</span>
+      </div>
+      <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Conclusiones generadas a partir de los datos registrados y los filtros actuales.</p>
+      {weekdayInsights.length ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 9 }}>
+          {weekdayInsights.map(insight => (
+            <div key={insight.title} style={{ padding: 11, borderRadius: 8, background: 'var(--bg-app)', border: '1px solid var(--border-light)' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 10, marginBottom: 5, fontWeight: 700 }}>{insight.title}</div>
+              <div style={{ color: 'var(--text-bright)', fontSize: 12, lineHeight: 1.5 }}>{insight.text}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>Todavía no hay datos suficientes para generar conclusiones.</div>
+      )}
+      <p style={{ margin: '10px 0 0', color: 'var(--text-dim)', fontSize: 10 }}>Los promedios se calculan por registro para evitar favorecer días con más registros acumulados.</p>
     </section>
   </div>;
 }
