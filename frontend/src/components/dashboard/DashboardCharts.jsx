@@ -118,11 +118,16 @@ function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty })
 }
 
 function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
-  const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [initialDates] = useState(() => {
+    const today = new Date();
+    return {
+      start: dateKey(new Date(today.getFullYear(), today.getMonth(), 1)),
+      end: dateKey(today)
+    };
+  });
   const [preset, setPreset] = useState('month');
-  const [startDate, setStartDate] = useState(dateKey(monthStart));
-  const [endDate, setEndDate] = useState(dateKey(today));
+  const [startDate, setStartDate] = useState(initialDates.start);
+  const [endDate, setEndDate] = useState(initialDates.end);
   const [grouping, setGrouping] = useState('daily');
   const [compare, setCompare] = useState(true);
   const [show, setShow] = useState({
