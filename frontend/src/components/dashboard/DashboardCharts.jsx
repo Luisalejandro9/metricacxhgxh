@@ -295,37 +295,61 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   }, [currentRows]);
 
   const weekdayInsights = useMemo(() => {
-    const activeDays = weekdayStats.filter(day => day.rows.length > 0);
-    if (!activeDays.length) return [];
-    const topBy = (field, direction = 'desc') => [...activeDays].sort((a, b) => direction === 'asc' ? a[field] - b[field] : b[field] - a[field])[0];
-    const mostManaged = topBy('managed');
-    const mostClosed = topBy('closed');
-    const bestClosedAverage = topBy('avgClosed');
-    const bestGxh = topBy('gxh');
-    const bestResolution = topBy('resolution');
+    const activeDays = weekdayStats.filter(day => day.rows.length > 0 && day.managed > 0);
+    if (!activeDays.length) return { insights: [], note: 'Todavía no hay datos suficientes para analizar el rendimiento.' };
+
+    // Para comparar rendimiento, exigimos una muestra mínima y un volumen razonable.
+    // Así, un único turno excepcional no convierte automáticamente a un día en el mejor.
+    const sortedVolumes = activeDays.map(day => day.managed).sort((a, b) => a - b);
+    const middle = Math.floor(sortedVolumes.length / 2);
+    const medianManaged = sortedVolumes.length % 2
+      ? sortedVolumes[middle]
+      : (sortedVolumes[middle - 1] + sortedVolumes[middle]) / 2;
+    const minManaged = Math.max(10, medianManaged * 0.5);
+    const representativeDays = activeDays.filter(day => day.rows.length >= 2 && day.managed >= minManaged);
+    const topBy = (days, field) => [...days].sort((a, b) => b[field] - a[field])[0];
+
+    const mostManaged = topBy(activeDays, 'managed');
+    const mostClosed = topBy(activeDays, 'closed');
     const insights = [
       {
         title: 'Mayor volumen gestionado',
-        text: `${mostManaged.label} registra ${fmtCompact(mostManaged.managed, 0)} casos gestionados en total, en ${mostManaged.rows.length} registros.`
+        text: `${mostManaged.label} concentra ${fmtCompact(mostManaged.managed, 0)} casos gestionados en ${mostManaged.rows.length} registros.`
       },
       {
         title: 'Mayor cantidad de cierres',
-        text: `${mostClosed.label} acumula ${fmtCompact(mostClosed.closed, 0)} casos cerrados en total, en ${mostClosed.rows.length} registros.`
-      },
-      {
-        title: 'Mejor promedio de cierres',
-        text: `${bestClosedAverage.label} promedia ${fmtCompact(bestClosedAverage.avgClosed, 2)} cierres por registro (${fmtCompact(bestClosedAverage.closed, 0)} en total).`
-      },
-      {
-        title: 'Mejor productividad',
-        text: `${bestGxh.label} alcanza el GxH promedio más alto: ${fmt(bestGxh.gxh)}.`
-      },
-      {
-        title: 'Mayor resolución',
-        text: `${bestResolution.label} presenta la mejor resolución promedio: ${fmt(bestResolution.resolution, 1)}%.`
+        text: `${mostClosed.label} acumula ${fmtCompact(mostClosed.closed, 0)} casos cerrados en ${mostClosed.rows.length} registros.`
       }
     ];
-    return insights;
+
+    if (representativeDays.length >= 2) {
+      const bestClosedAverage = topBy(representativeDays, 'avgClosed');
+      const bestGxh = topBy(representativeDays, 'gxh');
+      const bestResolution = topBy(representativeDays, 'resolution');
+      insights.push(
+        {
+          title: 'Mejor promedio de cierres (muestra válida)',
+          text: `${bestClosedAverage.label} promedia ${fmtCompact(bestClosedAverage.avgClosed, 2)} cierres por registro, con ${fmtCompact(bestClosedAverage.managed, 0)} casos gestionados.`
+        },
+        {
+          title: 'Mejor productividad (muestra válida)',
+          text: `${bestGxh.label} alcanza ${fmt(bestGxh.gxh)} GxH con ${fmtCompact(bestGxh.managed, 0)} casos gestionados.`
+        },
+        {
+          title: 'Mayor resolución (muestra válida)',
+          text: `${bestResolution.label} registra ${fmt(bestResolution.resolution, 1)}% de resolución sobre ${fmtCompact(bestResolution.managed, 0)} casos gestionados.`
+        }
+      );
+    } else {
+      insights.push({
+        title: 'Comparación de rendimiento',
+        text: 'Todavía no hay al menos dos días con volumen y cantidad de registros suficientes para comparar métricas de forma confiable.'
+      });
+    }
+
+    const excludedDays = activeDays.filter(day => !representativeDays.includes(day));
+    const note = `Los rankings de rendimiento consideran días con al menos 2 registros y ${fmtCompact(minManaged, 0)} casos gestionados (50% de la mediana diaria como mínimo). ${excludedDays.length ? `Se excluyen del ranking: ${excludedDays.map(day => `${day.label} (${day.rows.length} registro/s, ${fmtCompact(day.managed, 0)} gestionados)`).join('; ')}.` : 'Todos los días con actividad cumplen el mínimo de muestra.'}`;
+    return { insights, note };
   }, [weekdayStats]);
 
   const updateToggle = (key, axis, value) => setShow(prev => ({ ...prev, [key]: { ...prev[key], [axis]: value } }));
@@ -419,9 +443,9 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
         <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '.05em' }}>ANÁLISIS AUTOMÁTICO</span>
       </div>
       <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Conclusiones generadas a partir de los datos registrados y los filtros actuales.</p>
-      {weekdayInsights.length ? (
+      {weekdayInsights.insights.length ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 9 }}>
-          {weekdayInsights.map(insight => (
+          {weekdayInsights.insights.map(insight => (
             <div key={insight.title} style={{ padding: 11, borderRadius: 8, background: 'var(--bg-app)', border: '1px solid var(--border-light)' }}>
               <div style={{ color: 'var(--text-dim)', fontSize: 10, marginBottom: 5, fontWeight: 700 }}>{insight.title}</div>
               <div style={{ color: 'var(--text-bright)', fontSize: 12, lineHeight: 1.5 }}>{insight.text}</div>
@@ -431,7 +455,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       ) : (
         <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>Todavía no hay datos suficientes para generar conclusiones.</div>
       )}
-      <p style={{ margin: '10px 0 0', color: 'var(--text-dim)', fontSize: 10 }}>Los promedios se calculan por registro para evitar favorecer días con más registros acumulados.</p>
+      <p style={{ margin: '10px 0 0', color: 'var(--text-dim)', fontSize: 10, lineHeight: 1.5 }}>{weekdayInsights.note}</p>
     </section>
   </div>;
 }
