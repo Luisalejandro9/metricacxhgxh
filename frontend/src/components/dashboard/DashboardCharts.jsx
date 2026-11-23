@@ -253,7 +253,17 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     { label: 'Casos cerrados', value: String(currentSummary.closed), delta: deltaLabel(currentSummary.closed, previousSummary.closed), good: currentSummary.closed >= previousSummary.closed }
   ];
 
-  const dailyMap = useMemo(() => new Map(currentRows.map(row => [row.date, row])), [currentRows]);
+  const dailyMap = useMemo(() => {
+    const byDate = new Map();
+    currentRows.forEach(row => {
+      if (!byDate.has(row.date)) byDate.set(row.date, []);
+      byDate.get(row.date).push(row);
+    });
+    return new Map([...byDate.entries()].map(([date, rows]) => {
+      const summary = summarize(rows);
+      return [date, { cases_per_hour: summary.gxh, cases_closed: summary.closed }];
+    }));
+  }, [currentRows]);
   const heatDays = useMemo(() => {
     const days = [];
     for (let d = new Date(range.start); d <= range.end; d = addDays(d, 1)) days.push({ date: dateKey(d), row: dailyMap.get(dateKey(d)) });
