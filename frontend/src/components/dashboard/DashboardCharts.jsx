@@ -193,7 +193,6 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
 
   const targetLine = (length, value) => Array(length).fill(value);
   const labels = currentGroups.map(group => group.label);
-  const previousLabels = previousGroups.map(group => group.label);
   const comparisonValues = (field, length) => Array.from({ length }, (_, i) => previousGroups[i] ? previousGroups[i][field] : null);
   const gxhTarget = num(standards.GXH_GREEN) || 4;
   const resolutionTarget = num(standards.RESOLUTION_GREEN) || 84;
@@ -303,7 +302,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark' }) {
     </div>
 
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
-      {kpis.map((kpi, index) => <div key={kpi.label} style={cardStyle}>
+      {kpis.map(kpi => <div key={kpi.label} style={cardStyle}>
         <div style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 8 }}>{kpi.label}</div>
         <div style={{ color: 'var(--text-bright)', fontSize: 24, fontWeight: 750, letterSpacing: '-.03em' }}>{kpi.value}</div>
         <div style={{ color: compare ? (kpi.good ? '#10b981' : '#ef4444') : 'var(--text-dim)', fontSize: 10, marginTop: 6 }}>{compare ? kpi.delta : 'Período seleccionado'}</div>
