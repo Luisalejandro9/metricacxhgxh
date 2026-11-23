@@ -410,12 +410,23 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
         {heatDays.map(day => {
           const value = num(day.row?.cases_per_hour);
           const intensity = day.row ? Math.max(.12, Math.min(.95, value / maxGxh)) : 0;
-          return <div key={day.date} title={day.row ? `${day.date} · GxH ${fmt(value)} · ${num(day.row.cases_closed)} cerrados` : `${day.date} · Sin registro`} style={{ minHeight: 48, borderRadius: 7, display: 'grid', placeItems: 'center', background: day.row ? `rgba(16,185,129,${intensity})` : 'var(--bg-app)', border: '1px solid var(--border-light)', color: day.row && intensity > .55 ? '#052e24' : 'var(--text-dim)', fontSize: 11, fontWeight: 650 }}>
+          const targetRatio = gxhTarget > 0 ? value / gxhTarget : 0;
+          const traffic = targetRatio < 0.8
+            ? { color: '239,68,68', text: '#fff1f2', label: 'Bajo objetivo' }
+            : targetRatio < 1
+              ? { color: '234,179,8', text: '#422006', label: 'Cerca del objetivo' }
+              : { color: '34,197,94', text: '#052e16', label: 'Objetivo alcanzado' };
+          const alpha = 0.35 + intensity * 0.55;
+          return <div key={day.date} title={day.row ? `${day.date} · GxH ${fmt(value)} · ${num(day.row.cases_closed)} cerrados · ${traffic.label} (${fmt(targetRatio * 100, 0)}% del objetivo)` : `${day.date} · Sin registro`} style={{ minHeight: 48, borderRadius: 7, display: 'grid', placeItems: 'center', background: day.row ? `rgba(${traffic.color},${alpha})` : 'var(--bg-app)', border: '1px solid var(--border-light)', color: day.row ? traffic.text : 'var(--text-dim)', fontSize: 11, fontWeight: 650 }}>
             {parseDate(day.date).getDate()}
           </div>;
         })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', fontSize: 10, marginTop: 10 }}><span>Menor GxH</span><span>Mayor GxH</span></div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, color: 'var(--text-dim)', fontSize: 10, marginTop: 10 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Bajo el 80% del objetivo</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#eab308' }} /> Entre 80% y 99% del objetivo</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#22c55e' }} /> Objetivo alcanzado o superado</span>
+      </div>
     </section>
 
     <section style={{ ...cardStyle, marginTop: 18 }}>
