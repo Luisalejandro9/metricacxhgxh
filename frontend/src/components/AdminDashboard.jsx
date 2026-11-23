@@ -393,6 +393,23 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     return filtered;
   }, [dateFilteredMetrics, selectedUserEmail, users, searchTerm, excludedUserIds]);
 
+
+  // Historial completo para que el comparativo del gráfico también pueda leer el período anterior.
+  const chartHistory = useMemo(() => {
+    let filtered = [...allMetrics];
+    if (selectedUserEmail !== 'all') {
+      const userObj = users.find(u => u.email === selectedUserEmail);
+      if (userObj) filtered = filtered.filter(m => m.user_id === userObj.id);
+    } else if (excludedUserIds.length > 0) {
+      filtered = filtered.filter(m => !excludedUserIds.includes(m.user_id));
+    }
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(m => users.find(u => u.id === m.user_id)?.email.toLowerCase().includes(term));
+    }
+    return filtered;
+  }, [allMetrics, selectedUserEmail, users, excludedUserIds, searchTerm]);
+
   const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
 
   // Historial unificado considerando exclusión de usuarios en modo global
@@ -941,7 +958,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             selectedUserEmail={selectedUserEmail}
             excludedUserIds={excludedUserIds}
             clearExcludedUsers={clearExcludedUsers}
-            chartHistory={filteredMetrics}
+            chartHistory={chartHistory}
             theme={theme}
             chartScopeLabel={selectedUserEmail === 'all' ? 'Global' : selectedUserEmail}
           />
