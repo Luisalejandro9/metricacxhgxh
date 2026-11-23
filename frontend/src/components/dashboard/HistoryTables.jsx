@@ -86,13 +86,15 @@ function HistoryTables({
                         <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.tmo_managed}s)</span>
                       </div>
                     </td>
-                    <td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                      <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
-                        <Edit3 size={16} />
-                      </button>
-                      <button onClick={() => handleDeleteRecord(item.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer' }}>
-                        <Trash2 size={16} />
-                      </button>
+                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <button onClick={() => handleOpenEditModal(item)} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer' }}>
+                          <Edit3 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteRecord(item.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer' }}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
