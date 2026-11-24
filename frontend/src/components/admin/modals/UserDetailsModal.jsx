@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Trash2 } from 'lucide-react';
+import { X, Calendar, Trash2, Eraser, Ban, UserRoundCheck } from 'lucide-react';
 
 function UserDetailsModal({
   viewingUserDetails,
@@ -7,6 +7,8 @@ function UserDetailsModal({
   standards,
   getStatusClass,
   onDeleteClick,
+  onClearDataClick,
+  onBanClick,
   isSuperAdmin = false,
   isProtectedAccount = false
 }) {
@@ -19,6 +21,7 @@ function UserDetailsModal({
           <div>
             <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--text-bright)' }}>{viewingUserDetails.email.split('@')[0]}</h2>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{viewingUserDetails.email}</p>
+            {!viewingUserDetails.is_enabled && <span style={{ display: 'inline-flex', marginTop: 6, padding: '3px 8px', borderRadius: 5, background: 'rgba(239,68,68,0.12)', color: 'var(--accent-error)', fontSize: 10, fontWeight: 800 }}>CUENTA BANEADA</span>}
           </div>
           <button className="btn btn-secondary" onClick={onClose} style={{ padding: '8px' }}>
             <X size={20} />
@@ -94,23 +97,32 @@ function UserDetailsModal({
 
         <footer style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
           {(!isProtectedAccount && (viewingUserDetails.role !== 'admin' || isSuperAdmin)) ? (
-            <button
-              className="btn"
-              style={{
-                backgroundColor: 'var(--accent-error)',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontWeight: '600',
-                padding: '8px 16px',
-                borderRadius: '8px'
-              }}
-              onClick={() => onDeleteClick(viewingUserDetails)}
-            >
-              <Trash2 size={16} />
-              <span>Limpiar Datos y Cerrar Sesión</span>
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                className="btn"
+                style={{ backgroundColor: 'var(--primary-light)', color: 'white', display: 'flex', alignItems: 'center', gap: 7, fontWeight: 600, padding: '8px 12px', borderRadius: 8 }}
+                onClick={() => onClearDataClick(viewingUserDetails)}
+              >
+                <Eraser size={15} />
+                <span>Limpiar solo datos</span>
+              </button>
+              <button
+                className="btn"
+                style={{ backgroundColor: viewingUserDetails.is_enabled ? 'var(--accent-error)' : 'var(--accent-success)', color: 'white', display: 'flex', alignItems: 'center', gap: 7, fontWeight: 600, padding: '8px 12px', borderRadius: 8 }}
+                onClick={() => onBanClick(viewingUserDetails)}
+              >
+                {viewingUserDetails.is_enabled ? <Ban size={15} /> : <UserRoundCheck size={15} />}
+                <span>{viewingUserDetails.is_enabled ? 'Banear usuario' : 'Desbanear usuario'}</span>
+              </button>
+              <button
+                className="btn"
+                style={{ backgroundColor: 'var(--accent-error)', color: 'white', display: 'flex', alignItems: 'center', gap: 7, fontWeight: 600, padding: '8px 12px', borderRadius: 8 }}
+                onClick={() => onDeleteClick(viewingUserDetails)}
+              >
+                <Trash2 size={15} />
+                <span>Limpiar y cerrar sesión</span>
+              </button>
+            </div>
           ) : (
             <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold' }}>{isProtectedAccount ? 'ADMINISTRADOR TOTAL PROTEGIDO' : 'ACCIÓN RESERVADA A ADMINISTRADORES TOTALES'}</div>
           )}
