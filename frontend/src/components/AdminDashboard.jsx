@@ -801,10 +801,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
           <button
             className="btn btn-secondary"
-            style={{ width: '100%', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
-            onClick={() => navigate('/historico')}
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Acceso temporalmente suspendido"
+            style={{ width: '100%', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold', opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)' }}
           >
             <Database size={13} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
+            <span style={{ fontSize: '9px', marginLeft: '4px' }}>SUSPENDIDO</span>
           </button>
 
           <button
@@ -833,11 +837,15 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
               </button>
             </div>
             <button
-              className={`btn ${activeTab === 'pulso_config' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              onClick={() => setActiveTab('pulso_config')}
+              className="btn btn-secondary"
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="Acceso temporalmente suspendido"
+              style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)' }}
             >
               <UploadCloud size={13} /> Carga y Configuración Pulso
+              <span style={{ fontSize: '9px', marginLeft: '4px' }}>SUSPENDIDO</span>
             </button>
           </div>
 
