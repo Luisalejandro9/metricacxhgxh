@@ -131,6 +131,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const [endDate, setEndDate] = useState(initialDates.end);
   const [grouping, setGrouping] = useState('daily');
   const [heatMetric, setHeatMetric] = useState('gxh');
+  const [selectedWeekday, setSelectedWeekday] = useState(null);
   const [compare, setCompare] = useState(true);
   const [show, setShow] = useState({
     gxhTmo: { a: true, b: true },
@@ -307,6 +308,16 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     });
   }, [currentRows]);
 
+  const weekdayDateGroups = useMemo(() => {
+    if (!selectedWeekday) return [];
+    const grouped = new Map();
+    selectedWeekday.rows.forEach(row => {
+      if (!grouped.has(row.date)) grouped.set(row.date, []);
+      grouped.get(row.date).push(row);
+    });
+    return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, rows]) => ({ date, rows, ...summarize(rows) }));
+  }, [selectedWeekday]);
+
   const weekdayInsights = useMemo(() => {
     const activeDays = weekdayStats.filter(day => day.rows.length > 0 && day.managed > 0);
     if (!activeDays.length) return { insights: [], note: 'Todavía no hay datos suficientes para analizar el rendimiento.' };
@@ -460,7 +471,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Totales y promedios calculados sobre los registros del período seleccionado.</p>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, fontSize: 12 }}>
-          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'Técnicos enviados', 'Gestionados', 'GxH promedio', 'Resolución', 'Cerrados'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
+          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'Técnicos enviados', 'Gestionados', 'GxH promedio', 'Resolución', 'Cerrados', 'Detalle'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
           <tbody>{weekdayStats.map(day => <tr key={day.day} style={{ color: 'var(--text-bright)' }}>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.label}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length}</td>
@@ -469,10 +480,31 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmt(day.gxh) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? `${fmt(day.resolution, 1)}%` : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? fmtCompact(day.closed, 0) : '—'}</td>
+            <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}><button type="button" disabled={!day.rows.length} onClick={() => setSelectedWeekday(day)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-light)', background: day.rows.length ? 'var(--bg-app)' : 'transparent', color: day.rows.length ? 'var(--text-bright)' : 'var(--text-dim)', cursor: day.rows.length ? 'pointer' : 'not-allowed', fontSize: 11, opacity: day.rows.length ? 1 : .5 }}>Ver detalle</button></td>
           </tr>)}</tbody>
         </table>
       </div>
     </section>
+
+    {selectedWeekday && <div role="presentation" onClick={e => { if (e.target === e.currentTarget) setSelectedWeekday(null); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,.68)', display: 'grid', placeItems: 'center', padding: 16 }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="weekday-detail-title" style={{ width: 'min(900px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 12, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,.35)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <div><h3 id="weekday-detail-title" style={{ margin: 0, color: 'var(--text-bright)', fontSize: 17 }}>Detalle de {selectedWeekday.label}</h3><p style={{ margin: '5px 0 0', color: 'var(--text-dim)', fontSize: 11 }}>Fechas individuales incluidas en el período seleccionado</p></div>
+          <button type="button" onClick={() => setSelectedWeekday(null)} aria-label="Cerrar detalle" style={{ border: '1px solid var(--border-light)', background: 'var(--bg-app)', color: 'var(--text-bright)', borderRadius: 7, padding: '6px 10px', cursor: 'pointer' }}>Cerrar ✕</button>
+        </div>
+        {weekdayDateGroups.map(group => {
+          const date = parseDate(group.date);
+          const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' });
+          return <div key={group.date} style={{ border: '1px solid var(--border-light)', borderRadius: 9, padding: 13, marginBottom: 10, background: 'var(--bg-app)' }}>
+            <h4 style={{ margin: '0 0 10px', color: 'var(--text-bright)', fontSize: 13, textTransform: 'capitalize' }}>{dateLabel}</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: 8 }}>
+              {[['Registros', group.rows.length], ['Técnicos enviados', fmtCompact(group.technicians, 0)], ['Gestionados', fmtCompact(group.managed, 0)], ['GxH promedio', fmt(group.gxh)], ['Resolución', `${fmt(group.resolution, 1)}%`], ['Cerrados', fmtCompact(group.closed, 0)], ['TMO promedio', `${fmt(group.tmo)} min`], ['Tiempo total', `${(group.seconds / 3600).toLocaleString('es-AR', { maximumFractionDigits: 2 })} h`]].map(([label, value]) => <div key={label} style={{ padding: 9, borderRadius: 7, background: 'var(--bg-card)', border: '1px solid var(--border-light)' }}><div style={{ color: 'var(--text-dim)', fontSize: 10 }}>{label}</div><div style={{ color: 'var(--text-bright)', fontWeight: 700, fontSize: 14, marginTop: 4 }}>{value}</div></div>)}
+            </div>
+          </div>;
+        })}
+        {!weekdayDateGroups.length && <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>No hay registros para este día.</p>}
+      </section>
+    </div>}
 
     <section style={{ ...cardStyle, marginTop: 14, border: '1px solid rgba(99,102,241,.28)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
