@@ -331,16 +331,16 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     }
     setIsDeleting(true);
     try {
-      const { data, error } = await supabase.rpc('set_profile_ban_status', {
-        p_target_user_id: targetUser.id,
-        p_banned: banned
+      const { data, error } = await supabase.functions.invoke('manage-user-ban', {
+        body: { targetUserId: targetUser.id, banned }
       });
       if (error) throw error;
+      if (!data?.success || !data?.profile) throw new Error(data?.error || 'Supabase no confirmó el cambio de estado.');
       showMessage('success', banned
-        ? `${targetUser.email} fue baneado y sus sesiones fueron revocadas.`
+        ? `${targetUser.email} fue baneado en Supabase Auth y en la plataforma.`
         : `${targetUser.email} fue rehabilitado y puede volver a ingresar.`);
       setUsers(current => current.map(item => item.id === targetUser.id
-        ? { ...item, is_enabled: data?.is_enabled ?? !banned }
+        ? { ...item, is_enabled: data.profile.is_enabled }
         : item));
       setDeleteConfirmModal({ show: false, targetUser: null, mode: banned ? 'ban' : 'unban' });
       setViewingUserDetails(null);
