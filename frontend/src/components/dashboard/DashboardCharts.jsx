@@ -459,11 +459,12 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       <h3 style={{ margin: '0 0 5px', color: 'var(--text-bright)', fontSize: 15 }}>Rendimiento por día de la semana</h3>
       <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Totales y promedios calculados sobre los registros del período seleccionado.</p>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620, fontSize: 12 }}>
-          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'Gestionados', 'GxH promedio', 'Resolución', 'Cerrados'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, fontSize: 12 }}>
+          <thead><tr style={{ color: 'var(--text-dim)', textAlign: 'left' }}>{['Día', 'Registros', 'Técnicos enviados', 'Gestionados', 'GxH promedio', 'Resolución', 'Cerrados'].map(label => <th key={label} style={{ padding: '9px 8px', borderBottom: '1px solid var(--border-light)' }}>{label}</th>)}</tr></thead>
           <tbody>{weekdayStats.map(day => <tr key={day.day} style={{ color: 'var(--text-bright)' }}>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.label}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length}</td>
+            <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmtCompact(day.technicians, 0) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmtCompact(day.managed, 0) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)', fontWeight: 700 }}>{day.rows.length ? fmt(day.gxh) : '—'}</td>
             <td style={{ padding: '10px 8px', borderBottom: '1px solid var(--border-light)' }}>{day.rows.length ? `${fmt(day.resolution, 1)}%` : '—'}</td>
