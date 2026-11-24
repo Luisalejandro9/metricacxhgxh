@@ -285,7 +285,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       if (error) throw error;
 
       showMessage('success', `Datos de ${targetUser.email} limpiados y sesión cerrada de forma remota.`);
-      setDeleteConfirmModal({ show: false, targetUser: null });
+      setDeleteConfirmModal({ show: false, targetUser: null, mode: 'delete' });
       setViewingUserDetails(null);
       await fetchData(true);
     } catch (error) {
@@ -297,6 +297,68 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleClearOnlyMetrics = async (targetUser) => {
+    if (!targetUser || isProtectedSuperAdmin(targetUser)) return;
+    if (targetUser.role === 'admin' && !isSuperAdmin) {
+      showMessage('error', 'Solo los administradores totales pueden limpiar métricas de otros administradores.');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc('clear_user_metrics', {
+        target_user_id: targetUser.id
+      });
+      if (error) throw error;
+      showMessage('success', `Se limpiaron las métricas de ${targetUser.email}. Su perfil y sesión permanecen activos. (${data || 0} registros)`);
+      setDeleteConfirmModal({ show: false, targetUser: null, mode: 'clear' });
+      setViewingUserDetails(null);
+      await fetchData(true);
+    } catch (error) {
+      console.error('Error al limpiar métricas:', error);
+      showMessage('error', error.message || 'No se pudieron limpiar las métricas.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSetUserBan = async (targetUser, banned) => {
+    if (!targetUser || isProtectedSuperAdmin(targetUser)) return;
+    if (targetUser.role === 'admin' && !isSuperAdmin) {
+      showMessage('error', 'Solo los administradores totales pueden banear o desbanear a otros administradores.');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc('set_profile_ban_status', {
+        p_target_user_id: targetUser.id,
+        p_banned: banned
+      });
+      if (error) throw error;
+      showMessage('success', banned
+        ? `${targetUser.email} fue baneado y sus sesiones fueron revocadas.`
+        : `${targetUser.email} fue rehabilitado y puede volver a ingresar.`);
+      setUsers(current => current.map(item => item.id === targetUser.id
+        ? { ...item, is_enabled: data?.is_enabled ?? !banned }
+        : item));
+      setDeleteConfirmModal({ show: false, targetUser: null, mode: banned ? 'ban' : 'unban' });
+      setViewingUserDetails(null);
+      await fetchData(true);
+    } catch (error) {
+      console.error('Error al actualizar el baneo:', error);
+      showMessage('error', error.message || 'No se pudo actualizar el estado del usuario.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleConfirmUserAction = () => {
+    const { targetUser, mode } = deleteConfirmModal;
+    if (mode === 'clear') return handleClearOnlyMetrics(targetUser);
+    if (mode === 'ban') return handleSetUserBan(targetUser, true);
+    if (mode === 'unban') return handleSetUserBan(targetUser, false);
+    return handleDeleteUserData(targetUser);
   };
 
   const handleSetAdminRole = async (targetUser, makeAdmin) => {
@@ -1006,7 +1068,9 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         getStatusClass={getStatusClass}
         isSuperAdmin={isSuperAdmin}
         isProtectedAccount={isProtectedSuperAdmin(viewingUserDetails)}
-        onDeleteClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u })}
+        onClearDataClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u, mode: 'clear' })}
+        onDeleteClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u, mode: 'delete' })}
+        onBanClick={(u) => setDeleteConfirmModal({ show: true, targetUser: u, mode: u.is_enabled ? 'ban' : 'unban' })}
       />
 
       {roleConfirmUser && (
@@ -1031,9 +1095,10 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       <DeleteConfirmModal
         show={deleteConfirmModal.show}
         targetUser={deleteConfirmModal.targetUser}
+        mode={deleteConfirmModal.mode || 'delete'}
         isDeleting={isDeleting}
-        onCancel={() => setDeleteConfirmModal({ show: false, targetUser: null })}
-        onConfirm={() => handleDeleteUserData(deleteConfirmModal.targetUser)}
+        onCancel={() => setDeleteConfirmModal({ show: false, targetUser: null, mode: 'delete' })}
+        onConfirm={handleConfirmUserAction}
       />
 
       <style>{`
