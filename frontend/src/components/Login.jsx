@@ -12,18 +12,31 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
   useEffect(() => {
     if (!googleClientId || !googleButtonRef.current) return undefined;
     let cancelled = false;
-    const renderGoogleButton = () => {
+    const renderGoogleButton = async () => {
       if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
-      googleButtonRef.current.innerHTML = '';
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: (response) => googleHandlerRef.current?.(response.credential),
-        auto_select: false
-      });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',
-        shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))
-      });
+      try {
+        // Generate a fresh nonce for every page load/sign-in initialization.
+        const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+        const rawNonce = btoa(String.fromCharCode(...randomBytes));
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawNonce));
+        const hashedNonce = Array.from(new Uint8Array(digest))
+          .map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        if (cancelled || !googleButtonRef.current) return;
+
+        googleButtonRef.current.innerHTML = '';
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          nonce: hashedNonce,
+          callback: (response) => googleHandlerRef.current?.(response.credential, rawNonce),
+          auto_select: false
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',
+          shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))
+        });
+      } catch (error) {
+        console.error('No se pudo inicializar el acceso seguro de Google:', error);
+      }
     };
 
     if (window.google?.accounts?.id) {
