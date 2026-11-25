@@ -84,34 +84,9 @@ export function resolveBypassUrl(input) {
  * 2. Si el proxy llegase a no responder (o en un entorno sin proxy),
  *    automáticamente reintenta de forma transparente hacia la URL directa de Supabase.
  */
-const resilientFetch = async (input, init) => {
-  const urlStr = typeof input === 'string' ? input : 'url' in input ? input.url : input.toString();
-
-  try {
-    const res = await fetch(input, init);
-    // Si el proxy local devolviera 404 o 502/504, intentar URL directa
-    if (!res.ok && (res.status === 404 || res.status >= 500) && urlStr.includes('/supabase')) {
-      const fallbackUrl = urlStr.replace(/https?:\/\/[^/]+\/supabase/, DIRECT_SUPABASE_URL);
-      try {
-        return await fetch(fallbackUrl, init);
-      } catch {
-        return res;
-      }
-    }
-    return res;
-  } catch (primaryErr) {
-    // Si hubo falla de red hacia el proxy, probar fallback directo
-    if (urlStr.includes('/supabase')) {
-      try {
-        const fallbackUrl = urlStr.replace(/https?:\/\/[^/]+\/supabase/, DIRECT_SUPABASE_URL);
-        return await fetch(fallbackUrl, init);
-      } catch {
-        throw primaryErr;
-      }
-    }
-    throw primaryErr;
-  }
-};
+// Mantener todas las solicitudes en el proxy del mismo origen.
+// No usar fallback al dominio directo: puede estar bloqueado por DNS corporativo.
+const resilientFetch = (input, init) => fetch(input, init);
 
 export const supabase = createClient(
   getEffectiveSupabaseUrl(),

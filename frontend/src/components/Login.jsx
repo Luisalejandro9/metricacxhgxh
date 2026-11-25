@@ -1,8 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, RefreshCw, Sun, Moon, ExternalLink, KeyRound, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { resolveBypassUrl, supabase } from '../lib/supabase';
 
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
+  const googleButtonRef = useRef(null);
+  const googleHandlerRef = useRef(handleGoogleLogin);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => { googleHandlerRef.current = handleGoogleLogin; }, [handleGoogleLogin]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return undefined;
+    let cancelled = false;
+    const renderGoogleButton = async () => {
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
+      try {
+        // Generate a fresh nonce for every page load/sign-in initialization.
+        const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+        const rawNonce = btoa(String.fromCharCode(...randomBytes));
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawNonce));
+        const hashedNonce = Array.from(new Uint8Array(digest))
+          .map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        if (cancelled || !googleButtonRef.current) return;
+
+        googleButtonRef.current.innerHTML = '';
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          nonce: hashedNonce,
+          callback: (response) => googleHandlerRef.current?.(response.credential, rawNonce),
+          auto_select: false
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',
+          shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))
+        });
+      } catch (error) {
+        console.error('No se pudo inicializar el acceso seguro de Google:', error);
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+    } else {
+      let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (!script) {
+        script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener('load', renderGoogleButton);
+      script.addEventListener('error', () => {
+        if (!cancelled) console.error('No se pudo cargar Google Identity Services.');
+      });
+    }
+    return () => { cancelled = true; };
+  }, [googleClientId]);
+
   const [bypassInput, setBypassInput] = useState('');
   const [bypassError, setBypassError] = useState('');
   const [showBypass, setShowBypass] = useState(false);
@@ -143,33 +198,16 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
               </p>
             </div>
             
-            <button 
-              className="btn-google" 
-              onClick={handleGoogleLogin} 
-              style={{
-                background: 'var(--btn-primary-bg)',
-                color: 'var(--btn-primary-text)',
-                border: '1px solid var(--btn-primary-border)',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <RefreshCw size={15} />
-              Reintentar Acceso Google
-            </button>
+
           </div>
         )}
 
-        {/* Botón Principal de Acceso con Google */}
-        {authError !== 'bloqueo_dns' && (
-          <button className="btn-google" onClick={handleGoogleLogin} style={{ width: '100%', marginBottom: '12px' }}>
-            <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '16px', height: '16px' }} />
-            Ingresar con Google
-          </button>
-        )}
+        {/* Google Identity Services entrega el ID Token sin redirección a Supabase */}
+        <div style={{ width: '100%', minHeight: '44px', display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+          {googleClientId
+            ? <div ref={googleButtonRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
+            : <p style={{ color: 'var(--accent-error)', fontSize: '12px' }}>Falta configurar VITE_GOOGLE_CLIENT_ID en Netlify.</p>}
+        </div>
 
         {/* --- SISTEMA DE SALTO DE BLOQUEO CORPORATIVO (NETLIFY / VERCEL BYPASS) --- */}
         <div style={{ marginTop: '12px', marginBottom: '16px', border: '1px solid var(--border-light)', borderRadius: '6px', overflow: 'hidden' }}>
