@@ -78,35 +78,24 @@ function App() {
 
         // PROFILE IS MISSING - Check if there is an active session to auto-create
         console.warn('Perfil no encontrado, intentando auto-crear perfil por defecto...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (!sessionError && session && session.user && session.user.id === userId) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: userId, 
-                email: session.user.email, 
-                role: 'operator', 
-                is_enabled: true 
-              }
-            ])
-            .select()
-            .single();
+        const { data: newProfile, error: createError } = await supabase
+          .rpc('ensure_own_profile');
 
-          if (!createError && newProfile) {
-            console.log('Perfil auto-creado con éxito:', newProfile);
-            setProfile(newProfile);
-            setNetworkError(false);
-            return;
-          } else {
-            console.error('Error al auto-crear perfil:', createError);
-            const isCreateNetworkErr = createError?.message?.toLowerCase().includes('fetch') ||
-                                       createError?.message?.toLowerCase().includes('timeout');
-            if (isCreateNetworkErr) {
-              setNetworkError(true);
-              return;
-            }
-          }
+        if (!createError && newProfile && newProfile.id === userId) {
+          console.log('Perfil recuperado o creado de forma segura:', newProfile);
+          setProfile(newProfile);
+          setNetworkError(false);
+          return;
+        }
+
+        console.error('Error al recuperar/crear perfil:', createError);
+        const createErrorMessage = createError?.message?.toLowerCase() || '';
+        const isCreateNetworkErr = createErrorMessage.includes('fetch') ||
+                                   createErrorMessage.includes('timeout') ||
+                                   createErrorMessage.includes('network');
+        if (isCreateNetworkErr) {
+          setNetworkError(true);
+          return;
         }
         setProfile(null);
       }
