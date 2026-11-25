@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase, getEffectiveSupabaseUrl, DIRECT_SUPABASE_URL } from './lib/supabase';
+import { supabase, getEffectiveSupabaseUrl } from './lib/supabase';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
@@ -127,21 +127,9 @@ function App() {
       
       clearTimeout(timeoutId);
       return true;
-    } catch (err) {
-      // Si el proxy falló (ej: entorno local sin proxy), intentar conexión directa
-      try {
-        const directCtrl = new AbortController();
-        const directTimeout = setTimeout(() => directCtrl.abort(), 2500);
-        await fetch(`${DIRECT_SUPABASE_URL}/rest/v1/`, {
-          method: 'HEAD',
-          signal: directCtrl.signal,
-          cache: 'no-store'
-        });
-        clearTimeout(directTimeout);
-        return true;
-      } catch {
-        return false;
-      }
+    } catch {
+      // No intentar el dominio directo: en redes corporativas puede estar bloqueado.
+      return false;
     }
   };
 
@@ -334,27 +322,25 @@ function App() {
     }
   }, [user, profile]);
 
-  // --- Authentication Handler ---
-  // Triggers the Google OAuth flow and handles specific network/auth errors
-  const handleGoogleLogin = async () => {
+  // --- Google Identity Services: ID Token flow (sin redirección OAuth a Supabase) ---
+  const handleGoogleLogin = async (idToken) => {
     try {
       setAuthError(null);
       setNetworkError(false);
+      if (!idToken) throw new Error('Google no devolvió un token de identidad.');
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: { 
-          redirectTo: window.location.origin + '/dashboard' 
-        }
+        token: idToken
       });
       if (error) throw error;
     } catch (err) {
-      console.error('Error al iniciar sesión:', err.message);
-      // If Supabase is blocked during login, show the network banner
-      if (err.message?.toLowerCase().includes('fetch') || err.message?.toLowerCase().includes('network')) {
+      console.error('Error al iniciar sesión con Google ID Token:', err);
+      const message = err.message?.toLowerCase() || '';
+      if (message.includes('fetch') || message.includes('network') || message.includes('failed to fetch')) {
         setAuthError('bloqueo_dns');
       } else {
-        setAuthError('No se pudo conectar con el servicio de autenticación. Verifica tu conexión a internet.');
+        setAuthError(err.message || 'No se pudo completar el inicio de sesión con Google.');
       }
     }
   };
