@@ -808,6 +808,14 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           </div>
         )}
 
+        <section style={{ margin: '4px 0 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: 'var(--primary-light)' }}>NIVEL 1</span>
+            <h1 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 20 }}>Registro de jornada</h1>
+          </div>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Cargá tus gestiones, cierres y técnicos enviados. Los indicadores se actualizan con estos datos.</p>
+        </section>
+
         <DashboardStats
           user={user}
           timerSeconds={timerSeconds}
@@ -837,6 +845,13 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           calculateRecordBonus={calculateRecordBonus}
         />
 
+        <section style={{ margin: '30px 0 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: 'var(--primary-light)' }}>NIVEL 4</span>
+            <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 17 }}>Historial y evolución</h2>
+          </div>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Consultá tus registros anteriores, corregí datos y analizá tu evolución.</p>
+        </section>
         <HistoryTables
           isLoadingHistory={isLoadingHistory}
           filteredHistory={filteredHistory}
