@@ -3,7 +3,48 @@ import { ShieldCheck, RefreshCw, Sun, Moon, ExternalLink, KeyRound, Mail, ArrowR
 import { resolveBypassUrl, supabase } from '../lib/supabase';
 
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
-  const googleButtonRef = useRef(null);\n  const googleHandlerRef = useRef(handleGoogleLogin);\n  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;\n\n  useEffect(() => { googleHandlerRef.current = handleGoogleLogin; }, [handleGoogleLogin]);\n\n  useEffect(() => {\n    if (!googleClientId || !googleButtonRef.current) return undefined;\n    let cancelled = false;\n    const renderGoogleButton = () => {\n      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;\n      googleButtonRef.current.innerHTML = '';\n      window.google.accounts.id.initialize({\n        client_id: googleClientId,\n        callback: (response) => googleHandlerRef.current?.(response.credential),\n        auto_select: false\n      });\n      window.google.accounts.id.renderButton(googleButtonRef.current, {\n        type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',\n        shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))\n      });\n    };\n    if (window.google?.accounts?.id) {\n      renderGoogleButton();\n    } else {\n      let script = document.querySelector('script[src=\"https://accounts.google.com/gsi/client\"]');\n      if (!script) {\n        script = document.createElement('script');\n        script.src = 'https://accounts.google.com/gsi/client';\n        script.async = true;\n        script.defer = true;\n        document.head.appendChild(script);\n      }\n      script.addEventListener('load', renderGoogleButton);\n      script.addEventListener('error', () => {\n        if (!cancelled) console.error('No se pudo cargar Google Identity Services.');\n      });\n      if (window.google?.accounts?.id) renderGoogleButton();\n    }\n    return () => { cancelled = true; };\n  }, [googleClientId]);
+  const googleButtonRef = useRef(null);
+  const googleHandlerRef = useRef(handleGoogleLogin);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => { googleHandlerRef.current = handleGoogleLogin; }, [handleGoogleLogin]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return undefined;
+    let cancelled = false;
+    const renderGoogleButton = () => {
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
+      googleButtonRef.current.innerHTML = '';
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => googleHandlerRef.current?.(response.credential),
+        auto_select: false
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',
+        shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+    } else {
+      let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (!script) {
+        script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener('load', renderGoogleButton);
+      script.addEventListener('error', () => {
+        if (!cancelled) console.error('No se pudo cargar Google Identity Services.');
+      });
+    }
+    return () => { cancelled = true; };
+  }, [googleClientId]);
+
   const [bypassInput, setBypassInput] = useState('');
   const [bypassError, setBypassError] = useState('');
   const [showBypass, setShowBypass] = useState(false);
