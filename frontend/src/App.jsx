@@ -323,15 +323,16 @@ function App() {
   }, [user, profile]);
 
   // --- Google Identity Services: ID Token flow (sin redirección OAuth a Supabase) ---
-  const handleGoogleLogin = async (idToken) => {
+  const handleGoogleLogin = async (idToken, nonce) => {
     try {
       setAuthError(null);
       setNetworkError(false);
-      if (!idToken) throw new Error('Google no devolvió un token de identidad.');
+      if (!idToken || !nonce) throw new Error('Google no devolvió las credenciales necesarias para iniciar sesión.');
 
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        token: idToken
+        token: idToken,
+        nonce
       });
       if (error) throw error;
     } catch (err) {
