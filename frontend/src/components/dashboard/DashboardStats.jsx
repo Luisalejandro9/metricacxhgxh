@@ -311,6 +311,15 @@ function DashboardStats({
         </div>
       </div>
 
+      {/* NIVEL 2: INDICADORES CALCULADOS */}
+      <section style={{ margin: '26px 0 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: 'var(--primary-light)' }}>NIVEL 2</span>
+          <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 17 }}>Indicadores de rendimiento</h2>
+        </div>
+        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Resultados calculados automáticamente a partir de tus registros.</p>
+      </section>
+
       {/* --- REJILLA SECUNDARIA DE KPIs --- */}
       <div className="grid-secondary">
         <div className="metric-card">
@@ -434,6 +443,30 @@ function DashboardStats({
           })()}
         </div>
       </div>
+
+      {/* NIVEL 3: GUÍA DE INDICADORES */}
+      <section style={{ marginTop: 28, padding: 18, border: '1px solid var(--border-light)', borderRadius: 12, background: 'var(--bg-card)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: 'var(--primary-light)' }}>NIVEL 3</span>
+          <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 17 }}>¿Qué significa cada indicador?</h2>
+        </div>
+        <p style={{ margin: '0 0 14px', color: 'var(--text-muted)', fontSize: 12 }}>Abrí cada apartado para conocer qué mide, cómo se calcula y cómo interpretar el resultado.</p>
+        {[
+          { title: 'GxH · Gestiones por hora', body: 'Mide cuántos casos gestionás por cada hora registrada. Se calcula dividiendo los casos gestionados por el tiempo trabajado expresado en horas.', formula: 'Casos gestionados ÷ horas trabajadas', target: `Objetivo configurado: ${standards.GXH_GREEN.toFixed(2)} GxH` },
+          { title: 'TMO · Tiempo medio por gestión', body: 'Indica cuánto tiempo promedio representa cada caso gestionado. Un TMO menor equivale a más gestiones por hora, siempre que se mantenga la calidad del trabajo.', formula: 'Segundos trabajados ÷ casos gestionados', target: `Referencia configurada: ${formatTmoMin(standards.TIME_PER_MANAGED)} por gestión` },
+          { title: 'Cierre real', body: 'Muestra qué proporción de los casos gestionados terminó cerrada. No es lo mismo que resolución neta: aquí solo cuentan los cierres registrados.', formula: '(Casos cerrados ÷ casos gestionados) × 100', target: `Objetivo: ${standards.CLOSED_GREEN}% · Nivel de alerta: ${standards.CLOSED_YELLOW}%` },
+          { title: 'Resolución neta', body: 'Estima el porcentaje de casos resueltos sin necesidad de enviar un técnico. Los técnicos enviados se descuentan de los casos gestionados.', formula: '((Casos gestionados − técnicos enviados) ÷ casos gestionados) × 100', target: `Objetivo: ${standards.RESOLUTION_GREEN}% · Nivel de alerta: ${standards.RESOLUTION_YELLOW}%` },
+          { title: 'Bonificación', body: 'Es la suma de los valores asignados a los tramos de GxH y resolución neta. El porcentaje puede ser positivo, neutro o negativo según los rangos configurados.', formula: 'Bonificación GxH + bonificación de resolución neta', target: 'Los tramos y sus valores dependen de la configuración vigente.' },
+          { title: 'Diferencias y acumulados', body: 'La diferencia indica cuántos casos estás por encima o por debajo del volumen necesario para alcanzar el objetivo. Los acumulados se calculan sobre los registros del mes seleccionado.', formula: 'Resultado real − resultado requerido para el objetivo', target: 'Un valor positivo indica que alcanzaste o superaste el objetivo; uno negativo indica lo que falta.' }
+        ].map(item => (
+          <details key={item.title} style={{ borderTop: '1px solid var(--border-light)', padding: '12px 0' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>{item.title}</summary>
+            <p style={{ color: 'var(--text-main)', fontSize: 12, lineHeight: 1.6, margin: '10px 0 8px' }}>{item.body}</p>
+            <div style={{ padding: '9px 11px', borderRadius: 7, background: 'var(--bg-main)', color: 'var(--text-bright)', fontSize: 12 }}><strong>Fórmula:</strong> {item.formula}</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, margin: '8px 0 0' }}>{item.target}</p>
+          </details>
+        ))}
+      </section>
 
       {/* --- BOTONES GUARDAR Y DESCARGAR CSV SIDE-BY-SIDE --- */}
       <div className="save-container" style={{ margin: '24px auto', width: '100%', maxWidth: '750px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
