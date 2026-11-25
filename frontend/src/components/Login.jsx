@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, RefreshCw, Sun, Moon, ExternalLink, KeyRound, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { resolveBypassUrl, supabase } from '../lib/supabase';
 
-function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
+function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {\n  const googleButtonRef = useRef(null);\n  const googleHandlerRef = useRef(handleGoogleLogin);\n  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;\n\n  useEffect(() => { googleHandlerRef.current = handleGoogleLogin; }, [handleGoogleLogin]);\n\n  useEffect(() => {\n    if (!googleClientId || !googleButtonRef.current) return undefined;\n    let cancelled = false;\n    const renderGoogleButton = () => {\n      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;\n      googleButtonRef.current.innerHTML = '';\n      window.google.accounts.id.initialize({\n        client_id: googleClientId,\n        callback: (response) => googleHandlerRef.current?.(response.credential),\n        auto_select: false\n      });\n      window.google.accounts.id.renderButton(googleButtonRef.current, {\n        type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',\n        shape: 'rectangular', width: Math.max(240, Math.floor(googleButtonRef.current.clientWidth || 360))\n      });\n    };\n    if (window.google?.accounts?.id) {\n      renderGoogleButton();\n    } else {\n      let script = document.querySelector('script[src=\"https://accounts.google.com/gsi/client\"]');\n      if (!script) {\n        script = document.createElement('script');\n        script.src = 'https://accounts.google.com/gsi/client';\n        script.async = true;\n        script.defer = true;\n        document.head.appendChild(script);\n      }\n      script.addEventListener('load', renderGoogleButton);\n      script.addEventListener('error', () => {\n        if (!cancelled) console.error('No se pudo cargar Google Identity Services.');\n      });\n      if (window.google?.accounts?.id) renderGoogleButton();\n    }\n    return () => { cancelled = true; };\n  }, [googleClientId]);
   const [bypassInput, setBypassInput] = useState('');
   const [bypassError, setBypassError] = useState('');
   const [showBypass, setShowBypass] = useState(false);
@@ -143,33 +143,16 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
               </p>
             </div>
             
-            <button 
-              className="btn-google" 
-              onClick={handleGoogleLogin} 
-              style={{
-                background: 'var(--btn-primary-bg)',
-                color: 'var(--btn-primary-text)',
-                border: '1px solid var(--btn-primary-border)',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <RefreshCw size={15} />
-              Reintentar Acceso Google
-            </button>
+
           </div>
         )}
 
-        {/* Botón Principal de Acceso con Google */}
-        {authError !== 'bloqueo_dns' && (
-          <button className="btn-google" onClick={handleGoogleLogin} style={{ width: '100%', marginBottom: '12px' }}>
-            <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '16px', height: '16px' }} />
-            Ingresar con Google
-          </button>
-        )}
+        {/* Google Identity Services entrega el ID Token sin redirección a Supabase */}
+        <div style={{ width: '100%', minHeight: '44px', display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+          {googleClientId
+            ? <div ref={googleButtonRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
+            : <p style={{ color: 'var(--accent-error)', fontSize: '12px' }}>Falta configurar VITE_GOOGLE_CLIENT_ID en Netlify.</p>}
+        </div>
 
         {/* --- SISTEMA DE SALTO DE BLOQUEO CORPORATIVO (NETLIFY / VERCEL BYPASS) --- */}
         <div style={{ marginTop: '12px', marginBottom: '16px', border: '1px solid var(--border-light)', borderRadius: '6px', overflow: 'hidden' }}>
