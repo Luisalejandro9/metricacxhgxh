@@ -89,7 +89,7 @@ function DashboardSidebar({
             </button>
           )}
         </div>
-        <bution>
+      </section>
 
       <section className="timer-section">
         <div className="swiss-section-header">TIMER DE JORNADA</div>
