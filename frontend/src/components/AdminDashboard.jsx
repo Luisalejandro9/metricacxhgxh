@@ -1122,7 +1122,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                     <th style={{ padding: '10px 8px' }}>Técnico</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Resolución</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Técnicos enviados</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Penalización</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Bonificación</th>
                   </tr>
                 </thead>
                 <tbody>
