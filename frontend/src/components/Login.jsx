@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, RefreshCw, Sun, Moon, ExternalLink, KeyRound, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { resolveBypassUrl, supabase } from '../lib/supabase';
+import { ShieldCheck, RefreshCw, Sun, Moon, KeyRound, Mail, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
   const googleButtonRef = useRef(null);
@@ -58,29 +58,12 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
     return () => { cancelled = true; };
   }, [googleClientId]);
 
-  const [bypassInput, setBypassInput] = useState('');
-  const [bypassError, setBypassError] = useState('');
-  const [showBypass, setShowBypass] = useState(false);
-
   // Email OTP state for direct access without OAuth redirects
   const [email, setEmail] = useState('');
   const [otpToken, setOtpToken] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpMessage, setOtpMessage] = useState(null);
-
-  const handleBypassSubmit = (e) => {
-    e.preventDefault();
-    setBypassError('');
-    if (!bypassInput.trim()) {
-      setBypassError('Ingresa el enlace o código de Supabase.');
-      return;
-    }
-    const success = resolveBypassUrl(bypassInput);
-    if (!success) {
-      setBypassError('No se pudo procesar el enlace. Verifica que sea válido.');
-    }
-  };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -194,7 +177,7 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
                 Restricción de Red Corporativa
               </div>
               <p style={{ margin: 0, color: 'var(--text-main)', lineHeight: '1.4' }}>
-                La red de Konecta tiene bloqueado el dominio directo de Supabase. Puedes reintentar, usar el bypass por enlace o ingresar directamente con código por correo.
+                No se pudo conectar con el servicio de autenticación. Verifica la conexión e inténtalo nuevamente.
               </p>
             </div>
             
@@ -207,78 +190,6 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
           {googleClientId
             ? <div ref={googleButtonRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
             : <p style={{ color: 'var(--accent-error)', fontSize: '12px' }}>Falta configurar VITE_GOOGLE_CLIENT_ID en Netlify.</p>}
-        </div>
-
-        {/* --- SISTEMA DE SALTO DE BLOQUEO CORPORATIVO (NETLIFY / VERCEL BYPASS) --- */}
-        <div style={{ marginTop: '12px', marginBottom: '16px', border: '1px solid var(--border-light)', borderRadius: '6px', overflow: 'hidden' }}>
-          <button
-            type="button"
-            onClick={() => setShowBypass(!showBypass)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              background: 'var(--bg-secondary)',
-              border: 'none',
-              color: 'var(--text-bright)',
-              fontSize: '11px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer'
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ExternalLink size={13} style={{ color: 'var(--primary)' }} />
-              ¿Error 404 o enlace bloqueado al logear?
-            </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{showBypass ? 'Ocultar' : 'Bypass'}</span>
-          </button>
-
-          {showBypass && (
-            <div style={{ padding: '12px', background: 'var(--bg-card)', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                Si Google te redirigió a una pantalla de error 404 con un enlace largo de Supabase (<code>oyhlhdlubralrgjbgtqw.supabase.co</code>), pega ese enlace aquí para saltar el bloqueo inmediatamente mediante el proxy de Netlify/Vercel:
-              </p>
-
-              <form onSubmit={handleBypassSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Pega el enlace largo de Supabase o código..."
-                  value={bypassInput}
-                  onChange={(e) => setBypassInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    fontSize: '11px',
-                    borderRadius: '4px',
-                    border: '1px solid var(--border-strong)',
-                    background: 'var(--bg-main)',
-                    color: 'var(--text-bright)'
-                  }}
-                />
-                {bypassError && (
-                  <span style={{ color: 'var(--accent-error)', fontSize: '10px' }}>{bypassError}</span>
-                )}
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{
-                    padding: '8px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <ArrowRight size={13} />
-                  Saltar Bloqueo y Entrar
-                </button>
-              </form>
-            </div>
-          )}
         </div>
 
         {/* --- ACCESO DIRECTO CON CÓDIGO POR CORREO (SIN REDIRECCIONES EXTERNAS) --- */}
