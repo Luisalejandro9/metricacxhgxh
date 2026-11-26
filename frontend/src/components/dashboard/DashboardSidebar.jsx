@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Database,
   LogOut,
   ShieldCheck,
   Pause,
@@ -90,32 +89,7 @@ function DashboardSidebar({
             </button>
           )}
         </div>
-        <button
-          className="btn btn-secondary"
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Acceso temporalmente suspendido"
-          style={{
-            marginTop: '8px',
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            padding: '8px 12px',
-            fontSize: '11px',
-            fontWeight: '700',
-            letterSpacing: '0.04em',
-            opacity: 0.45,
-            cursor: 'not-allowed',
-            filter: 'grayscale(1)'
-          }}
-        >
-          <Database size={13} strokeWidth={2} /> Histórico Pulso (CxH / GxH)
-          <span style={{ fontSize: '9px', marginLeft: '4px' }}>SUSPENDIDO</span>
-        </button>
-      </section>
+        <bution>
 
       <section className="timer-section">
         <div className="swiss-section-header">TIMER DE JORNADA</div>
