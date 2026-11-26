@@ -24,7 +24,7 @@ import {
   Trash2,
   Shield
 } from 'lucide-react';
-import { supabase, DIRECT_SUPABASE_URL, getEffectiveSupabaseUrl } from '../lib/supabase';
+import { supabase, SUPABASE_ANON_KEY, DIRECT_SUPABASE_URL, getEffectiveSupabaseUrl } from '../lib/supabase';
 import { fetchRecentIncidents, clearAllIncidents } from '../lib/incidentSentinel';
 
 const CURRENT_VERSION = typeof __APP_BUILD_VERSION__ !== 'undefined' ? __APP_BUILD_VERSION__ : 'dev';
@@ -81,7 +81,7 @@ export function TechStatusDashboard({ onExit }) {
       cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
-        apikey: supabase.supabaseKey || '',
+        apikey: SUPABASE_ANON_KEY,
         'x-status-password': password,
       },
       body: JSON.stringify({}),
