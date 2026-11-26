@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit3, Trash2 } from 'lucide-react';
-import ResolutionDifferenceBreakdown from '../ResolutionDifferenceBreakdown';
+import { getResolutionBonusProgress } from '../ResolutionDifferenceBreakdown';
 
 const formatTmoMin = (seconds) => {
   if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
@@ -135,35 +135,48 @@ function HistoryTables({
                 </tr>
               </thead>
               <tbody>
-                {filteredHistory.map((item) => (
-                  <tr key={item.id + '-accum'}>
-                    <td>{item.date}</td>
-                    <td style={{ fontWeight: 'bold' }}>{item.accumManaged}</td>
-                    <td className={getStatusClass(item.accumCloseRate, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
-                      {item.accumCloseRate}%
-                    </td>
-                    <td style={{ fontWeight: '700' }}>{item.accumTransferred || 0}</td>
-                    <td className={getStatusClass(item.accumResoRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
-                      {item.accumResoRate}%
-                    </td>
-                    <td className={getStatusClass(item.accumGxH, standards.GXH_GREEN, standards.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
-                      {item.accumGxH}
-                    </td>
-                    <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
-                      {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
-                    </td>
-                    <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                      {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
-                    </td>
-                    <td><ResolutionDifferenceBreakdown managed={item.accumManaged} technicians={item.accumTechnicians} tiers={standards.resolution_bonus_tiers} compact interactive={item.date === latestRecordDate || item.date === currentDate} /></td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                        <span style={{ fontWeight: '600' }}>{formatTmoMin(item.accumTmoManaged)}</span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.accumTmoManaged}s)</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredHistory.map((item) => {
+                  const resolutionProgress = getResolutionBonusProgress(
+                    item.accumManaged,
+                    item.accumTechnicians,
+                    standards.resolution_bonus_tiers
+                  );
+                  const resolutionDifference = resolutionProgress?.difference ?? 0;
+
+                  return (
+                    <tr key={item.id + '-accum'}>
+                      <td>{item.date}</td>
+                      <td style={{ fontWeight: 'bold' }}>{item.accumManaged}</td>
+                      <td className={getStatusClass(item.accumCloseRate, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        {item.accumCloseRate}%
+                      </td>
+                      <td style={{ fontWeight: '700' }}>{item.accumTransferred || 0}</td>
+                      <td className={getStatusClass(item.accumResoRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        {item.accumResoRate}%
+                      </td>
+                      <td className={getStatusClass(item.accumGxH, standards.GXH_GREEN, standards.GXH_YELLOW)} style={{ fontWeight: 'bold' }}>
+                        {item.accumGxH}
+                      </td>
+                      <td style={{ fontWeight: '800', color: item.accumClosingDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)', background: 'rgba(255,255,255,0.02)' }}>
+                        {item.accumClosingDiff > 0 ? `+${item.accumClosingDiff}` : item.accumClosingDiff}
+                      </td>
+                      <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                        {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
+                      </td>
+                      <td style={{ fontWeight: '800', color: resolutionDifference >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
+                        {resolutionProgress
+                          ? resolutionDifference > 0 ? `+${resolutionDifference}` : resolutionDifference
+                          : '—'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                          <span style={{ fontWeight: '600' }}>{formatTmoMin(item.accumTmoManaged)}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>({item.accumTmoManaged}s)</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
