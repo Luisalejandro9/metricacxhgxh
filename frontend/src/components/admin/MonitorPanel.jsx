@@ -24,6 +24,7 @@ function MonitorPanel({
   excludedUserIds,
   clearExcludedUsers,
   chartHistory = [],
+  calculateRecordBonus,
   theme = 'dark',
   chartScopeLabel = 'Global'
 }) {
@@ -214,6 +215,7 @@ function MonitorPanel({
       <DashboardCharts
         history={chartHistory}
         standards={standards}
+        calculateRecordBonus={calculateRecordBonus}
         theme={theme}
         scopeLabel={chartScopeLabel}
         dateRange={{ start: startDate, end: endDate }}

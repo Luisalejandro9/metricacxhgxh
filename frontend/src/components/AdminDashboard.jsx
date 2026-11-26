@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Database,
@@ -120,6 +120,17 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
   });
   const [isLoadingStandards, setIsLoadingStandards] = useState(true);
+
+  const calculateRecordBonus = useCallback((managedPerHour, resolutionRate) => {
+    const resolveTierBonus = (value, tiers, fallback) => {
+      const numericValue = Number(value);
+      const sorted = [...(Array.isArray(tiers) ? tiers : fallback)].sort((a, b) => Number(b.min) - Number(a.min));
+      const tier = sorted.find(item => numericValue >= Number(item.min));
+      return Number(tier?.bonus ?? sorted[sorted.length - 1]?.bonus ?? -2);
+    };
+    return resolveTierBonus(managedPerHour, standards.gxh_bonus_tiers, DEFAULT_GXH_TIERS)
+      + resolveTierBonus(resolutionRate, standards.resolution_bonus_tiers, DEFAULT_RESOLUTION_TIERS);
+  }, [standards.gxh_bonus_tiers, standards.resolution_bonus_tiers]);
 
   // Form State for configuration editing
   const [formConfig, setFormConfig] = useState(null);
@@ -1063,6 +1074,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             excludedUserIds={excludedUserIds}
             clearExcludedUsers={clearExcludedUsers}
             chartHistory={chartHistory}
+            calculateRecordBonus={calculateRecordBonus}
             theme={theme}
             chartScopeLabel={selectedUserEmail === 'all' ? 'Global' : selectedUserEmail}
           />
