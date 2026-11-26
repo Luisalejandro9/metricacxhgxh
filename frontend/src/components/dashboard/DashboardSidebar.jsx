@@ -10,6 +10,7 @@ import {
   Check,
   RotateCcw,
   Zap,
+  ArrowLeftRight,
   Sun,
   Moon
 } from 'lucide-react';
@@ -42,6 +43,9 @@ function DashboardSidebar({
   onSubtractManaged,
   techniciansCount,
   setTechniciansCount,
+  transferredCount,
+  onAddTransferred,
+  onSubtractTransferred,
   standards,
   resetAll,
   handleLogout,
@@ -112,7 +116,7 @@ function DashboardSidebar({
           <button className="btn btn-subtract" onClick={() => closedCount > 0 && setClosedCount(c => c - 1)} disabled={!isTimerRunning || closedCount === 0}>
             <Minus size={14} strokeWidth={2} />
           </button>
-          <button className="btn btn-action" onClick={() => setClosedCount(c => c + 1)} disabled={!isTimerRunning || closedCount >= managedCount}>
+          <button className="btn btn-action" onClick={() => setClosedCount(c => c + 1)} disabled={!isTimerRunning || closedCount >= managedCount - transferredCount}>
             <span className="btn-label">CASO CERRADO</span>
             <span className="btn-icon"><Check size={14} strokeWidth={2.5} /></span>
           </button>
@@ -135,6 +139,16 @@ function DashboardSidebar({
           <button className="btn btn-action" onClick={() => techniciansCount < managedCount && setTechniciansCount(t => t + 1)} disabled={!isTimerRunning || techniciansCount >= managedCount}>
             <span className="btn-label">TCO ENVIADO</span>
             <span className="btn-icon"><Zap size={14} strokeWidth={2} /></span>
+          </button>
+        </div>
+
+        <div className="action-row">
+          <button className="btn btn-subtract" onClick={onSubtractTransferred} disabled={!isTimerRunning || transferredCount === 0}>
+            <Minus size={14} strokeWidth={2} />
+          </button>
+          <button className="btn btn-action" onClick={onAddTransferred} disabled={!isTimerRunning || transferredCount >= managedCount - closedCount}>
+            <span className="btn-label">CASO TRANSFERIDO</span>
+            <span className="btn-icon"><ArrowLeftRight size={14} strokeWidth={2} /></span>
           </button>
         </div>
 

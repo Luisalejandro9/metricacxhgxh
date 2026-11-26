@@ -65,6 +65,7 @@ function HistoryTables({
                   <th>Cerr.</th>
                   <th>Dif. Cierre</th>
                   <th>TCO</th>
+                  <th>Transf.</th>
                   <th>Cierre</th>
                   <th>G/h</th>
                   <th>TMO Gest.</th>
@@ -81,6 +82,7 @@ function HistoryTables({
                       {item.closingDiff > 0 ? `+${item.closingDiff}` : item.closingDiff}
                     </td>
                     <td>{item.technicians_sent}</td>
+                    <td>{item.cases_transferred || 0}</td>
                     <td>{item.efficiency}%</td>
                     <td>{item.cases_per_hour}</td>
                     <td>
@@ -123,6 +125,7 @@ function HistoryTables({
                   <th>Fecha</th>
                   <th>Acum. Casos</th>
                   <th>Acum. Cierre</th>
+                  <th>Acum. Transf.</th>
                   <th>Acum. Reso</th>
                   <th>Acum. GxH</th>
                   <th>Dif-cierre Acum</th>
@@ -139,6 +142,7 @@ function HistoryTables({
                     <td className={getStatusClass(item.accumCloseRate, standards.CLOSED_GREEN, standards.CLOSED_YELLOW)} style={{ fontWeight: 'bold' }}>
                       {item.accumCloseRate}%
                     </td>
+                    <td style={{ fontWeight: '700' }}>{item.accumTransferred || 0}</td>
                     <td className={getStatusClass(item.accumResoRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)} style={{ fontWeight: 'bold' }}>
                       {item.accumResoRate}%
                     </td>

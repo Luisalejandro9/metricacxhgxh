@@ -184,6 +184,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const [closedCount, setClosedCount] = useState(0);
   const [managedCount, setManagedCount] = useState(0);
   const [techniciansCount, setTechniciansCount] = useState(0);
+  const [transferredCount, setTransferredCount] = useState(0);
 
   // History State
   const [history, setHistory] = useState([]);
@@ -337,10 +338,11 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
     if (savedCounts) {
       try {
-        const { closed, managed, technicians } = JSON.parse(savedCounts);
+        const { closed, managed, technicians, transferred = 0 } = JSON.parse(savedCounts);
         setClosedCount(closed || 0);
         setManagedCount(managed || 0);
         setTechniciansCount(technicians || 0);
+        setTransferredCount(transferred || 0);
       } catch (e) {
         console.error('Error loading saved counts', e);
       }
@@ -367,10 +369,11 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     const counts = {
       closed: closedCount,
       managed: managedCount,
-      technicians: techniciansCount
+      technicians: techniciansCount,
+      transferred: transferredCount
     };
     localStorage.setItem(`gxh_counts_${dateStr}`, JSON.stringify(counts));
-  }, [closedCount, managedCount, techniciansCount]);
+  }, [closedCount, managedCount, techniciansCount, transferredCount]);
 
   // --- Intelligent Auto-Save (Logic) ---
   useEffect(() => {
@@ -385,7 +388,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [closedCount, managedCount, techniciansCount]);
+  }, [closedCount, managedCount, techniciansCount, transferredCount]);
 
   const historyWithAccum = useMemo(() => {
     const monthFiltered = history.filter(item => item.date.startsWith(searchMonth));
@@ -394,6 +397,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     let runningManaged = 0;
     let runningClosed = 0;
     let runningTechnicians = 0;
+    let runningTransferred = 0;
     let runningSeconds = 0;
 
     const withAccum = sorted.map(item => {
@@ -403,6 +407,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       runningManaged += item.cases_managed || 0;
       runningClosed += item.cases_closed || 0;
       runningTechnicians += item.technicians_sent || 0;
+      runningTransferred += item.cases_transferred || 0;
       runningSeconds += rowSeconds;
 
       const totalHours = runningSeconds / 3600;
@@ -426,6 +431,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         accumManaged: runningManaged,
         accumClosed: runningClosed,
         accumTechnicians: runningTechnicians,
+        accumTransferred: runningTransferred,
         accumSeconds: runningSeconds,
         accumCloseRate,
         accumResoRate,
@@ -502,6 +508,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         setClosedCount(0);
         setManagedCount(0);
         setTechniciansCount(0);
+        setTransferredCount(0);
         setTimerSeconds(0);
         setIsTimerRunning(false);
         startTimeRef.current = null;
@@ -519,8 +526,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   // --- Manual Edit Handlers ---
   const saveManualClosed = () => {
     const val = parseInt(manualCountInput) || 0;
-    if (val > managedCount) {
-      showMessage('error', 'Cerrados no puede ser mayor que gestionados');
+    if (val > managedCount - transferredCount) {
+      showMessage('error', 'Cerrados y transferidos no pueden superar los casos gestionados');
       return;
     }
     setClosedCount(val);
@@ -529,8 +536,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
   const saveManualManaged = () => {
     const val = parseInt(manualCountInput) || 0;
-    if (val < closedCount) {
-      showMessage('error', 'Gestionados no puede ser menor que cerrados');
+    if (val < closedCount + transferredCount) {
+      showMessage('error', 'Gestionados no puede ser menor que la suma de cerrados y transferidos');
       return;
     }
     setManagedCount(val);
@@ -599,6 +606,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       tmo_case: stats.tmoCase,
       tmo_managed: stats.tmoManaged,
       technicians_sent: techniciansCount,
+      cases_transferred: transferredCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
 
@@ -657,6 +665,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       tmo_case: stats.tmoCase,
       tmo_managed: stats.tmoManaged,
       technicians_sent: techniciansCount,
+      cases_transferred: transferredCount,
       resolution_rate: parseFloat(stats.resolutionRate)
     };
 
@@ -733,10 +742,13 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   };
 
   const subtractManaged = () => {
-    if (managedCount > closedCount) {
+    if (managedCount > closedCount + transferredCount) {
       setManagedCount(prev => prev - 1);
     }
   };
+
+  const addTransferred = () => setTransferredCount(prev => prev < managedCount - closedCount ? prev + 1 : prev);
+  const subtractTransferred = () => setTransferredCount(prev => Math.max(0, prev - 1));
 
   return (
     <div className="app-layout">
@@ -754,6 +766,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         onSubtractManaged={subtractManaged}
         techniciansCount={techniciansCount}
         setTechniciansCount={setTechniciansCount}
+        transferredCount={transferredCount}
+        onAddTransferred={addTransferred}
+        onSubtractTransferred={subtractTransferred}
         standards={standards}
         accumulatedBonusTotal={accumulatedBonusTotal}
         stats={stats}
@@ -828,6 +843,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           closedCount={closedCount}
           managedCount={managedCount}
           techniciansCount={techniciansCount}
+          transferredCount={transferredCount}
           manualCountInput={manualCountInput}
           setManualCountInput={setManualCountInput}
           saveManualClosed={saveManualClosed}
@@ -921,6 +937,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
             tmo_case: tmoCase,
             tmo_managed: tmoManaged,
             technicians_sent: formData.technicians,
+            cases_transferred: Math.min(formData.transferred, Math.max(0, formData.managed - formData.closed)),
             resolution_rate: parseFloat(resolutionRate.toFixed(2))
           };
 
