@@ -465,6 +465,9 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       if (totalManaged <= 0) return null;
 
       const resolutionRate = ((totalManaged - totalTechnicians) / totalManaged) * 100;
+      // Margen de técnicos respecto al objetivo global de resolución configurado.
+      // Positivo: puede absorber más envíos; negativo: está por debajo del objetivo.
+      const resolutionDifference = (totalManaged - totalTechnicians) - Math.ceil(totalManaged * (standards.RESOLUTION_GREEN / 100));
       const tiers = [...(Array.isArray(standards.resolution_bonus_tiers) ? standards.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS)]
         .sort((a, b) => Number(b.min) - Number(a.min));
       const resolutionTier = tiers.find(tier => resolutionRate >= Number(tier.min));
@@ -476,12 +479,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         totalManaged,
         totalTechnicians,
         resolutionRate,
+        resolutionDifference,
         resolutionPenalty
       };
     }).filter(Boolean);
 
     return rows.sort((a, b) =>
-      b.resolutionRate - a.resolutionRate
+      b.resolutionDifference - a.resolutionDifference
+      || b.resolutionRate - a.resolutionRate
       || a.totalTechnicians - b.totalTechnicians
       || a.email.localeCompare(b.email)
     );
@@ -1106,7 +1111,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
               <div>
                 <h2 id="technician-ranking-title" style={{ margin: 0, fontSize: 17 }}>Ranking de técnicos enviados y resolución</h2>
                 <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: 11 }}>
-                  Período: {startDate || 'Inicio'} al {endDate || 'Actualidad'} · Ordenado por mayor resolución y menor cantidad de técnicos
+                  Período: {startDate || 'Inicio'} al {endDate || 'Actualidad'} · Ordenado por mayor margen disponible frente al objetivo de resolución
                 </p>
               </div>
               <button type="button" className="btn btn-secondary" onClick={() => setShowTechnicianRanking(false)} aria-label="Cerrar ranking" style={{ padding: 7 }}>
@@ -1115,13 +1120,14 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             </header>
 
             <div style={{ overflow: 'auto', padding: 16 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 520 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
                 <thead>
                   <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>
                     <th style={{ padding: '10px 8px', width: 48 }}>#</th>
                     <th style={{ padding: '10px 8px' }}>Técnico</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Resolución</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Técnicos enviados</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Diferencia a favor / en contra</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Bonificación</th>
                   </tr>
                 </thead>
@@ -1138,6 +1144,9 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                         <td style={{ padding: '11px 8px', fontWeight: 600 }}>{item.email}</td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>{item.resolutionRate.toFixed(1)}%</td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{item.totalTechnicians}</td>
+                        <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: item.resolutionDifference > 0 ? 'var(--accent-success)' : item.resolutionDifference < 0 ? 'var(--accent-error)' : 'var(--text-muted)' }}>
+                          {item.resolutionDifference > 0 ? `+${item.resolutionDifference} a favor` : item.resolutionDifference < 0 ? `${item.resolutionDifference} en contra` : '0 · justo'}
+                        </td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: penalized ? 'var(--accent-error)' : 'var(--text-muted)' }}>
                           {item.resolutionPenalty > 0 ? '+' : ''}{item.resolutionPenalty.toFixed(1)}
                         </td>
@@ -1145,7 +1154,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                     );
                   })}
                   {technicianRanking.length === 0 && (
-                    <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No hay métricas registradas en el período seleccionado.</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No hay métricas registradas en el período seleccionado.</td></tr>
                   )}
                 </tbody>
               </table>
