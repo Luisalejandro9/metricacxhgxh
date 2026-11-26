@@ -193,12 +193,12 @@ function DashboardStats({
               )}
             </div>
           </div>
-          <div className={`status-indicator ${parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? 'standard-meets' :
-            parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? 'standard-warning' : 'standard-below'
+          <div className={`status-indicator ${parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? 'standard-meets' :
+            parseFloat(stats.closeRate) >= standards.CLOSED_YELLOW ? 'standard-warning' : 'standard-below'
             }`}>
-            {parseFloat(stats.closedPerHour) >= standards.GXH_GREEN ? (
+            {parseFloat(stats.closeRate) >= standards.CLOSED_GREEN ? (
               <><Check size={12} strokeWidth={2.5} style={{ marginRight: 4 }} /> CUMPLE CON LA MÉTRICA</>
-            ) : parseFloat(stats.closedPerHour) >= standards.GXH_YELLOW ? (
+            ) : parseFloat(stats.closeRate) >= standards.CLOSED_YELLOW ? (
               <><AlertTriangle size={12} strokeWidth={2} style={{ marginRight: 4 }} /> MÉTRICA EN RIESGO</>
             ) : (
               <><X size={12} strokeWidth={2.5} style={{ marginRight: 4 }} /> NO CUMPLE LA MÉTRICA</>
