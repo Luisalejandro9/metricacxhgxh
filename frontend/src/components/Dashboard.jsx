@@ -865,7 +865,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           handleDeleteRecord={handleDeleteRecord}
           getStatusClass={getStatusClass}
           standards={standards}
-          latestRecordDate={historyWithAccum[historyWithAccum.length - 1]?.date || null}
+          latestRecordDate={history.reduce((latest, item) => !latest || item.date > latest ? item.date : latest, null)}
           currentDate={new Date().toLocaleDateString('en-CA')}
         />
 
