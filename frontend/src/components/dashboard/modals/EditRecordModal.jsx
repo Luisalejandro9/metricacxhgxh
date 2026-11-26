@@ -9,7 +9,8 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
     s: 0,
     closed: 0,
     managed: 0,
-    technicians: 0
+    technicians: 0,
+    transferred: 0
   });
 
   useEffect(() => {
@@ -20,7 +21,8 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
         h, m, s,
         closed: editingRecord.cases_closed,
         managed: editingRecord.cases_managed,
-        technicians: editingRecord.technicians_sent
+        technicians: editingRecord.technicians_sent,
+        transferred: editingRecord.cases_transferred || 0
       });
     }
   }, [show, editingRecord]);
@@ -59,6 +61,11 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
             <label>TCO Enviados</label>
             <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
               value={formData.technicians} onChange={e => setFormData({ ...formData, technicians: parseInt(e.target.value) || 0 })} />
+          </div>
+          <div className="input-group">
+            <label>Casos Transferidos</label>
+            <input type="number" min="0" max={formData.managed} className="filter-input" style={{ width: '100%', marginTop: '5px' }}
+              value={formData.transferred} onChange={e => setFormData({ ...formData, transferred: Math.min(formData.managed, Math.max(0, parseInt(e.target.value) || 0)) })} />
           </div>
         </div>
 
