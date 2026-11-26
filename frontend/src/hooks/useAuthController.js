@@ -226,9 +226,9 @@ export function useAuthController() {
           } else {
             console.warn('Acceso denegado en cambio de estado: Email no corporativo.');
             setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
-            await supabase.auth.signOut();
             setUser(null);
             setProfile(null);
+            setTimeout(() => { void supabase.auth.signOut(); }, 0);
           }
         } else {
           // If there was no active user anyway, just clear and return
