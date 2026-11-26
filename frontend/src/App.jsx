@@ -113,9 +113,7 @@ function App() {
         <Route
           path="/status"
           element={
-            user && profile?.role === 'admin' && profile?.is_enabled === true
-              ? <TechStatusDashboard onExit={() => { window.location.href = '/'; }} />
-              : <Navigate to="/" replace />
+            <TechStatusDashboard onExit={() => { window.location.href = user ? '/dashboard' : '/'; }} />
           }
         />
 
