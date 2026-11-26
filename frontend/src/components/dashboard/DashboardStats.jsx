@@ -1,4 +1,5 @@
 import React from 'react';
+import ResolutionDifferenceBreakdown from '../ResolutionDifferenceBreakdown';
 import { SquarePen, Save, Zap, Check, AlertTriangle, X, Download } from 'lucide-react';
 
 const formatTmoMin = (seconds) => {
@@ -364,18 +365,8 @@ function DashboardStats({
           })()}
         </div>
         <div className="metric-card">
-          <span className="metric-label">Dif. Reso ({standards.RESOLUTION_GREEN}%)</span>
-          <div className={`metric-value medium ${stats.resoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
-            {stats.resoDiff > 0 ? `+${stats.resoDiff}` : stats.resoDiff}
-          </div>
-          {(() => {
-            const needed = getCasesNeededToFixReso(managedCount, techniciansCount, standards.RESOLUTION_GREEN);
-            return (
-              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: stats.resoDiff >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {stats.resoDiff < 0 ? `Para 0: Resuelve ${needed} caso${needed > 1 ? 's' : ''} sin técnico` : '✓ En objetivo (0 pend.)'}
-              </div>
-            );
-          })()}
+          <span className="metric-label">Margen por bonificación de resolución</span>
+          <ResolutionDifferenceBreakdown managed={managedCount} technicians={techniciansCount} tiers={standards.resolution_bonus_tiers} />
         </div>
         <div className="metric-card">
           <span className="metric-label">TMO GxH</span>
@@ -428,19 +419,8 @@ function DashboardStats({
           })()}
         </div>
         <div className="metric-card accum-card">
-          <span className="metric-label accum-label">Dif. Reso Acum</span>
-          <div className={`metric-value medium ${currentAccum && currentAccum.accumResoDiff >= 0 ? 'stat-meets-standard' : 'stat-below-standard'}`}>
-            {currentAccum ? (currentAccum.accumResoDiff > 0 ? `+${currentAccum.accumResoDiff}` : currentAccum.accumResoDiff) : 0}
-          </div>
-          {(() => {
-            const val = currentAccum ? currentAccum.accumResoDiff : 0;
-            const needed = currentAccum ? getCasesNeededToFixReso(currentAccum.accumManaged, currentAccum.accumTechnicians, standards.RESOLUTION_GREEN) : 0;
-            return (
-              <div style={{ fontSize: '11px', marginTop: '6px', fontWeight: '700', color: val >= 0 ? '#22c55e' : 'var(--accent-warning)' }}>
-                {val < 0 ? `Para 0: Resuelve ${needed} caso${needed > 1 ? 's' : ''} sin técnico` : '✓ En objetivo (0 pend.)'}
-              </div>
-            );
-          })()}
+          <span className="metric-label accum-label">Margen por bonificación de resolución · Acum.</span>
+          <ResolutionDifferenceBreakdown managed={currentAccum?.accumManaged || 0} technicians={currentAccum?.accumTechnicians || 0} tiers={standards.resolution_bonus_tiers} compact />
         </div>
       </div>
 

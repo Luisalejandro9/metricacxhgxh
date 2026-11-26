@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit3, Trash2 } from 'lucide-react';
+import ResolutionDifferenceBreakdown from '../ResolutionDifferenceBreakdown';
 
 const formatTmoMin = (seconds) => {
   if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
@@ -148,9 +149,7 @@ function HistoryTables({
                     <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                       {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
                     </td>
-                    <td style={{ fontWeight: '700', color: item.accumResoDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
-                      {item.accumResoDiff > 0 ? `+${item.accumResoDiff}` : item.accumResoDiff}
-                    </td>
+                    <td><ResolutionDifferenceBreakdown managed={item.accumManaged} technicians={item.accumTechnicians} tiers={standards.resolution_bonus_tiers} compact /></td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                         <span style={{ fontWeight: '600' }}>{formatTmoMin(item.accumTmoManaged)}</span>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import ResolutionDifferenceBreakdown from './ResolutionDifferenceBreakdown';
 
 // Subcomponents
 import ConfigPanel from './admin/ConfigPanel';
@@ -45,11 +46,11 @@ const DEFAULT_GXH_TIERS = [
 ];
 
 const DEFAULT_RESOLUTION_TIERS = [
-  { min: 84.00, bonus: 3.0 },
-  { min: 83.00, bonus: 2.0 },
-  { min: 82.00, bonus: 1.0 },
-  { min: 81.00, bonus: 0.0 },
-  { min: 80.00, bonus: -1.0 },
+  { min: 84.50, bonus: 3.0 },
+  { min: 83.50, bonus: 2.0 },
+  { min: 82.40, bonus: 1.0 },
+  { min: 81.30, bonus: 0.0 },
+  { min: 80.20, bonus: -1.0 }
   { min: 0.00, bonus: -2.0 }
 ];
 
@@ -467,7 +468,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       const resolutionRate = ((totalManaged - totalTechnicians) / totalManaged) * 100;
       // Margen de técnicos respecto al objetivo global de resolución configurado.
       // Positivo: puede absorber más envíos; negativo: está por debajo del objetivo.
-      const resolutionDifference = (totalManaged - totalTechnicians) - Math.ceil(totalManaged * (standards.RESOLUTION_GREEN / 100));
+      const zeroResolutionTier = (standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0);
+      const resolutionDifference = (totalManaged - totalTechnicians) - Math.ceil(totalManaged * (Number(zeroResolutionTier?.min ?? standards.RESOLUTION_GREEN) / 100));
       const tiers = [...(Array.isArray(standards.resolution_bonus_tiers) ? standards.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS)]
         .sort((a, b) => Number(b.min) - Number(a.min));
       const resolutionTier = tiers.find(tier => resolutionRate >= Number(tier.min));
@@ -516,7 +518,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         return s + (h * 3600 + min * 60 + sec);
       }, 0);
       const gxhDiff = totalSeconds > 0 ? (totalManaged - ((totalSeconds / 3600) * standards.GXH_GREEN)) : 0;
-      const resoDiff = totalManaged > 0 ? ((totalManaged - totalTechs) - Math.ceil(totalManaged * (standards.RESOLUTION_GREEN / 100))) : 0;
+      const zeroResolutionTier = (standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0);
+      const resoDiff = totalManaged > 0 ? ((totalManaged - totalTechs) - Math.ceil(totalManaged * (Number(zeroResolutionTier?.min ?? standards.RESOLUTION_GREEN) / 100))) : 0;
 
       return {
         ...u,
@@ -1127,7 +1130,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                     <th style={{ padding: '10px 8px' }}>Técnico</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Resolución</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Técnicos enviados</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Diferencia a favor / en contra</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Margen para cada bonificación</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Bonificación</th>
                   </tr>
                 </thead>
@@ -1144,8 +1147,8 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                         <td style={{ padding: '11px 8px', fontWeight: 600 }}>{item.email}</td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>{item.resolutionRate.toFixed(1)}%</td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{item.totalTechnicians}</td>
-                        <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: item.resolutionDifference > 0 ? 'var(--accent-success)' : item.resolutionDifference < 0 ? 'var(--accent-error)' : 'var(--text-muted)' }}>
-                          {item.resolutionDifference > 0 ? `+${item.resolutionDifference} a favor` : item.resolutionDifference < 0 ? `${item.resolutionDifference} en contra` : '0 · justo'}
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <ResolutionDifferenceBreakdown managed={item.totalManaged} technicians={item.totalTechnicians} tiers={standards.resolution_bonus_tiers} compact />
                         </td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: penalized ? 'var(--accent-error)' : 'var(--text-muted)' }}>
                           {item.resolutionPenalty > 0 ? '+' : ''}{item.resolutionPenalty.toFixed(1)}
