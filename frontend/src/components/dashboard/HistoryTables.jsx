@@ -19,7 +19,9 @@ function HistoryTables({
   handleOpenEditModal,
   handleDeleteRecord,
   getStatusClass,
-  standards
+  standards,
+  latestRecordDate,
+  currentDate
 }) {
   return (
     <div className="history-section">
@@ -149,7 +151,7 @@ function HistoryTables({
                     <td style={{ fontWeight: '700', color: parseFloat(item.accumGxhDiff) >= 0 ? 'var(--accent-success)' : 'var(--accent-error)' }}>
                       {parseFloat(item.accumGxhDiff) > 0 ? `+${item.accumGxhDiff}` : item.accumGxhDiff}
                     </td>
-                    <td><ResolutionDifferenceBreakdown managed={item.accumManaged} technicians={item.accumTechnicians} tiers={standards.resolution_bonus_tiers} compact /></td>
+                    <td><ResolutionDifferenceBreakdown managed={item.accumManaged} technicians={item.accumTechnicians} tiers={standards.resolution_bonus_tiers} compact interactive={item.date === latestRecordDate || item.date === currentDate} /></td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                         <span style={{ fontWeight: '600' }}>{formatTmoMin(item.accumTmoManaged)}</span>
