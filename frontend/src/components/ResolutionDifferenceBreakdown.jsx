@@ -61,7 +61,7 @@ export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT
     targetBonus: progressTarget ? Number(progressTarget.bonus) : null,
     difference,
     label: progressTarget
-      ? `Faltan ${Math.max(0, Math.abs(Math.min(0, difference)))} cierres sin técnico para llegar al ${Number(progressTarget.bonus).toFixed(0)}%`
+      ? `${Math.max(0, Math.abs(Math.min(0, difference)))} cierre${Math.max(0, Math.abs(Math.min(0, difference))) === 1 ? '' : 's'} s/técnico → ${Number(progressTarget.bonus).toFixed(0)}%`
       : `Sobrante ${Math.max(0, difference)}`
   };
 };
@@ -81,7 +81,7 @@ function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = 
     <span
       title={isSurplus
         ? 'Techo alcanzado: bonificación de resolución del 3%'
-        : `Próximo objetivo: ${progress.targetBonus}% de bonificación de resolución`}
+        : `Faltan ${Math.max(0, Math.abs(Math.min(0, progress.difference)))} cierres sin técnico para llegar al ${progress.targetBonus}% de bonificación de resolución`}
       style={{
         display: 'inline-block',
         padding: compact ? '6px 8px' : '8px 10px',
