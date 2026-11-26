@@ -148,6 +148,7 @@ function DashboardSidebar({
           </button>
           <button className="btn btn-action" onClick={onAddTransferred} disabled={!isTimerRunning || transferredCount >= managedCount - closedCount}>
             <span className="btn-label">CASO TRANSFERIDO</span>
+            <span className="btn-count" style={{ minWidth: '22px', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{transferredCount}</span>
             <span className="btn-icon"><ArrowLeftRight size={14} strokeWidth={2} /></span>
           </button>
         </div>
