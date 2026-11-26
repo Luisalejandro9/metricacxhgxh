@@ -843,6 +843,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           closedCount={closedCount}
           managedCount={managedCount}
           techniciansCount={techniciansCount}
+          transferredCount={transferredCount}
           manualCountInput={manualCountInput}
           setManualCountInput={setManualCountInput}
           saveManualClosed={saveManualClosed}
