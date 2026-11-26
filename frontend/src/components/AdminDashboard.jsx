@@ -50,7 +50,7 @@ const DEFAULT_RESOLUTION_TIERS = [
   { min: 83.50, bonus: 2.0 },
   { min: 82.40, bonus: 1.0 },
   { min: 81.30, bonus: 0.0 },
-  { min: 80.20, bonus: -1.0 }
+  { min: 80.20, bonus: -1.0 },
   { min: 0.00, bonus: -2.0 }
 ];
 
@@ -547,7 +547,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             ...row,
             accumClosingDiff: runManaged > 0 ? (runClosed - Math.ceil(runManaged * (standards.CLOSED_GREEN / 100))) : 0,
             accumGxhDiff: runSeconds > 0 ? (runManaged - ((runSeconds / 3600) * standards.GXH_GREEN)).toFixed(1) : "0.0",
-            accumResoDiff: runManaged > 0 ? ((runManaged - runTechs) - Math.ceil(runManaged * (standards.RESOLUTION_GREEN / 100))) : 0
+            accumResoDiff: runManaged > 0 ? ((runManaged - runTechs) - Math.ceil(runManaged * (Number((standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0)?.min ?? standards.RESOLUTION_GREEN) / 100))) : 0
           };
         })
       };
