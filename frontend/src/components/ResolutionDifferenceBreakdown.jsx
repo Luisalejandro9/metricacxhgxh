@@ -61,7 +61,7 @@ export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT
     targetBonus: progressTarget ? Number(progressTarget.bonus) : null,
     difference,
     label: progressTarget
-      ? `Faltan ${Math.max(0, Math.abs(Math.min(0, difference)))} para ${Number(progressTarget.bonus).toFixed(0)}%`
+      ? `Faltan ${Math.max(0, Math.abs(Math.min(0, difference)))} cierres sin técnico para llegar al ${Number(progressTarget.bonus).toFixed(0)}%`
       : `Sobrante ${Math.max(0, difference)}`
   };
 };
