@@ -26,7 +26,6 @@ import ConfigPanel from './admin/ConfigPanel';
 import MonitorPanel from './admin/MonitorPanel';
 import UserDetailsModal from './admin/modals/UserDetailsModal';
 import DeleteConfirmModal from './admin/modals/DeleteConfirmModal';
-import HistoricoConfig from './historico/HistoricoConfig';
 
 const SUPER_ADMIN_EMAILS = new Set([
   'luis.acosta@konecta.com',
@@ -56,55 +55,8 @@ const DEFAULT_RESOLUTION_TIERS = [
 function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
-  // Navigation Tab State ('monitor', 'config', 'pulso_config')
+  // Navigation Tab State
   const [activeTab, setActiveTab] = useState('monitor');
-
-  // Pulso Config State (Admin Only)
-  const [pulsoConfig, setPulsoConfig] = useState(() => {
-    try {
-      return {
-        supabaseUrl: localStorage.getItem('pulso_supabase_url') || 'https://oyhlhdlubralrgjbgtqw.supabase.co',
-        anonKey: localStorage.getItem('pulso_anon_key') || 'sb_publishable_8493GeAz4c4Iw_4byE16Mg_RHAS4jtw',
-        ingestToken: localStorage.getItem('pulso_ingest_token') || '',
-        viewToken: localStorage.getItem('pulso_view_token') || '',
-        pulsoEmail: localStorage.getItem('pulso_email') || 'luis.acosta@konecta.com'
-      };
-    } catch {
-      return {
-        supabaseUrl: 'https://oyhlhdlubralrgjbgtqw.supabase.co',
-        anonKey: 'sb_publishable_8493GeAz4c4Iw_4byE16Mg_RHAS4jtw',
-        ingestToken: '',
-        viewToken: '',
-        pulsoEmail: 'luis.acosta@konecta.com'
-      };
-    }
-  });
-
-  const handleSavePulsoConfig = (newConfig) => {
-    setPulsoConfig(newConfig);
-    try {
-      localStorage.setItem('pulso_supabase_url', newConfig.supabaseUrl);
-      localStorage.setItem('pulso_anon_key', newConfig.anonKey);
-      localStorage.setItem('pulso_ingest_token', newConfig.ingestToken);
-      localStorage.setItem('pulso_view_token', newConfig.viewToken);
-      localStorage.setItem('pulso_email', newConfig.pulsoEmail);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleIngestPulsoData = async ({ info, produ, rel }) => {
-    const token = pulsoConfig.ingestToken?.trim();
-    if (!token) throw new Error('Falta el Token de Carga.');
-    const { data, error } = await supabase.rpc('ingest', {
-      p_token: token,
-      p_info: info,
-      p_produ: produ,
-      p_rel: rel
-    });
-    if (error) throw error;
-    return data || 'guardado';
-  };
 
   // Dynamic Standards State
   const [standards, setStandards] = useState({
@@ -812,18 +764,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
           <button
             className="btn btn-secondary"
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="Acceso temporalmente suspendido"
-            style={{ width: '100%', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold', opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)' }}
-          >
-            <Database size={13} style={{ color: 'var(--primary-light)' }} /> Histórico Pulso (CxH / GxH)
-            <span style={{ fontSize: '9px', marginLeft: '4px' }}>SUSPENDIDO</span>
-          </button>
-
-          <button
-            className="btn btn-secondary"
             style={{ width: '100%', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}
             onClick={() => navigate('/status')}
           >
@@ -847,17 +787,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 <Settings size={13} /> Configuración
               </button>
             </div>
-            <button
-              className="btn btn-secondary"
-              type="button"
-              disabled
-              aria-disabled="true"
-              title="Acceso temporalmente suspendido"
-              style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)' }}
-            >
-              <UploadCloud size={13} /> Carga y Configuración Pulso
-              <span style={{ fontSize: '9px', marginLeft: '4px' }}>SUSPENDIDO</span>
-            </button>
+>
           </div>
 
           <div>
@@ -1043,14 +973,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
             addTier={addTier}
             deleteTier={deleteTier}
           />
-        ) : activeTab === 'pulso_config' ? (
-          <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-            <HistoricoConfig
-              config={pulsoConfig}
-              onSaveConfig={handleSavePulsoConfig}
-              onIngestData={handleIngestPulsoData}
-            />
-          </div>
         ) : (
           <MonitorPanel
             users={users}
