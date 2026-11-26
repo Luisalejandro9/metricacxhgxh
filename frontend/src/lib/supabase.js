@@ -40,45 +40,6 @@ export function getSafeMediaUrl(url) {
 }
 
 /**
- * Bypass de Bloqueo Corporativo (Error 404 de Konecta / Enlace Supabase).
- * Toma el enlace o código largo que queda atrapado en el navegador tras intentar el OAuth
- * (ej: https://oyhlhdlubralrgjbgtqw.supabase.co/auth/v1/callback?code=... o solo el código)
- * y lo redirige a través de la infraestructura cloud de Netlify / Vercel para completar el login.
- */
-export function resolveBypassUrl(input) {
-  if (!input) return false;
-  const trimmed = input.trim();
-  const origin = window.location.origin;
-
-  // Si pegaron la URL completa de Supabase
-  if (trimmed.includes('supabase.co')) {
-    try {
-      const parsed = new URL(trimmed);
-      // Redirigir a través del proxy inverso local /supabase o la función /api/auth-callback
-      const target = `${origin}/supabase${parsed.pathname}${parsed.search}`;
-      window.location.href = target;
-      return true;
-    } catch {
-      // Fallback simple por reemplazo de cadena
-      const replaced = trimmed.replace('https://oyhlhdlubralrgjbgtqw.supabase.co', `${origin}/supabase`);
-      window.location.href = replaced;
-      return true;
-    }
-  }
-
-  // Si pegaron una URL relativa o con query params (ej: /auth/v1/callback?code=... o ?code=...)
-  if (trimmed.includes('callback') || trimmed.includes('code=')) {
-    const cleanParams = trimmed.startsWith('?') ? trimmed.slice(1) : trimmed.includes('?') ? trimmed.split('?')[1] : trimmed;
-    window.location.href = `${origin}/supabase/auth/v1/callback?${cleanParams}`;
-    return true;
-  }
-
-  // Si pegaron directamente el código de autorización
-  window.location.href = `${origin}/supabase/auth/v1/callback?code=${encodeURIComponent(trimmed)}`;
-  return true;
-}
-
-/**
  * Fetch con tolerancia a fallos:
  * 1. Intenta conectarse a través del proxy inverso local (/supabase/...).
  * 2. Si el proxy llegase a no responder (o en un entorno sin proxy),
