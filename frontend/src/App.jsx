@@ -64,20 +64,27 @@ function App() {
         const error = result.error;
         console.warn('Profile sync warning or error:', error);
         
-        // If it's a network/fetch error or timeout, do NOT set profile to null
-        const isNetworkErr = error?.message?.toLowerCase().includes('fetch') || 
+        // Solo tratar como perfil ausente el caso explícito de PostgREST (PGRST116).
+        // Cualquier otro error (permisos, red, timeout o fallo temporal) no debe
+        // convertirse en profile=null porque eso puede disparar un cierre de sesión.
+        const isNetworkErr = error?.message?.toLowerCase().includes('fetch') ||
                              error?.message?.toLowerCase().includes('network') ||
                              error?.message?.toLowerCase().includes('timeout') ||
                              error?.status === 0;
-        
+
         if (isNetworkErr) {
           setNetworkError(true);
-          console.warn('Network error during profile sync. Retaining existing profile state.');
+          console.warn('Error de red al sincronizar perfil. Se conserva el estado actual.');
           return;
         }
 
-        // PROFILE IS MISSING - Check if there is an active session to auto-create
-        console.warn('Perfil no encontrado, intentando auto-crear perfil por defecto...');
+        const profileMissing = error?.code === 'PGRST116' || !result.data;
+        if (!profileMissing) {
+          console.error('Error no transitorio al consultar perfil; no se cerrará la sesión:', error);
+          return;
+        }
+
+        console.warn('Perfil realmente ausente, intentando recuperarlo/crearlo...');
         const { data: newProfile, error: createError } = await supabase
           .rpc('ensure_own_profile');
 
@@ -88,16 +95,13 @@ function App() {
           return;
         }
 
-        console.error('Error al recuperar/crear perfil:', createError);
+        console.error('No se pudo recuperar/crear el perfil. Se mantiene la sesión y se podrá reintentar:', createError);
         const createErrorMessage = createError?.message?.toLowerCase() || '';
-        const isCreateNetworkErr = createErrorMessage.includes('fetch') ||
-                                   createErrorMessage.includes('timeout') ||
-                                   createErrorMessage.includes('network');
-        if (isCreateNetworkErr) {
+        if (createErrorMessage.includes('fetch') || createErrorMessage.includes('timeout') ||
+            createErrorMessage.includes('network') || createError?.status === 0) {
           setNetworkError(true);
-          return;
         }
-        setProfile(null);
+        // No asignar null: un fallo de provisioning nunca equivale a una cuenta deshabilitada.
       }
     } catch (err) {
       console.error('Profile sync error:', err);
@@ -315,7 +319,7 @@ function App() {
   useEffect(() => {
     if (user && profile !== undefined) {
       if (user.isDemo) return; // Skip forced logout checks for local demo sessions
-      if (profile === null || profile.is_enabled === false) {
+      if (profile?.is_enabled === false) {
         console.warn('Perfil deshabilitado o eliminado. Forzando cierre de sesión...');
         supabase.auth.signOut();
       }
