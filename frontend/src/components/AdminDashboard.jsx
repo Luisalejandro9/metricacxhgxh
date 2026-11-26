@@ -15,8 +15,7 @@ import {
   UserX,
   UserCheck,
   BarChart3,
-  Settings,
-  UploadCloud
+  Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
