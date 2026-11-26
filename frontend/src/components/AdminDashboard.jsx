@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
-import ResolutionDifferenceBreakdown from './ResolutionDifferenceBreakdown';
 
 // Subcomponents
 import ConfigPanel from './admin/ConfigPanel';
@@ -466,14 +465,31 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       if (totalManaged <= 0) return null;
 
       const resolutionRate = ((totalManaged - totalTechnicians) / totalManaged) * 100;
-      // Margen de técnicos respecto al objetivo global de resolución configurado.
-      // Positivo: puede absorber más envíos; negativo: está por debajo del objetivo.
-      const zeroResolutionTier = (standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0);
-      const resolutionDifference = (totalManaged - totalTechnicians) - Math.ceil(totalManaged * (Number(zeroResolutionTier?.min ?? standards.RESOLUTION_GREEN) / 100));
       const tiers = [...(Array.isArray(standards.resolution_bonus_tiers) ? standards.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS)]
         .sort((a, b) => Number(b.min) - Number(a.min));
       const resolutionTier = tiers.find(tier => resolutionRate >= Number(tier.min));
       const resolutionPenalty = Number(resolutionTier?.bonus ?? tiers[tiers.length - 1]?.bonus ?? -2);
+
+      // Escalera de progreso: desde 0% hasta +3%. Se muestra el próximo escalón
+      // y, una vez alcanzado +3%, el excedente sobre ese objetivo.
+      const positiveTiers = tiers
+        .filter(tier => Number(tier.bonus) >= 0 && Number(tier.bonus) <= 3)
+        .sort((a, b) => Number(a.bonus) - Number(b.bonus));
+      const resolvedCases = totalManaged - totalTechnicians;
+      const nextTier = positiveTiers.find(tier => Number(tier.bonus) > Math.max(0, resolutionPenalty));
+      const topTier = positiveTiers.reduce((highest, tier) =>
+        !highest || Number(tier.bonus) > Number(highest.bonus) ? tier : highest, null);
+      const progressTarget = resolutionPenalty < 0
+        ? positiveTiers.find(tier => Number(tier.bonus) === 0)
+        : nextTier;
+      const progressDifference = progressTarget
+        ? resolvedCases - Math.ceil(totalManaged * Number(progressTarget.min) / 100)
+        : topTier
+          ? resolvedCases - Math.ceil(totalManaged * Number(topTier.min) / 100)
+          : 0;
+      const progressLabel = progressTarget
+        ? `Faltan ${Math.max(0, Math.abs(Math.min(0, progressDifference)))} para ${Number(progressTarget.bonus).toFixed(0)}%`
+        : `Sobrante ${Math.max(0, progressDifference)}`;
 
       return {
         id: person.id,
@@ -481,15 +497,16 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         totalManaged,
         totalTechnicians,
         resolutionRate,
-        resolutionDifference,
-        resolutionPenalty
+        resolutionPenalty,
+        progressDifference,
+        progressLabel
       };
     }).filter(Boolean);
 
     return rows.sort((a, b) =>
-      b.resolutionDifference - a.resolutionDifference
+      b.resolutionPenalty - a.resolutionPenalty
+      || b.progressDifference - a.progressDifference
       || b.resolutionRate - a.resolutionRate
-      || a.totalTechnicians - b.totalTechnicians
       || a.email.localeCompare(b.email)
     );
   }, [users, dateFilteredMetrics, standards.resolution_bonus_tiers]);
@@ -1114,7 +1131,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
               <div>
                 <h2 id="technician-ranking-title" style={{ margin: 0, fontSize: 17 }}>Ranking de técnicos enviados y resolución</h2>
                 <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: 11 }}>
-                  Período: {startDate || 'Inicio'} al {endDate || 'Actualidad'} · Ordenado por mayor margen disponible frente al objetivo de resolución
+                  Período: {startDate || 'Inicio'} al {endDate || 'Actualidad'} · Ordenado por bonificación de resolución, de mayor a menor
                 </p>
               </div>
               <button type="button" className="btn btn-secondary" onClick={() => setShowTechnicianRanking(false)} aria-label="Cerrar ranking" style={{ padding: 7 }}>
@@ -1130,7 +1147,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                     <th style={{ padding: '10px 8px' }}>Técnico</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Resolución</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Técnicos enviados</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Margen para cada bonificación</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Progreso al siguiente nivel</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Bonificación</th>
                   </tr>
                 </thead>
@@ -1148,7 +1165,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>{item.resolutionRate.toFixed(1)}%</td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{item.totalTechnicians}</td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <ResolutionDifferenceBreakdown managed={item.totalManaged} technicians={item.totalTechnicians} tiers={standards.resolution_bonus_tiers} compact />
+                          <span style={{ display: 'inline-block', padding: '6px 9px', border: '1px solid var(--border-light)', borderRadius: 7, color: item.progressLabel.startsWith('Sobrante') ? 'var(--accent-success)' : 'var(--text-muted)', fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{item.progressLabel}</span>
                         </td>
                         <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: penalized ? 'var(--accent-error)' : 'var(--text-muted)' }}>
                           {item.resolutionPenalty > 0 ? '+' : ''}{item.resolutionPenalty.toFixed(1)}
