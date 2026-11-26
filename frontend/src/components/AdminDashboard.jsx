@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
-import ResolutionDifferenceBreakdown, { getResolutionTierDifferences } from './ResolutionDifferenceBreakdown';
+import ResolutionDifferenceBreakdown from './ResolutionDifferenceBreakdown';
 
 // Subcomponents
 import ConfigPanel from './admin/ConfigPanel';
@@ -46,11 +46,11 @@ const DEFAULT_GXH_TIERS = [
 ];
 
 const DEFAULT_RESOLUTION_TIERS = [
-  { min: 84.00, bonus: 3.0 },
-  { min: 83.00, bonus: 2.0 },
-  { min: 82.00, bonus: 1.0 },
-  { min: 81.00, bonus: 0.0 },
-  { min: 80.00, bonus: -1.0 },
+  { min: 84.50, bonus: 3.0 },
+  { min: 83.50, bonus: 2.0 },
+  { min: 82.40, bonus: 1.0 },
+  { min: 81.30, bonus: 0.0 },
+  { min: 80.20, bonus: -1.0 }
   { min: 0.00, bonus: -2.0 }
 ];
 
