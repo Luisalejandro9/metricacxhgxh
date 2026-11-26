@@ -19,6 +19,7 @@ using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)
 drop policy if exists "Allow anon delete to network_incidents" on public.network_incidents;
 revoke delete, update, truncate on table public.network_incidents from anon, authenticated;
 grant select, insert on table public.network_incidents to anon, authenticated;
+grant delete on table public.network_incidents to authenticated;
 create policy "Enabled admins can delete network incidents" on public.network_incidents for delete to authenticated
 using (public.is_admin());
 
