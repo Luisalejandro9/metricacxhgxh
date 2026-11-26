@@ -868,6 +868,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         <DashboardCharts
           history={history}
           standards={standards}
+          calculateRecordBonus={calculateRecordBonus}
           theme={theme}
         />
       </main>

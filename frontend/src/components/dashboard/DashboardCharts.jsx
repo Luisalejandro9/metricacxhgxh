@@ -118,7 +118,7 @@ function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty })
   </section>;
 }
 
-function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '', dateRange = null, hideDateControls = false }) {
+function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '', dateRange = null, hideDateControls = false, calculateRecordBonus = () => 0 }) {
   const [initialDates] = useState(() => {
     const today = new Date();
     return {
@@ -170,6 +170,32 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const currentRows = useMemo(() => history.filter(row => inRange(row, range.start, range.end)), [history, range]);
   const previousRows = useMemo(() => history.filter(row => inRange(row, range.previousStart, range.previousEnd)), [history, range]);
   const currentSummary = useMemo(() => summarize(currentRows), [currentRows]);
+  // Reproduce the monthly accumulated-bonus calculation used by the dashboard:
+  // cumulative managed / cumulative hours and cumulative net resolution, reset each month.
+  const monthlyBonusSeries = useMemo(() => {
+    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    const monthState = new Map();
+    const lastBonusByDate = new Map();
+    sorted.forEach(row => {
+      const month = row.date.slice(0, 7);
+      const state = monthState.get(month) || { managed: 0, technicians: 0, seconds: 0 };
+      state.managed += num(row.cases_managed);
+      state.technicians += num(row.technicians_sent);
+      state.seconds += timeSeconds(row.total_time);
+      const hours = state.seconds / 3600;
+      const accumulatedGxh = hours > 0 ? state.managed / hours : 0;
+      const accumulatedResolution = state.managed > 0
+        ? ((state.managed - state.technicians) / state.managed) * 100
+        : 0;
+      state.bonus = calculateRecordBonus(accumulatedGxh, accumulatedResolution);
+      monthState.set(month, state);
+      lastBonusByDate.set(row.date, state.bonus);
+    });
+    return [...lastBonusByDate.entries()]
+      .filter(([date]) => date >= dateKey(range.start) && date <= dateKey(range.end))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, bonus]) => ({ date, bonus }));
+  }, [history, calculateRecordBonus, range]);
   const previousSummary = useMemo(() => summarize(previousRows), [previousRows]);
   const currentGroups = useMemo(() => aggregateRows(currentRows, grouping), [currentRows, grouping]);
 
@@ -206,6 +232,39 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const gxhTarget = num(standards.GXH_GREEN) || 4;
   const resolutionTarget = num(standards.RESOLUTION_GREEN) || 84;
   const tmoTarget = (num(standards.TIME_PER_MANAGED) || 950) / 60;
+
+  const bonusLabels = monthlyBonusSeries.map(item => {
+    const date = parseDate(item.date);
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+  });
+  const bonusAreaChart = {
+    labels: bonusLabels,
+    datasets: [{
+      label: 'Bono acumulado del mes (%)',
+      data: monthlyBonusSeries.map(item => item.bonus),
+      borderColor: COLORS.green,
+      backgroundColor: 'rgba(16, 185, 129, 0.18)',
+      fill: true,
+      tension: 0.32,
+      cubicInterpolationMode: 'monotone',
+      borderWidth: 2.5,
+      pointRadius: 2,
+      pointHoverRadius: 5
+    }]
+  };
+  const bonusAreaOptions = {
+    ...chartBase,
+    plugins: {
+      ...chartBase.plugins,
+      legend: { ...chartBase.plugins.legend, display: true }
+    },
+    scales: {
+      ...chartBase.scales,
+      x: { ...chartBase.scales.x, title: { display: true, text: 'FECHA', color: theme === 'light' ? '#64748b' : '#94a3b8' } },
+      y: { ...chartBase.scales.y, title: { display: true, text: 'BONIFICACIÓN ACUMULADA (%)', color: theme === 'light' ? '#64748b' : '#94a3b8' } },
+      y1: { display: false }
+    }
+  };
 
   const chart1 = {
     labels,
@@ -424,9 +483,32 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </div>)}
     </div>
 
-    <ChartCard title="Tendencia del período · GxH vs TMO" subtitle="Eje X: tiempo · Eje Y izquierdo: gestiones por hora · Eje Y derecho: TMO en minutos" data={chart1} options={optionsFor('TMO (min)', 'GxH')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.gxhTmo.a} onChange={v => updateToggle('gxhTmo', 'a', v)}>GxH</MetricToggle><MetricToggle checked={show.gxhTmo.b} onChange={v => updateToggle('gxhTmo', 'b', v)}>TMO</MetricToggle></>} />
-    <ChartCard title="Tendencia · Resolución vs Técnicos" subtitle="Eje X: tiempo · Eje Y izquierdo: resolución (%) · Eje Y derecho: técnicos enviados" data={chart2} options={optionsFor('Técnicos', 'Resolución (%)')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.resolution.a} onChange={v => updateToggle('resolution', 'a', v)}>Resolución</MetricToggle><MetricToggle checked={show.resolution.b} onChange={v => updateToggle('resolution', 'b', v)}>Técnicos</MetricToggle></>} />
-    <ChartCard title="Tendencia · GxH vs Casos Cerrados" subtitle="Eje X: tiempo · Eje Y izquierdo: gestiones por hora · Eje Y derecho: casos cerrados" data={chart3} options={optionsFor('Casos cerrados', 'GxH')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.closed.a} onChange={v => updateToggle('closed', 'a', v)}>GxH</MetricToggle><MetricToggle checked={show.closed.b} onChange={v => updateToggle('closed', 'b', v)}>Cerrados</MetricToggle></>} />
+    <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
+      <details style={{ ...cardStyle, padding: 0 }}>
+        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>Bono acumulado del mes · Evolución diaria</summary>
+        <div style={{ padding: '0 14px 14px' }}>
+          <ChartCard title="BONO ACUM. MES" subtitle="Evolución diaria del porcentaje acumulado, reiniciado al comenzar cada mes." data={bonusAreaChart} options={bonusAreaOptions} empty={!monthlyBonusSeries.length} />
+        </div>
+      </details>
+      <details style={{ ...cardStyle, padding: 0 }}>
+        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>GxH vs TMO</summary>
+        <div style={{ padding: '0 14px 14px' }}>
+          <ChartCard title="Tendencia del período · GxH vs TMO" subtitle="Eje X: tiempo · Eje Y izquierdo: gestiones por hora · Eje Y derecho: TMO en minutos" data={chart1} options={optionsFor('TMO (min)', 'GxH')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.gxhTmo.a} onChange={v => updateToggle('gxhTmo', 'a', v)}>GxH</MetricToggle><MetricToggle checked={show.gxhTmo.b} onChange={v => updateToggle('gxhTmo', 'b', v)}>TMO</MetricToggle></>} />
+        </div>
+      </details>
+      <details style={{ ...cardStyle, padding: 0 }}>
+        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>Resolución vs Técnicos</summary>
+        <div style={{ padding: '0 14px 14px' }}>
+          <ChartCard title="Tendencia · Resolución vs Técnicos" subtitle="Eje X: tiempo · Eje Y izquierdo: resolución (%) · Eje Y derecho: técnicos enviados" data={chart2} options={optionsFor('Técnicos', 'Resolución (%)')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.resolution.a} onChange={v => updateToggle('resolution', 'a', v)}>Resolución</MetricToggle><MetricToggle checked={show.resolution.b} onChange={v => updateToggle('resolution', 'b', v)}>Técnicos</MetricToggle></>} />
+        </div>
+      </details>
+      <details style={{ ...cardStyle, padding: 0 }}>
+        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>GxH vs Casos Cerrados</summary>
+        <div style={{ padding: '0 14px 14px' }}>
+          <ChartCard title="Tendencia · GxH vs Casos Cerrados" subtitle="Eje X: tiempo · Eje Y izquierdo: gestiones por hora · Eje Y derecho: casos cerrados" data={chart3} options={optionsFor('Casos cerrados', 'GxH')} empty={!currentGroups.length} toggles={<><MetricToggle checked={show.closed.a} onChange={v => updateToggle('closed', 'a', v)}>GxH</MetricToggle><MetricToggle checked={show.closed.b} onChange={v => updateToggle('closed', 'b', v)}>Cerrados</MetricToggle></>} />
+        </div>
+      </details>
+    </div>
 
     <section style={{ ...cardStyle, marginTop: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
