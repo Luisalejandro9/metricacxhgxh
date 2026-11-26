@@ -1241,3 +1241,345 @@ textarea:focus-visible {
     animation-duration: 2s !important;
   }
 }
+
+
+/* /status — mobile-first layout refinements */
+@media (max-width: 768px) {
+  .tech-status-container {
+    min-height: 100dvh;
+    padding-bottom: 28px;
+    align-items: stretch;
+    overflow-x: hidden;
+  }
+
+  .tech-topbar {
+    position: relative;
+    gap: 14px;
+    padding: 14px 14px 12px;
+  }
+
+  .tech-topbar-left {
+    gap: 12px;
+  }
+
+  .tech-back-btn {
+    min-height: 40px;
+    padding: 9px 11px;
+    border-radius: 9px;
+  }
+
+  .tech-title-block {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tech-title-row {
+    align-items: flex-start;
+  }
+
+  .tech-title-row h1 {
+    font-size: 0.98rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .tech-subtitle {
+    font-size: 0.62rem;
+    line-height: 1.45;
+    letter-spacing: 0.035em;
+  }
+
+  .tech-topbar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+    gap: 8px;
+  }
+
+  .tech-action-btn {
+    min-height: 42px;
+    justify-content: center;
+    padding: 8px 6px;
+    border-radius: 9px;
+    font-size: 0.62rem;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+  }
+
+  .tech-action-btn.danger {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .tech-main-grid {
+    width: 100%;
+    padding: 14px 12px 24px;
+    gap: 14px;
+  }
+
+  .tech-verdict-banner {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    padding: 15px;
+    border-radius: 12px;
+  }
+
+  .tech-verdict-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .tech-verdict-tag {
+    font-size: 0.58rem;
+    margin-bottom: 5px;
+  }
+
+  .tech-verdict-body h3 {
+    font-size: 0.88rem;
+    line-height: 1.35;
+    letter-spacing: 0;
+    margin: 0 0 6px;
+  }
+
+  .tech-verdict-body p {
+    font-size: 0.72rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .tech-verdict-meta {
+    grid-column: 1 / -1;
+    white-space: normal;
+    font-size: 0.68rem;
+    padding-top: 8px;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .tech-dual-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .tech-card {
+    min-width: 0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .tech-card-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 13px 14px;
+    gap: 9px;
+  }
+
+  .tech-card-title {
+    min-width: 0;
+    flex: 1 1 100%;
+    align-items: flex-start;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    letter-spacing: 0.045em;
+  }
+
+  .tech-card-title svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  .tech-card-header > .tech-pill-badge,
+  .tech-card-header > div {
+    max-width: 100%;
+  }
+
+  .tech-card-content {
+    min-width: 0;
+    padding: 13px;
+    gap: 11px;
+  }
+
+  .tech-metric-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.73rem;
+  }
+
+  .tech-metric-val {
+    font-size: 0.82rem;
+  }
+
+  .tech-code {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+
+  .tech-log-box,
+  .tech-info-note {
+    font-size: 0.7rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    padding: 10px;
+  }
+
+  .tech-sub-btn {
+    min-height: 36px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    font-size: 0.62rem;
+  }
+
+  .tech-tables-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px;
+  }
+
+  .tech-table-item {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 9px;
+  }
+
+  .tech-table-name {
+    font-size: 0.62rem;
+    line-height: 1.35;
+    letter-spacing: 0.035em;
+  }
+
+  .tech-table-body {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .tech-table-count {
+    font-size: 0.76rem;
+  }
+
+  .tech-table-ms {
+    font-size: 0.64rem;
+  }
+
+  .tech-cache-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tech-cache-item {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 9px;
+  }
+
+  .tech-cache-item span {
+    font-size: 0.6rem;
+    line-height: 1.4;
+    letter-spacing: 0.035em;
+  }
+
+  .tech-cache-item strong {
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .tech-office-summary {
+    gap: 10px;
+  }
+
+  .tech-office-stat {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .tech-stat-label,
+  .tech-stat-val,
+  .tech-stat-badge {
+    font-size: 0.7rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .tech-incidents-list {
+    max-height: 360px;
+    overflow-y: auto;
+  }
+
+  .tech-incident-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .tech-incident-time {
+    flex-wrap: wrap;
+  }
+
+  .tech-incident-body {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tech-incident-desc {
+    overflow-wrap: anywhere;
+  }
+
+  .tech-login-card {
+    width: calc(100% - 28px);
+    margin: 56px auto 24px;
+    padding: 25px 20px;
+    border-radius: 14px;
+    box-sizing: border-box;
+  }
+
+  .tech-login-header h2 {
+    font-size: 1.08rem;
+    line-height: 1.3;
+  }
+
+  .tech-form-buttons {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .tech-btn-primary,
+  .tech-btn-secondary {
+    min-height: 44px;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 380px) {
+  .tech-topbar-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    gap: 6px;
+  }
+
+  .tech-action-btn {
+    font-size: 0.56rem;
+  }
+
+  .tech-main-grid {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .tech-card-header,
+  .tech-card-content {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .tech-tables-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
