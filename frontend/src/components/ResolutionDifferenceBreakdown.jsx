@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 const DEFAULT_TIERS = [
   { min: 84.5, bonus: 3 },
@@ -13,6 +13,7 @@ export const getResolutionTierDifferences = (managed, technicians, tiers = DEFAU
   const total = Number(managed) || 0;
   const sent = Number(technicians) || 0;
   if (total <= 0) return [];
+
   const resolved = total - sent;
   return [...(Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_TIERS)]
     .sort((a, b) => Number(b.min) - Number(a.min))
@@ -23,134 +24,78 @@ export const getResolutionTierDifferences = (managed, technicians, tiers = DEFAU
     }));
 };
 
-const formatBonus = bonus => `${bonus > 0 ? '+' : ''}${bonus}%`;
+// Misma escalera del ranking administrativo: piso 0%, luego 1%, 2% y techo 3%.
+export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT_TIERS) => {
+  const total = Number(managed) || 0;
+  const sent = Number(technicians) || 0;
+  if (total <= 0) return null;
 
-const getDifferenceLabel = difference => {
-  if (difference > 0) return `+${difference} a favor`;
-  if (difference < 0) return `Faltan ${Math.abs(difference)}`;
-  return 'Justo';
+  const allTiers = [...(Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_TIERS)]
+    .sort((a, b) => Number(b.min) - Number(a.min));
+  const resolutionRate = ((total - sent) / total) * 100;
+  const currentTier = allTiers.find(tier => resolutionRate >= Number(tier.min));
+  const currentBonus = Number(currentTier?.bonus ?? allTiers[allTiers.length - 1]?.bonus ?? -2);
+
+  const positiveTiers = allTiers
+    .filter(tier => Number(tier.bonus) >= 0 && Number(tier.bonus) <= 3)
+    .sort((a, b) => Number(a.bonus) - Number(b.bonus));
+
+  if (!positiveTiers.length) return null;
+
+  const nextTier = positiveTiers.find(tier => Number(tier.bonus) > Math.max(0, currentBonus));
+  const topTier = positiveTiers.reduce((highest, tier) =>
+    !highest || Number(tier.bonus) > Number(highest.bonus) ? tier : highest, null);
+  const progressTarget = currentBonus < 0
+    ? positiveTiers.find(tier => Number(tier.bonus) === 0)
+    : nextTier;
+
+  const resolvedCases = total - sent;
+  const difference = progressTarget
+    ? resolvedCases - Math.ceil(total * Number(progressTarget.min) / 100)
+    : topTier
+      ? resolvedCases - Math.ceil(total * Number(topTier.min) / 100)
+      : 0;
+
+  return {
+    currentBonus,
+    targetBonus: progressTarget ? Number(progressTarget.bonus) : null,
+    difference,
+    label: progressTarget
+      ? `Faltan ${Math.max(0, Math.abs(Math.min(0, difference)))} para ${Number(progressTarget.bonus).toFixed(0)}%`
+      : `Sobrante ${Math.max(0, difference)}`
+  };
 };
 
-function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false, interactive = true }) {
-  const items = getResolutionTierDifferences(managed, technicians, tiers).filter(item => item.bonus >= 0);
-  const zeroIndex = items.findIndex(item => item.bonus === 0);
-  const [selectedBonus, setSelectedBonus] = useState(0);
-  const [menu, setMenu] = useState(null);
+function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false }) {
+  const progress = getResolutionBonusProgress(managed, technicians, tiers);
+  if (!progress) return <span>Sin datos</span>;
 
-  if (!items.length) return <span>Sin datos</span>;
-
-  const selected = items.find(item => item.bonus === selectedBonus) || items[zeroIndex] || items[0];
-  const selectedLabel = `${formatBonus(selected.bonus)}  ${getDifferenceLabel(selected.difference)}`;
-  if (!interactive) return <span title={`Objetivo 0%: ${getDifferenceLabel(items[zeroIndex]?.difference ?? 0)}`} style={{ display: 'inline-block', padding: compact ? '6px 8px' : '8px 10px', border: '1px solid var(--border-light)', borderRadius: 7, color: 'var(--text-muted)', fontSize: compact ? 11 : 12, fontWeight: 800, whiteSpace: 'nowrap' }}>{formatBonus(items[zeroIndex]?.bonus ?? 0)} · {getDifferenceLabel(items[zeroIndex]?.difference ?? 0)}</span>;
-  const isNegative = selected.difference < 0;
-  const isPositive = selected.difference > 0;
-
-  const openMenu = () => {
-    if (menu) {
-      setMenu(null);
-      return;
-    }
-    setMenu(true);
-  };
+  const isSurplus = progress.targetBonus === null;
+  const color = isSurplus
+    ? 'var(--accent-success)'
+    : progress.difference < 0
+      ? 'var(--accent-warning)'
+      : 'var(--text-muted)';
 
   return (
-    <div style={{ display: 'inline-flex', position: 'relative', maxWidth: '100%' }}>
-      <button
-        type="button"
-        onClick={openMenu}
-        aria-haspopup="menu"
-        aria-expanded={Boolean(menu)}
-        title="Seleccionar objetivo de bonificación de resolución"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          minWidth: compact ? 112 : 142,
-          maxWidth: '100%',
-          padding: compact ? '6px 8px' : '8px 10px',
-          border: '1px solid var(--border-light)',
-          borderRadius: 7,
-          background: 'var(--bg-card)',
-          color: isNegative ? 'var(--accent-error)' : isPositive ? 'var(--accent-success)' : 'var(--text-muted)',
-          fontSize: compact ? 11 : 12,
-          fontWeight: 800,
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-          fontVariantNumeric: 'tabular-nums'
-        }}
-      >
-        <span>{formatBonus(selected.bonus)}</span>
-        <span>{getDifferenceLabel(selected.difference)}</span>
-        <span aria-hidden="true" style={{ fontSize: 10, opacity: 0.65 }}>▾</span>
-      </button>
-
-      {menu && (
-          <div
-            role="menu"
-            aria-label="Elegir objetivo de resolución"
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 6px)',
-              left: 0,
-              zIndex: 1000,
-              width: 220,
-              maxHeight: 300,
-              overflowY: 'auto',
-              padding: 5,
-              border: '1px solid var(--border-light)',
-              borderRadius: 10,
-              background: 'var(--bg-card)',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.24)'
-            }}
-          >
-            <div style={{ padding: '7px 9px 8px', color: 'var(--text-muted)', fontSize: 10, fontWeight: 800, letterSpacing: '.06em' }}>
-              ELEGÍ TU OBJETIVO
-            </div>
-            {items.map(item => {
-              const active = item.bonus === selected.bonus;
-              const color = item.difference < 0
-                ? 'var(--accent-error)'
-                : item.difference > 0
-                  ? 'var(--accent-success)'
-                  : 'var(--text-muted)';
-              return (
-                <button
-                  key={item.bonus}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setSelectedBonus(item.bonus);
-                    setMenu(null);
-                  }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    padding: '10px 9px',
-                    border: 0,
-                    borderRadius: 6,
-                    background: active ? 'var(--bg-main)' : 'transparent',
-                    color: 'var(--text-bright)',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: active ? 800 : 600 }}>
-                    <span style={{ color: 'var(--primary-light)', minWidth: 30 }}>{formatBonus(item.bonus)}</span>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Objetivo</span>
-                  </span>
-                  <strong style={{ color, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
-                    {getDifferenceLabel(item.difference)}
-                  </strong>
-                </button>
-              );
-            })}
-          </div>
-      )}
-    </div>
+    <span
+      title={isSurplus
+        ? 'Techo alcanzado: bonificación de resolución del 3%'
+        : `Próximo objetivo: ${progress.targetBonus}% de bonificación de resolución`}
+      style={{
+        display: 'inline-block',
+        padding: compact ? '6px 8px' : '8px 10px',
+        border: '1px solid var(--border-light)',
+        borderRadius: 7,
+        color,
+        fontSize: compact ? 11 : 12,
+        fontWeight: 800,
+        whiteSpace: 'nowrap',
+        fontVariantNumeric: 'tabular-nums'
+      }}
+    >
+      {progress.label}
+    </span>
   );
 }
 
