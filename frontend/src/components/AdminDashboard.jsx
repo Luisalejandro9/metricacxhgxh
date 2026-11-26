@@ -786,7 +786,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                 <Settings size={13} /> Configuración
               </button>
             </div>
->
           </div>
 
           <div>
