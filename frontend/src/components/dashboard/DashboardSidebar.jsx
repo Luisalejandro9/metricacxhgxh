@@ -116,7 +116,7 @@ function DashboardSidebar({
           <button className="btn btn-subtract" onClick={() => closedCount > 0 && setClosedCount(c => c - 1)} disabled={!isTimerRunning || closedCount === 0}>
             <Minus size={14} strokeWidth={2} />
           </button>
-          <button className="btn btn-action" onClick={() => setClosedCount(c => c + 1)} disabled={!isTimerRunning || closedCount >= managedCount}>
+          <button className="btn btn-action" onClick={() => setClosedCount(c => c + 1)} disabled={!isTimerRunning || closedCount >= managedCount - transferredCount}>
             <span className="btn-label">CASO CERRADO</span>
             <span className="btn-icon"><Check size={14} strokeWidth={2.5} /></span>
           </button>
@@ -146,7 +146,7 @@ function DashboardSidebar({
           <button className="btn btn-subtract" onClick={onSubtractTransferred} disabled={!isTimerRunning || transferredCount === 0}>
             <Minus size={14} strokeWidth={2} />
           </button>
-          <button className="btn btn-action" onClick={onAddTransferred} disabled={!isTimerRunning || transferredCount >= managedCount}>
+          <button className="btn btn-action" onClick={onAddTransferred} disabled={!isTimerRunning || transferredCount >= managedCount - closedCount}>
             <span className="btn-label">CASO TRANSFERIDO</span>
             <span className="btn-icon"><ArrowLeftRight size={14} strokeWidth={2} /></span>
           </button>
