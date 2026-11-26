@@ -383,6 +383,13 @@ function DashboardStats({
           <div className="metric-value medium">{techniciansCount}</div>
         </div>
         <div className="metric-card">
+          <span className="metric-label">Casos Transferidos</span>
+          <div className="metric-value medium">{transferredCount}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Casos derivados · No cuentan como cierre
+          </div>
+        </div>
+        <div className="metric-card">
           <span className="metric-label">% Resolución Real</span>
           <div className={`metric-value medium ${getStatusClass(stats.resolutionRate, standards.RESOLUTION_GREEN, standards.RESOLUTION_YELLOW)}`}>
             {stats.resolutionRate}%
