@@ -27,13 +27,12 @@ import {
 import { supabase, DIRECT_SUPABASE_URL, getEffectiveSupabaseUrl } from '../lib/supabase';
 import { fetchRecentIncidents, clearAllIncidents } from '../lib/incidentSentinel';
 
-const TECH_PASS = '1553758631';
 const CURRENT_VERSION = typeof __APP_BUILD_VERSION__ !== 'undefined' ? __APP_BUILD_VERSION__ : 'dev';
 
 export function TechStatusDashboard({ onExit }) {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('tech_status_auth') === 'true';
+    return sessionStorage.getItem('tech_status_auth') === 'true' && !!sessionStorage.getItem('tech_status_password');
   });
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -75,20 +74,41 @@ export function TechStatusDashboard({ onExit }) {
   const [clearingIncidents, setClearingIncidents] = useState(false);
 
   // Login Handler
-  const handleLogin = (e) => {
+  const requestStatusDiagnostics = useCallback(async (password = sessionStorage.getItem('tech_status_password')) => {
+    if (!password) throw new Error('La sesión de diagnóstico expiró. Ingresa nuevamente la contraseña.');
+    const response = await fetch(`${getEffectiveSupabaseUrl()}/functions/v1/status-diagnostics`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabase.supabaseKey || '',
+        'x-status-password': password,
+      },
+      body: JSON.stringify({}),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Error de diagnóstico (${response.status}).`);
+    return result;
+  }, []);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (passwordInput === TECH_PASS) {
-      setIsAuthenticated(true);
+    setLoginError('');
+    try {
+      await requestStatusDiagnostics(passwordInput);
+      sessionStorage.setItem('tech_status_password', passwordInput);
       sessionStorage.setItem('tech_status_auth', 'true');
-      setLoginError('');
-    } else {
-      setLoginError('Contraseña incorrecta. Acceso denegado.');
+      setIsAuthenticated(true);
+      setPasswordInput('');
+    } catch (err) {
+      setLoginError(err?.message || 'Contraseña incorrecta. Acceso denegado.');
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('tech_status_auth');
+    sessionStorage.removeItem('tech_status_password');
     setPasswordInput('');
   };
 
@@ -204,61 +224,30 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
-  // Test 3: Table queries through the configured client
-  const runTableTests = useCallback(async () => {
-    const tables = [
-      { key: 'daily_metrics', label: 'Métricas Diarias' },
-      { key: 'profiles', label: 'Perfiles / Usuarios' },
-      { key: 'app_config', label: 'Configuración Global' },
-      { key: 'network_incidents', label: 'Centinela de Red' },
-    ];
-
-    for (const tbl of tables) {
-      setTableTests((prev) => ({
-        ...prev,
-        [tbl.key]: { table: tbl.key, label: tbl.label, status: 'loading' },
-      }));
-
-      const start = performance.now();
-      try {
-        const { count, error } = await supabase
-          .from(tbl.key)
-          .select('id', { count: 'exact', head: true });
-
-        const duration = Math.round(performance.now() - start);
-
-        if (error) {
-          setTableTests((prev) => ({
-            ...prev,
-            [tbl.key]: { table: tbl.key, label: tbl.label, status: 'error', durationMs: duration, errorMsg: error.message },
-          }));
-        } else {
-          setTableTests((prev) => ({
-            ...prev,
-            [tbl.key]: { table: tbl.key, label: tbl.label, status: 'ok', count: count || 0, durationMs: duration },
-          }));
-        }
-      } catch (err) {
-        const duration = Math.round(performance.now() - start);
-        setTableTests((prev) => ({
-          ...prev,
-          [tbl.key]: { table: tbl.key, label: tbl.label, status: 'error', durationMs: duration, errorMsg: err.message },
-        }));
-      }
-    }
-  }, []);
-
-  // Supabase database and Storage quota monitor (admin-only RPC).
-  const runDatabaseUsageTest = useCallback(async () => {
+  // Secure server-side diagnostics: the Edge Function validates the status password
+  // and uses its private service key so browser requests never bypass RLS.
+  const runStatusDiagnostics = useCallback(async () => {
+    setTableTests(prev => Object.fromEntries(Object.entries(prev).map(([key, value]) => [key, { ...value, status: 'loading', errorMsg: null }])));
     setDatabaseUsage(prev => ({ ...prev, status: 'loading', error: null }));
     try {
-      const { data, error } = await supabase.rpc('get_database_usage');
-      if (error) throw error;
-      setDatabaseUsage({ status: 'ok', data, error: null });
+      const result = await requestStatusDiagnostics();
+      setTableTests(prev => Object.fromEntries(Object.entries(prev).map(([key, value]) => {
+        const measured = result.tables?.[key];
+        const nextValue = measured?.error
+          ? { ...value, status: 'error', durationMs: measured.durationMs, errorMsg: measured.error }
+          : { ...value, status: 'ok', count: measured?.count ?? 0, durationMs: measured?.durationMs ?? 0 };
+        return [key, nextValue];
+      })));
+      setDatabaseUsage({ status: 'ok', data: result.usage, error: null });
     } catch (err) {
-      setDatabaseUsage({ status: 'error', data: null, error: err?.message || 'No se pudo consultar el consumo.' });
+      const message = err?.message || 'No se pudieron consultar los diagnósticos.';
+      setTableTests(prev => Object.fromEntries(Object.entries(prev).map(([key, value]) => [key, { ...value, status: 'error', errorMsg: message }])));
+      setDatabaseUsage({ status: 'error', data: null, error: message });
     }
-  }, []);
+  }, [requestStatusDiagnostics]);
+
+  const runTableTests = runStatusDiagnostics;
+  const runDatabaseUsageTest = runStatusDiagnostics;
 
   // Test 4: Version checking
   const runVersionTest = useCallback(async () => {
@@ -315,14 +304,13 @@ export function TechStatusDashboard({ onExit }) {
     await Promise.all([
       runDirectDnsTest(),
       runProxyTest(),
-      runTableTests(),
-      runDatabaseUsageTest(),
+      runStatusDiagnostics(),
       runVersionTest(),
       loadOfficeIncidents(),
     ]);
     setLastCheckTime(new Date());
     setIsRunningAll(false);
-  }, [runDirectDnsTest, runProxyTest, runTableTests, runDatabaseUsageTest, runVersionTest, loadOfficeIncidents]);
+  }, [runDirectDnsTest, runProxyTest, runStatusDiagnostics, runVersionTest, loadOfficeIncidents]);
 
   useEffect(() => {
     if (isAuthenticated) {
