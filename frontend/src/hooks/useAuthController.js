@@ -61,7 +61,7 @@ export function useAuthController() {
           return;
         }
 
-        const profileMissing = error?.code === 'PGRST116' || !result.data;
+        const profileMissing = error?.code === 'PGRST116';
         if (!profileMissing) {
           console.error('Error no transitorio al consultar perfil; no se cerrará la sesión:', error);
           return;
@@ -94,7 +94,7 @@ export function useAuthController() {
       if (isNetworkErr) {
         setNetworkError(true);
       } else {
-        setProfile(null);
+        console.error('No se modifica el perfil local por un error inesperado de sincronización.');
       }
     }
   };
@@ -184,9 +184,9 @@ export function useAuthController() {
           } else {
             console.warn('Acceso denegado: Email no corporativo ni admin autorizado.');
             setAuthError('Acceso restringido. Solo se permite el inicio de sesión real a usuarios con correo @konecta.com.');
-            await supabase.auth.signOut();
             setUser(null);
             setProfile(null);
+            setTimeout(() => { void supabase.auth.signOut(); }, 0);
           }
         }
       } catch (err) {
@@ -201,7 +201,7 @@ export function useAuthController() {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
         // Keep demo sessions active even if Supabase triggers onAuthStateChange (e.g. on background syncs)
         const demoSessionStr = sessionStorage.getItem('demo_session');
@@ -221,7 +221,7 @@ export function useAuthController() {
             }
             // Only sync profile if it's not already loaded for this user
             if (profileRef.current === undefined || profileRef.current === null || profileRef.current.id !== session.user.id) {
-              await syncProfile(session.user.id);
+              setTimeout(() => { void syncProfile(session.user.id); }, 0);
             }
           } else {
             console.warn('Acceso denegado en cambio de estado: Email no corporativo.');
@@ -246,13 +246,13 @@ export function useAuthController() {
             // If the event is not SIGNED_OUT, it's a transient check (like token refresh or tab focus).
             // Do NOT clear the user or profile here to prevent unmounting the dashboard and slow reloads.
             // Instead, do a quick connection check to update the network error status.
-            const isReachable = await checkSupabaseConnection();
-            if (!isReachable) {
-              console.warn('onAuthStateChange: Supabase is unreachable during transient state.');
-              setNetworkError(true);
-            } else {
-              setNetworkError(false);
-            }
+            setTimeout(async () => {
+              const isReachable = await checkSupabaseConnection();
+              setNetworkError(!isReachable);
+              if (!isReachable) {
+                console.warn('onAuthStateChange: Supabase is unreachable during transient state.');
+              }
+            }, 0);
           }
         }
       }
