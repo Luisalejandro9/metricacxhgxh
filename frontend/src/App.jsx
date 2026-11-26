@@ -110,9 +110,13 @@ function App() {
           element={<Navigate to={user ? "/dashboard" : "/"} replace />}
         />
 
-        <Route 
-          path="/status" 
-          element={<TechStatusDashboard onExit={() => window.location.href = '/'} />} 
+        <Route
+          path="/status"
+          element={
+            user && profile?.role === 'admin' && profile?.is_enabled === true
+              ? <TechStatusDashboard onExit={() => { window.location.href = '/'; }} />
+              : <Navigate to="/" replace />
+          }
         />
 
         {/* FALLBACK */}
