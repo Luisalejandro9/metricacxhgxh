@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Database,
+  ClipboardList,
+  X,
   ArrowLeft,
   Mail,
   Trash2,
@@ -182,6 +184,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState('all');
   const [viewingUserDetails, setViewingUserDetails] = useState(null);
+  const [showTechnicianRanking, setShowTechnicianRanking] = useState(false);
   const [roleUpdatingUserId, setRoleUpdatingUserId] = useState(null);
   const [roleConfirmUser, setRoleConfirmUser] = useState(null);
   const [roleConfirmMakeAdmin, setRoleConfirmMakeAdmin] = useState(true);
@@ -452,6 +455,38 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
   }, [allMetrics, selectedUserEmail, users, excludedUserIds, searchTerm]);
 
   const metricsToday = useMemo(() => filteredMetrics.filter(m => m.date === todayStr), [filteredMetrics, todayStr]);
+
+  // Ranking global por resolución neta y técnicos enviados en el período seleccionado.
+  const technicianRanking = useMemo(() => {
+    const rows = users.map(person => {
+      const records = dateFilteredMetrics.filter(metric => metric.user_id === person.id);
+      const totalManaged = records.reduce((sum, metric) => sum + (Number(metric.cases_managed) || 0), 0);
+      const totalTechnicians = records.reduce((sum, metric) => sum + (Number(metric.technicians_sent) || 0), 0);
+      if (totalManaged <= 0) return null;
+
+      const resolutionRate = ((totalManaged - totalTechnicians) / totalManaged) * 100;
+      const tiers = [...(Array.isArray(standards.resolution_bonus_tiers) ? standards.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS)]
+        .sort((a, b) => Number(b.min) - Number(a.min));
+      const resolutionTier = tiers.find(tier => resolutionRate >= Number(tier.min));
+      const resolutionPenalty = Number(resolutionTier?.bonus ?? tiers[tiers.length - 1]?.bonus ?? -2);
+
+      return {
+        id: person.id,
+        email: person.email,
+        totalManaged,
+        totalTechnicians,
+        resolutionRate,
+        resolutionPenalty
+      };
+    }).filter(Boolean);
+
+    return rows.sort((a, b) =>
+      b.resolutionRate - a.resolutionRate
+      || a.totalTechnicians - b.totalTechnicians
+      || a.email.localeCompare(b.email)
+    );
+  }, [users, dateFilteredMetrics, standards.resolution_bonus_tiers]);
+
 
   // Historial unificado considerando exclusión de usuarios en modo global
   const unifiedHistory = useMemo(() => {
@@ -943,6 +978,17 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
                   : 'Mostrar Global (Todos)'}
               </div>
 
+              {selectedUserEmail === 'all' && excludedUserIds.length === 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowTechnicianRanking(true)}
+                  style={{ width: '100%', marginTop: '6px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', fontSize: '10px', fontWeight: 700 }}
+                >
+                  <ClipboardList size={13} /> Ver ranking de técnicos
+                </button>
+              )}
+
               {excludedUserIds.length > 0 && selectedUserEmail === 'all' && (
                 <button
                   type="button"
@@ -1040,6 +1086,76 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         onCancel={() => setDeleteConfirmModal({ show: false, targetUser: null, mode: 'delete' })}
         onConfirm={handleConfirmUserAction}
       />
+
+
+      {showTechnicianRanking && selectedUserEmail === 'all' && excludedUserIds.length === 0 && (
+        <div
+          role="presentation"
+          onClick={() => setShowTechnicianRanking(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 6000, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="technician-ranking-title"
+            onClick={event => event.stopPropagation()}
+            className="login-card"
+            style={{ width: '100%', maxWidth: 900, maxHeight: '88vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}
+          >
+            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid var(--border-light)' }}>
+              <div>
+                <h2 id="technician-ranking-title" style={{ margin: 0, fontSize: 17 }}>Ranking de técnicos enviados y resolución</h2>
+                <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: 11 }}>
+                  Período: {startDate || 'Inicio'} al {endDate || 'Actualidad'} · Ordenado por mayor resolución y menor cantidad de técnicos
+                </p>
+              </div>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowTechnicianRanking(false)} aria-label="Cerrar ranking" style={{ padding: 7 }}>
+                <X size={16} />
+              </button>
+            </header>
+
+            <div style={{ overflow: 'auto', padding: 16 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 520 }}>
+                <thead>
+                  <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>
+                    <th style={{ padding: '10px 8px', width: 48 }}>#</th>
+                    <th style={{ padding: '10px 8px' }}>Técnico</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Resolución</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Técnicos enviados</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Penalización</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {technicianRanking.map((item, index) => {
+                    const penalized = item.resolutionPenalty <= -1;
+                    return (
+                      <tr key={item.id} style={{
+                        background: penalized ? 'rgba(239, 68, 68, 0.16)' : 'transparent',
+                        borderBottom: '1px solid var(--border-light)',
+                        color: penalized ? 'var(--text-bright)' : 'var(--text-main)'
+                      }}>
+                        <td style={{ padding: '11px 8px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{index + 1}</td>
+                        <td style={{ padding: '11px 8px', fontWeight: 600 }}>{item.email}</td>
+                        <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>{item.resolutionRate.toFixed(1)}%</td>
+                        <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{item.totalTechnicians}</td>
+                        <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: penalized ? 'var(--accent-error)' : 'var(--text-muted)' }}>
+                          {item.resolutionPenalty > 0 ? '+' : ''}{item.resolutionPenalty.toFixed(1)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {technicianRanking.length === 0 && (
+                    <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No hay métricas registradas en el período seleccionado.</td></tr>
+                  )}
+                </tbody>
+              </table>
+              <p style={{ margin: '12px 2px 0', color: 'var(--text-muted)', fontSize: 10 }}>
+                Las filas rojas indican una bonificación de resolución de −1 o inferior según los tramos configurados actualmente.
+              </p>
+            </div>
+          </section>
+        </div>
+      )}
 
       <style>{`
         .clickable-rows tbody tr:hover {
