@@ -293,6 +293,9 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   };
   const selectedHeatMetric = heatMetricConfig[heatMetric];
   const maxHeatValue = Math.max(1, ...heatDays.map(day => num(day.row?.[selectedHeatMetric.field])));
+  const heatMetricFormat = value => `${fmt(value, 2)}${selectedHeatMetric.unit}`;
+  const heatThreshold80 = selectedHeatMetric.target * 0.8;
+  const heatThreshold100 = selectedHeatMetric.target;
   const weekdayStats = useMemo(() => {
     const buckets = Array.from({ length: 7 }, (_, day) => ({ day, label: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][day], rows: [] }));
     currentRows.forEach(row => buckets[parseDate(row.date).getDay()].rows.push(row));
@@ -459,10 +462,21 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
         })}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, color: 'var(--text-dim)', fontSize: 10, marginTop: 10 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Menos del 80% del objetivo</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#eab308' }} /> Entre 80% y 99%</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#22c55e' }} /> Objetivo alcanzado o superado</span>
-        <span style={{ color: 'var(--text-dim)' }}>Objetivo de {selectedHeatMetric.label}: {fmt(selectedHeatMetric.target)}{selectedHeatMetric.unit}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444', flexShrink: 0 }} />
+          {'Menos de ' + heatMetricFormat(heatThreshold80) + ' (80% del objetivo)'}
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#eab308', flexShrink: 0 }} />
+          {heatMetricFormat(heatThreshold80) + ' a menos de ' + heatMetricFormat(heatThreshold100)}
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#22c55e', flexShrink: 0 }} />
+          {heatMetricFormat(heatThreshold100) + ' o más (objetivo alcanzado)'}
+        </span>
+        <span style={{ color: 'var(--text-dim)' }}>
+          Objetivo de {selectedHeatMetric.label}: {heatMetricFormat(selectedHeatMetric.target)}
+        </span>
       </div>
     </section>
 
