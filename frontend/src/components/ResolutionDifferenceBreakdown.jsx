@@ -31,7 +31,7 @@ const getDifferenceLabel = difference => {
   return 'Justo';
 };
 
-function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false }) {
+function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false, interactive = true }) {
   const items = getResolutionTierDifferences(managed, technicians, tiers).filter(item => item.bonus >= 0);
   const zeroIndex = items.findIndex(item => item.bonus === 0);
   const [selectedBonus, setSelectedBonus] = useState(0);
@@ -40,21 +40,17 @@ function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = 
   if (!items.length) return <span>Sin datos</span>;
 
   const selected = items.find(item => item.bonus === selectedBonus) || items[zeroIndex] || items[0];
+  const selectedLabel = `${formatBonus(selected.bonus)}  ${getDifferenceLabel(selected.difference)}`;
+  if (!interactive) return <span title={`Objetivo 0%: ${getDifferenceLabel(items[zeroIndex]?.difference ?? 0)}`} style={{ display: 'inline-block', padding: compact ? '6px 8px' : '8px 10px', border: '1px solid var(--border-light)', borderRadius: 7, color: 'var(--text-muted)', fontSize: compact ? 11 : 12, fontWeight: 800, whiteSpace: 'nowrap' }}>{formatBonus(items[zeroIndex]?.bonus ?? 0)} · {getDifferenceLabel(items[zeroIndex]?.difference ?? 0)}</span>;
   const isNegative = selected.difference < 0;
   const isPositive = selected.difference > 0;
 
-  const openMenu = event => {
+  const openMenu = () => {
     if (menu) {
       setMenu(null);
       return;
     }
-    const rect = event.currentTarget.getBoundingClientRect();
-    const menuHeight = Math.min(items.length * 46 + 12, 300);
-    const top = rect.bottom + menuHeight + 8 <= window.innerHeight
-      ? rect.bottom + 4
-      : Math.max(8, rect.top - menuHeight - 4);
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 228);
-    setMenu({ top, left });
+    setMenu(true);
   };
 
   return (
@@ -90,21 +86,14 @@ function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = 
       </button>
 
       {menu && (
-        <>
-          <button
-            type="button"
-            aria-label="Cerrar selector de objetivo"
-            onClick={() => setMenu(null)}
-            style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'transparent', border: 0, padding: 0, cursor: 'default' }}
-          />
           <div
             role="menu"
             aria-label="Elegir objetivo de resolución"
             style={{
-              position: 'fixed',
-              top: menu.top,
-              left: menu.left,
-              zIndex: 9999,
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              left: 0,
+              zIndex: 1000,
               width: 220,
               maxHeight: 300,
               overflowY: 'auto',
@@ -160,7 +149,6 @@ function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = 
               );
             })}
           </div>
-        </>
       )}
     </div>
   );
