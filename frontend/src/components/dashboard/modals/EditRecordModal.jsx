@@ -55,7 +55,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
           <div className="input-group">
             <label>Cerrados</label>
             <input type="number" className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-              value={formData.closed} onChange={e => setFormData({ ...formData, closed: parseInt(e.target.value) || 0 })} />
+              value={formData.closed} max={Math.max(0, formData.managed - formData.transferred)} onChange={e => setFormData({ ...formData, closed: Math.min(Math.max(0, formData.managed - formData.transferred), Math.max(0, parseInt(e.target.value) || 0)) })} />
           </div>
           <div className="input-group">
             <label>TCO Enviados</label>
@@ -65,7 +65,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
           <div className="input-group">
             <label>Casos Transferidos</label>
             <input type="number" min="0" max={formData.managed} className="filter-input" style={{ width: '100%', marginTop: '5px' }}
-              value={formData.transferred} onChange={e => setFormData({ ...formData, transferred: Math.min(formData.managed, Math.max(0, parseInt(e.target.value) || 0)) })} />
+              value={formData.transferred} onChange={e => setFormData({ ...formData, transferred: Math.min(Math.max(0, formData.managed - formData.closed), Math.max(0, parseInt(e.target.value) || 0)) })} />
           </div>
         </div>
 
