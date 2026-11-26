@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Lock,
   Server,
+  Database,
   HardDrive,
   Clock,
   ArrowLeft,
@@ -41,6 +42,7 @@ export function TechStatusDashboard({ onExit }) {
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState(null);
   const [copiedReport, setCopiedReport] = useState(false);
+  const [databaseUsage, setDatabaseUsage] = useState({ status: 'loading', data: null, error: null });
 
   // 1. Direct DNS test (to see if Konecta is blocking supabase.co)
   const [directDnsTest, setDirectDnsTest] = useState({ status: 'loading' });
@@ -246,6 +248,18 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
+  // Supabase database and Storage quota monitor (admin-only RPC).
+  const runDatabaseUsageTest = useCallback(async () => {
+    setDatabaseUsage(prev => ({ ...prev, status: 'loading', error: null }));
+    try {
+      const { data, error } = await supabase.rpc('get_database_usage');
+      if (error) throw error;
+      setDatabaseUsage({ status: 'ok', data, error: null });
+    } catch (err) {
+      setDatabaseUsage({ status: 'error', data: null, error: err?.message || 'No se pudo consultar el consumo.' });
+    }
+  }, []);
+
   // Test 4: Version checking
   const runVersionTest = useCallback(async () => {
     setVersionSyncStatus('checking');
@@ -302,12 +316,13 @@ export function TechStatusDashboard({ onExit }) {
       runDirectDnsTest(),
       runProxyTest(),
       runTableTests(),
+      runDatabaseUsageTest(),
       runVersionTest(),
       loadOfficeIncidents(),
     ]);
     setLastCheckTime(new Date());
     setIsRunningAll(false);
-  }, [runDirectDnsTest, runProxyTest, runTableTests, runVersionTest, loadOfficeIncidents]);
+  }, [runDirectDnsTest, runProxyTest, runTableTests, runDatabaseUsageTest, runVersionTest, loadOfficeIncidents]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -349,12 +364,19 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
 - Configuración Global: ${tableTests.app_config?.status === 'ok' ? `OK (${tableTests.app_config.count} registros, ${tableTests.app_config.durationMs}ms)` : `ERROR: ${tableTests.app_config?.errorMsg}`}
 - Centinela de Red: ${tableTests.network_incidents?.status === 'ok' ? `OK (${tableTests.network_incidents.count} registros, ${tableTests.network_incidents.durationMs}ms)` : `ERROR: ${tableTests.network_incidents?.errorMsg}`}
 
-[ 4. VERSIÓN & AUTO-UPDATER ]
+[ 4. CONSUMO DE SUPABASE ]
+- PostgreSQL: ${databaseUsage.data ? (databaseUsage.data.database_bytes / 1048576).toFixed(2) + ' MB / ' + (databaseUsage.data.database_limit_bytes / 1048576).toFixed(0) + ' MB (' + databaseUsage.data.database_percent + '%)' : databaseUsage.error || 'No disponible'}
+- Storage: ${databaseUsage.data ? (databaseUsage.data.storage_bytes / 1048576).toFixed(2) + ' MB / ' + (databaseUsage.data.storage_limit_bytes / 1048576).toFixed(0) + ' MB (' + databaseUsage.data.storage_percent + '%)' : 'No disponible'}
+- Objetos Storage: ${databaseUsage.data?.storage_objects ?? '—'}
+- Crecimiento promedio diario: ${databaseUsage.data?.average_daily_growth_bytes != null ? (databaseUsage.data.average_daily_growth_bytes / 1048576).toFixed(3) + ' MB/día' : 'Aún reuniendo mediciones'}
+- Días estimados hasta 80%: ${databaseUsage.data?.estimated_days_to_80_percent ?? 'Aún sin tendencia suficiente'}
+
+[ 5. VERSIÓN & AUTO-UPDATER ]
 - Versión en Navegador: ${CURRENT_VERSION}
 - Versión en Netlify: ${serverVersion}
 - Estado de Sincronización: ${versionSyncStatus === 'ok' ? 'AL DÍA' : 'ACTUALIZACIÓN PENDIENTE'}
 
-[ 5. CACHÉ OFFLINE LOCALSTORAGE ]
+[ 6. CACHÉ OFFLINE LOCALSTORAGE ]
 - Total en Caché: ${(cacheStats.totalBytes / 1024).toFixed(1)} KB almacenados
 - Timer Activo: ${cacheStats.timerState ? 'SÍ' : 'NO'} | Métricas Hoy: ${cacheStats.countsToday} campos
 ═══════════════════════════════════════════════════════════
@@ -619,6 +641,76 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: Supabase storage consumption */}
+        <div className="tech-card">
+          <div className="tech-card-header">
+            <div className="tech-card-title">
+              <Database size={18} />
+              <span>4. CONSUMO Y CAPACIDAD DE SUPABASE</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className={`tech-pill-badge ${databaseUsage.status === 'ok' ? 'badge-green' : databaseUsage.status === 'error' ? 'badge-red' : 'badge-yellow'}`}>
+                {databaseUsage.status === 'ok' ? 'ACTUALIZADO' : databaseUsage.status === 'error' ? 'ERROR' : 'CONSULTANDO'}
+              </span>
+              <button onClick={runDatabaseUsageTest} className="tech-sub-btn" disabled={databaseUsage.status === 'loading'}>
+                <RefreshCw size={12} className={databaseUsage.status === 'loading' ? 'spin' : ''} />
+                <span>ACTUALIZAR</span>
+              </button>
+            </div>
+          </div>
+          <div className="tech-card-content">
+            {databaseUsage.status === 'error' ? (
+              <div className="tech-log-box" style={{ borderLeftColor: '#ef4444' }}>
+                No se pudo consultar el consumo de Supabase: {databaseUsage.error}
+              </div>
+            ) : databaseUsage.data ? (
+              <>
+                {[
+                  { key: 'database', label: 'Base de datos PostgreSQL', used: databaseUsage.data.database_bytes, limit: databaseUsage.data.database_limit_bytes, percent: databaseUsage.data.database_percent, unit: '500 MB' },
+                  { key: 'storage', label: 'Supabase Storage (archivos)', used: databaseUsage.data.storage_bytes, limit: databaseUsage.data.storage_limit_bytes, percent: databaseUsage.data.storage_percent, unit: '1 GB' }
+                ].map(item => {
+                  const percent = Math.min(100, Math.max(0, Number(item.percent) || 0));
+                  const color = percent >= 85 ? '#ef4444' : percent >= 70 ? '#eab308' : '#10b981';
+                  return (
+                    <div key={item.key} style={{ marginBottom: 18 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 7 }}>
+                        <strong style={{ fontSize: 12, color: 'var(--text-bright)' }}>{item.label}</strong>
+                        <strong style={{ fontSize: 12, color }}>{(item.used / 1048576).toFixed(2)} MB / {item.unit} · {percent.toFixed(2)}%</strong>
+                      </div>
+                      <div style={{ height: 12, borderRadius: 20, background: 'var(--border-color, #334155)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${percent}%`, background: color, borderRadius: 20, transition: 'width .3s ease' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="tech-cache-grid">
+                  <div className="tech-cache-item">
+                    <span>Objetos almacenados</span>
+                    <strong>{databaseUsage.data.storage_objects}</strong>
+                  </div>
+                  <div className="tech-cache-item">
+                    <span>Crecimiento promedio</span>
+                    <strong>{databaseUsage.data.average_daily_growth_bytes != null ? `${(databaseUsage.data.average_daily_growth_bytes / 1048576).toFixed(3)} MB/día` : 'Calculando tendencia'}</strong>
+                  </div>
+                  <div className="tech-cache-item">
+                    <span>Estimación hasta 80%</span>
+                    <strong>{databaseUsage.data.estimated_days_to_80_percent != null ? `${databaseUsage.data.estimated_days_to_80_percent} días` : 'Pendiente de historial'}</strong>
+                  </div>
+                  <div className="tech-cache-item">
+                    <span>Medición</span>
+                    <strong>{new Date(databaseUsage.data.measured_at).toLocaleString()}</strong>
+                  </div>
+                </div>
+                <div className="tech-info-note">
+                  Cuotas de referencia del plan Free: PostgreSQL 500 MB y Storage 1 GB. Se guarda una medición diaria para calcular el ritmo de crecimiento; la estimación estará disponible cuando haya al menos dos días de datos.
+                </div>
+              </>
+            ) : (
+              <div className="tech-log-box">Consultando tamaño de la base de datos y archivos...</div>
+            )}
           </div>
         </div>
 
