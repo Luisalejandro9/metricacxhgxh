@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, BookOpen, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import { getResolutionTierDifferences } from './ResolutionDifferenceBreakdown';
 
 // Subcomponents
 import ConfirmModal from './dashboard/modals/ConfirmModal';
@@ -417,7 +418,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
       const accumClosingDiff = runningManaged > 0 ? (runningClosed - Math.ceil(runningManaged * (standards.CLOSED_GREEN / 100))) : 0;
       const accumGxhDiff = runningSeconds > 0 ? (runningManaged - ((runningSeconds / 3600) * standards.GXH_GREEN)) : 0;
-      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * (standards.RESOLUTION_GREEN / 100))) : 0;
+      const zeroResolutionTier = (standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0);
+      const accumResoDiff = runningManaged > 0 ? ((runningManaged - runningTechnicians) - Math.ceil(runningManaged * (Number(zeroResolutionTier?.min ?? standards.RESOLUTION_GREEN) / 100))) : 0;
       const accumTmoManaged = runningManaged > 0 ? Math.floor(runningSeconds / runningManaged) : 0;
 
       return {
@@ -557,7 +559,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
     const closingBalance = managedCount > 0 ? (closedCount - Math.ceil(managedCount * (standards.CLOSED_GREEN / 100))) : 0;
     const gxhDiff = totalHours > 0 ? (managedCount - (totalHours * standards.GXH_GREEN)) : 0;
-    const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (standards.RESOLUTION_GREEN / 100))) : 0;
+    const zeroResolutionTier = (standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS).find(tier => Number(tier.bonus) === 0);
+    const resoDiff = managedCount > 0 ? ((managedCount - techniciansCount) - Math.ceil(managedCount * (Number(zeroResolutionTier?.min ?? standards.RESOLUTION_GREEN) / 100))) : 0;
 
     return {
       closeRate: closeRate.toFixed(2),
