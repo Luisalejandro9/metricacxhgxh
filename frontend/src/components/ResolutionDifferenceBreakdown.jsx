@@ -32,7 +32,7 @@ const getDifferenceLabel = difference => {
 };
 
 function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false }) {
-  const items = getResolutionTierDifferences(managed, technicians, tiers);
+  const items = getResolutionTierDifferences(managed, technicians, tiers).filter(item => item.bonus >= 0);
   const zeroIndex = items.findIndex(item => item.bonus === 0);
   const [selectedBonus, setSelectedBonus] = useState(0);
   const [menu, setMenu] = useState(null);
