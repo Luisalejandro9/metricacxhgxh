@@ -242,9 +242,21 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     datasets: [{
       label: 'Bono acumulado del mes (%)',
       data: monthlyBonusSeries.map(item => item.bonus),
-      borderColor: COLORS.green,
-      backgroundColor: 'rgba(16, 185, 129, 0.18)',
-      fill: true,
+      borderColor: context => {
+        const value = context?.p1?.parsed?.y ?? context?.p0?.parsed?.y ?? 0;
+        return value < 0 ? 'rgba(239, 68, 68, 1)' : COLORS.green;
+      },
+      backgroundColor: context => {
+        const value = context?.p1?.parsed?.y ?? context?.p0?.parsed?.y ?? 0;
+        return value < 0 ? 'rgba(239, 68, 68, 0.18)' : 'rgba(16, 185, 129, 0.18)';
+      },
+      segment: {
+        borderColor: context => {
+          const midpoint = ((context.p0.parsed.y || 0) + (context.p1.parsed.y || 0)) / 2;
+          return midpoint < 0 ? 'rgba(239, 68, 68, 1)' : COLORS.green;
+        }
+      },
+      fill: { target: { value: 0 }, above: 'rgba(16, 185, 129, 0.18)', below: 'rgba(239, 68, 68, 0.18)' },
       tension: 0.32,
       cubicInterpolationMode: 'monotone',
       borderWidth: 2.5,
