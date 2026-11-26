@@ -526,8 +526,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   // --- Manual Edit Handlers ---
   const saveManualClosed = () => {
     const val = parseInt(manualCountInput) || 0;
-    if (val > managedCount) {
-      showMessage('error', 'Cerrados no puede ser mayor que gestionados');
+    if (val > managedCount - transferredCount) {
+      showMessage('error', 'Cerrados y transferidos no pueden superar los casos gestionados');
       return;
     }
     setClosedCount(val);
@@ -536,8 +536,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
   const saveManualManaged = () => {
     const val = parseInt(manualCountInput) || 0;
-    if (val < Math.max(closedCount, transferredCount)) {
-      showMessage('error', 'Gestionados no puede ser menor que cerrados o transferidos');
+    if (val < closedCount + transferredCount) {
+      showMessage('error', 'Gestionados no puede ser menor que la suma de cerrados y transferidos');
       return;
     }
     setManagedCount(val);
@@ -742,12 +742,12 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   };
 
   const subtractManaged = () => {
-    if (managedCount > Math.max(closedCount, transferredCount)) {
+    if (managedCount > closedCount + transferredCount) {
       setManagedCount(prev => prev - 1);
     }
   };
 
-  const addTransferred = () => setTransferredCount(prev => prev < managedCount ? prev + 1 : prev);
+  const addTransferred = () => setTransferredCount(prev => prev < managedCount - closedCount ? prev + 1 : prev);
   const subtractTransferred = () => setTransferredCount(prev => Math.max(0, prev - 1));
 
   return (
@@ -937,7 +937,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
             tmo_case: tmoCase,
             tmo_managed: tmoManaged,
             technicians_sent: formData.technicians,
-            cases_transferred: formData.transferred,
+            cases_transferred: Math.min(formData.transferred, Math.max(0, formData.managed - formData.closed)),
             resolution_rate: parseFloat(resolutionRate.toFixed(2))
           };
 
