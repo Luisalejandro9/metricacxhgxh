@@ -240,7 +240,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const bonusAreaChart = {
     labels: bonusLabels,
     datasets: [{
-      label: 'Bono acumulado del mes (%)',
+      label: 'Bonificación del mes (%)',
       data: monthlyBonusSeries.map(item => item.bonus),
       borderColor: context => {
         const value = context?.p1?.parsed?.y ?? context?.p0?.parsed?.y ?? 0;
@@ -497,9 +497,9 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
 
     <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
       <details style={{ ...cardStyle, padding: 0 }}>
-        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>Bono acumulado del mes · Evolución diaria</summary>
+        <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>Bonificación del mes · Evolución diaria</summary>
         <div style={{ padding: '0 14px 14px' }}>
-          <ChartCard title="BONO ACUM. MES" subtitle="Evolución diaria del porcentaje acumulado, reiniciado al comenzar cada mes." data={bonusAreaChart} options={bonusAreaOptions} empty={!monthlyBonusSeries.length} />
+          <ChartCard title="BONIFICACION DEL MES" subtitle="Evolución diaria del porcentaje acumulado, reiniciado al comenzar cada mes." data={bonusAreaChart} options={bonusAreaOptions} empty={!monthlyBonusSeries.length} />
         </div>
       </details>
       <details style={{ ...cardStyle, padding: 0 }}>
