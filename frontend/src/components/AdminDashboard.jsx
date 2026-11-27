@@ -487,8 +487,13 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         : topTier
           ? resolvedCases - Math.ceil(totalManaged * Number(topTier.min) / 100)
           : 0;
+      // Un nuevo caso gestionado sin TCO suma 1 al numerador y 1 al denominador.
+      const targetRate = progressTarget ? Number(progressTarget.min) / 100 : null;
+      const casesNeeded = targetRate !== null && targetRate < 1
+        ? Math.max(0, Math.ceil((targetRate * totalManaged - resolvedCases) / (1 - targetRate)))
+        : 0;
       const progressLabel = progressTarget
-        ? `Faltan ${Math.max(0, Math.abs(Math.min(0, progressDifference)))} para ${Number(progressTarget.bonus).toFixed(0)}%`
+        ? `Faltan ${casesNeeded} casos sin TCO → ${Number(progressTarget.bonus).toFixed(0)}%`
         : `Sobrante ${Math.max(0, progressDifference)}`;
 
       return {
