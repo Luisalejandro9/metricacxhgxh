@@ -56,12 +56,20 @@ export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT
       ? resolvedCases - Math.ceil(total * Number(topTier.min) / 100)
       : 0;
 
+  // Los casos nuevos aumentan tanto el numerador como el denominador:
+  // (resueltos + x) / (gestionados + x) >= objetivo.
+  const targetRate = progressTarget ? Number(progressTarget.min) / 100 : null;
+  const casesNeeded = targetRate !== null && targetRate < 1
+    ? Math.max(0, Math.ceil((targetRate * total - resolvedCases) / (1 - targetRate)))
+    : 0;
+
   return {
     currentBonus,
     targetBonus: progressTarget ? Number(progressTarget.bonus) : null,
     difference,
+    casesNeeded,
     label: progressTarget
-      ? `${Math.max(0, Math.abs(Math.min(0, difference)))} cierre${Math.max(0, Math.abs(Math.min(0, difference))) === 1 ? '' : 's'} s/técnico → ${Number(progressTarget.bonus).toFixed(0)}%`
+      ? `Faltan ${casesNeeded} casos sin TCO → ${Number(progressTarget.bonus).toFixed(0)}%`
       : `Sobrante ${Math.max(0, difference)}`
   };
 };
