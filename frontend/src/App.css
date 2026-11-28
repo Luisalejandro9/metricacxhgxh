@@ -736,3 +736,162 @@
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
   .grid-primary { grid-template-columns: 1fr; }
 }
+
+
+/* --- RESPONSIVE DESKTOP / LAPTOP / MINI-LAPTOP --- */
+.app-layout {
+  width: 100%;
+  min-width: 0;
+}
+
+.sidebar {
+  flex: 0 0 320px;
+  min-width: 0;
+}
+
+.main-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.metric-card,
+.accum-card {
+  min-width: 0;
+}
+
+.resolution-progress-badge {
+  font-size: 15px !important;
+  letter-spacing: 0.01em;
+}
+
+.resolution-progress-badge.compact {
+  font-size: 14px !important;
+}
+
+.accum-card {
+  flex: 1 1 220px;
+}
+
+@media (max-width: 1200px) {
+  .sidebar {
+    flex-basis: 280px;
+    padding: 20px;
+  }
+
+  .main-content {
+    padding: 24px;
+  }
+
+  .metric-card {
+    padding: 18px;
+  }
+
+  .grid-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .accum-section {
+    justify-content: stretch;
+  }
+
+  .accum-card {
+    flex: 1 1 210px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    flex-basis: 255px;
+    padding: 16px;
+  }
+
+  .main-content {
+    padding: 18px;
+  }
+
+  .timer-display {
+    font-size: clamp(30px, 3.2vw, 38px);
+  }
+
+  .grid-primary {
+    gap: 12px;
+  }
+
+  .metric-value {
+    font-size: clamp(36px, 4vw, 48px);
+  }
+
+  .accum-card {
+    flex-basis: 100%;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .history-table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    flex: 0 0 auto;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .grid-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .accum-card {
+    flex: 1 1 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 14px;
+  }
+
+  .sidebar {
+    padding: 16px;
+  }
+
+  .grid-primary,
+  .grid-secondary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accum-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accum-card {
+    width: 100%;
+  }
+
+  .resolution-progress-badge,
+  .resolution-progress-badge.compact {
+    width: 100%;
+    font-size: 14px !important;
+  }
+
+  .filter-group,
+  .table-header {
+    flex-wrap: wrap;
+  }
+}
