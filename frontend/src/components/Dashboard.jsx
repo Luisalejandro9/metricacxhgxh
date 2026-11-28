@@ -26,6 +26,10 @@ const DashboardCharts = lazy(() => import('./dashboard/DashboardCharts'));
  */
 function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
+  // Separar el estado local por identidad y entorno para impedir cruces entre Demo y usuarios reales.
+  const storageScope = user ? `${user.isDemo ? 'demo' : 'user'}_${user.id}` : 'anonymous';
+  const timerStateStorageKey = `gxh_timer_state_${storageScope}`;
+  const countsStorageKey = (date) => `gxh_counts_${storageScope}_${date}`;
 
   // Estado dinámico de estándares del servicio (cargados desde app_config)
   const [standards, setStandards] = useState(() => {
@@ -217,9 +221,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     fetchHistory();
 
     // Recuperar estado persistido del temporizador y contadores del día actual
-    const savedState = localStorage.getItem('gxh_timer_state');
+    const savedState = localStorage.getItem(timerStateStorageKey);
     const todayStr = getTodayDateStr();
-    const savedCounts = localStorage.getItem(`gxh_counts_${todayStr}`);
+    const savedCounts = localStorage.getItem(countsStorageKey(todayStr));
 
     if (savedState) {
       try {
@@ -242,7 +246,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           // Reiniciar temporizador obsoleto de jornadas anteriores a 00:00:00
           setTimerSeconds(0);
           setIsTimerRunning(false);
-          localStorage.removeItem('gxh_timer_state');
+          localStorage.removeItem(timerStateStorageKey);
         }
       } catch (e) {
         console.error('Error al cargar estado del temporizador:', e);
@@ -276,8 +280,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       startTime: startTimeRef.current,
       date: todayStr
     };
-    localStorage.setItem('gxh_timer_state', JSON.stringify(state));
-  }, [timerSeconds, isTimerRunning]);
+    localStorage.setItem(timerStateStorageKey, JSON.stringify(state));
+  }, [timerSeconds, isTimerRunning, user, timerStateStorageKey]);
 
   // Persistir contadores diarios en localStorage
   useEffect(() => {
@@ -288,8 +292,8 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
       technicians: techniciansCount,
       transferred: transferredCount
     };
-    localStorage.setItem(`gxh_counts_${dateStr}`, JSON.stringify(counts));
-  }, [closedCount, managedCount, techniciansCount, transferredCount]);
+    localStorage.setItem(countsStorageKey(dateStr), JSON.stringify(counts));
+  }, [closedCount, managedCount, techniciansCount, transferredCount, user, storageScope]);
 
   // --- Auto-guardado inteligente tras 4s de inactividad en los contadores ---
   useEffect(() => {
@@ -429,7 +433,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         setIsTimerRunning(false);
         startTimeRef.current = null;
         localStorage.removeItem('gxh_timer_state');
-        localStorage.removeItem(`gxh_counts_${getTodayDateStr()}`);
+        localStorage.removeItem(countsStorageKey(getTodayDateStr()));
         showMessage('info', 'Contadores reiniciados.');
       },
       'danger',
