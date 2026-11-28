@@ -89,16 +89,22 @@ function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = 
     <span
       title={isSurplus
         ? 'Techo alcanzado: bonificación de resolución del 3%'
-        : `Faltan ${Math.max(0, Math.abs(Math.min(0, progress.difference)))} cierres sin técnico para llegar al ${progress.targetBonus}% de bonificación de resolución`}
+        : `Faltan ${progress.casesNeeded} casos gestionados sin TCO para llegar al ${progress.targetBonus}% de bonificación de resolución`}
+      className={`resolution-progress-badge${compact ? ' compact' : ''}`}
       style={{
-        display: 'inline-block',
-        padding: compact ? '6px 8px' : '8px 10px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: 'fit-content',
+        maxWidth: '100%',
+        padding: compact ? '9px 12px' : '10px 13px',
         border: '1px solid var(--border-light)',
-        borderRadius: 7,
+        borderRadius: 8,
         color,
-        fontSize: compact ? 11 : 12,
+        fontSize: compact ? 14 : 15,
         fontWeight: 800,
-        whiteSpace: 'nowrap',
+        lineHeight: 1.35,
+        whiteSpace: 'normal',
+        overflowWrap: 'anywhere',
         fontVariantNumeric: 'tabular-nums'
       }}
     >
