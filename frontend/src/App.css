@@ -1,4 +1,4 @@
-/* --- SWISS INTERNATIONAL TYPOGRAPHIC STYLE - APPLICATION LAYOUT --- */
+/* --- ESTILO TIPOGRÁFICO INTERNACIONAL SUIZO - LAYOUT DE LA APLICACIÓN --- */
 
 .app-layout {
   display: flex;
@@ -7,7 +7,7 @@
   transition: background-color 0.2s ease;
 }
 
-/* --- SIDEBAR --- */
+/* --- BARRA LATERAL (SIDEBAR) --- */
 .sidebar {
   width: 320px;
   background: var(--bg-sidebar);
@@ -92,7 +92,7 @@
   color: #ffffff;
 }
 
-/* --- TIMER SECTION --- */
+/* --- SECCIÓN DEL TEMPORIZADOR --- */
 .timer-section {
   text-align: center;
   margin-bottom: 28px;
@@ -122,7 +122,7 @@
   gap: 8px;
 }
 
-/* --- BUTTONS --- */
+/* --- BOTONES Y ACCIONES --- */
 .btn {
   padding: 12px 16px;
   font-weight: 700;
@@ -234,7 +234,7 @@
   border-color: var(--accent-error);
 }
 
-/* --- STANDARDS & METRICS SECTIONS --- */
+/* --- SECCIÓN DE ESTÁNDARES Y MÉTRICAS --- */
 .standards-section {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -265,7 +265,7 @@
   font-weight: 700;
 }
 
-/* --- MAIN CONTENT --- */
+/* --- CONTENIDO PRINCIPAL Y TARJETAS DE MÉTRICAS --- */
 .main-content {
   flex-grow: 1;
   padding: 32px;
@@ -350,7 +350,7 @@
   margin: 0;
 }
 
-/* Status Badges - Executive Style */
+/* Indicadores de estado - Estilo ejecutivo */
 .status-indicator {
   display: inline-flex;
   align-items: center;
@@ -403,7 +403,7 @@
   font-size: 24px;
 }
 
-/* --- ACCUMULATED METRICS SECTION --- */
+/* --- SECCIÓN DE MÉTRICAS ACUMULADAS --- */
 .accum-section {
   display: flex;
   flex-wrap: wrap;
@@ -437,7 +437,7 @@
 .stat-warning-standard { color: var(--accent-warning); }
 .stat-meets-standard { color: var(--accent-success); }
 
-/* --- LOGIN PAGE - EXECUTIVE PROFESSIONAL --- */
+/* --- PÁGINA DE INICIO DE SESIÓN (LOGIN) --- */
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -515,7 +515,7 @@
   height: 18px;
 }
 
-/* --- MODALS - EXECUTIVE PROFESSIONAL --- */
+/* --- MODALES --- */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -576,7 +576,7 @@
   color: var(--text-dim);
 }
 
-/* --- MESSAGES & TOASTS --- */
+/* --- MENSAJES Y NOTIFICACIONES (TOASTS) --- */
 .mensaje {
   position: fixed;
   top: 24px;
@@ -600,7 +600,7 @@
 .mensaje-error { background: var(--bg-card); color: var(--accent-error); border-color: var(--accent-error); }
 .mensaje-info { background: var(--bg-card); color: var(--accent-info); border-color: var(--accent-info); }
 
-/* --- TABLE STUFF - EXECUTIVE PROFESSIONAL --- */
+/* --- TABLAS E HISTORIAL --- */
 .h-full { height: 100%; }
 
 .table-header {
@@ -690,7 +690,7 @@
   font-size: 13px;
 }
 
-/* --- ADMIN DASHBOARD --- */
+/* --- PANEL DE ADMINISTRACIÓN --- */
 .user-list-item:hover:not(.active) {
   background: var(--bg-hover) !important;
   border-color: var(--border-strong) !important;
@@ -711,7 +711,7 @@
   color: var(--primary);
 }
 
-/* Spinner for loading state - always a circular spinner */
+/* Indicador de carga (spinner circular) */
 .spinner {
   width: 32px;
   height: 32px;
@@ -730,7 +730,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* Responsive adjustments */
+/* --- AJUSTES DE RESPONSIVIDAD --- */
 @media (max-width: 900px) {
   .app-layout { flex-direction: column; }
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
@@ -738,7 +738,7 @@
 }
 
 
-/* --- RESPONSIVE DESKTOP / LAPTOP / MINI-LAPTOP --- */
+/* --- RESPONSIVIDAD DESKTOP / LAPTOP / MINI-LAPTOP --- */
 .app-layout {
   width: 100%;
   min-width: 0;

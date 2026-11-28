@@ -1,9 +1,22 @@
+/**
+ * @fileoverview Modal de guía rápida para operadores con el flujo diario en 3 pasos,
+ * metas de bonificación, código de colores (semáforo) e interpretación de diferencias.
+ */
 import React from 'react';
 import { X, Play, Check, Plus, Zap, Save, Award, TrendingUp, AlertTriangle } from 'lucide-react';
 
+/**
+ * Guía rápida interactiva de uso de la plataforma y reglas de bonificación.
+ * @param {object} props
+ * @param {boolean} props.show - Controla la visibilidad del modal.
+ * @param {Function} props.onClose - Cierra el modal de ayuda.
+ * @param {object} [props.STANDARDS] - Estándares activos para mostrar las metas vigentes.
+ * @param {Function} [props.formatTmoMin] - Formateador de TMO en minutos (reservado en firma).
+ */
 function HelpModal({ show, onClose, STANDARDS, formatTmoMin }) {
   if (!show) return null;
 
+  // Valores de respaldo en caso de que STANDARDS aún no esté cargado
   const standards = STANDARDS || {
     GXH_GREEN: 4.00,
     CLOSED_GREEN: 81.0,

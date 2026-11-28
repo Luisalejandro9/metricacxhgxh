@@ -1,6 +1,23 @@
+/**
+ * @fileoverview Modal administrativo de detalle de operador con resumen del período,
+ * tabla de registros día por día y acciones de moderación/limpieza de cuenta.
+ */
 import React from 'react';
 import { X, Calendar, Trash2, Eraser, Ban, UserRoundCheck } from 'lucide-react';
 
+/**
+ * Muestra el desglose histórico de un operador y controles administrativos sobre su perfil.
+ * @param {object} props
+ * @param {object|null} props.viewingUserDetails - Datos consolidados y filas diarias del usuario.
+ * @param {Function} props.onClose - Cierra el modal de detalle.
+ * @param {object} props.standards - Estándares operativos para colorear métricas.
+ * @param {Function} props.getStatusClass - Devuelve la clase de semáforo según umbrales.
+ * @param {Function} props.onDeleteClick - Inicia flujo de limpieza y cierre remoto de sesión.
+ * @param {Function} props.onClearDataClick - Inicia flujo de borrado únicamente de métricas.
+ * @param {Function} props.onBanClick - Inicia flujo de baneo o desbaneo del usuario.
+ * @param {boolean} [props.isSuperAdmin=false] - Permite acciones sobre otros administradores.
+ * @param {boolean} [props.isProtectedAccount=false] - Bloquea acciones destructivas en cuentas protegidas.
+ */
 function UserDetailsModal({
   viewingUserDetails,
   onClose,
@@ -17,6 +34,7 @@ function UserDetailsModal({
   return (
     <div className="login-overlay drilldown-modal" style={{ zIndex: 2000 }}>
       <div className="login-card" style={{ maxWidth: '900px', width: '95%', padding: '0', overflow: 'hidden' }}>
+        {/* CABECERA: IDENTIDAD Y ESTADO DE LA CUENTA */}
         <header style={{ padding: '24px 32px', background: 'var(--bg-glass)', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--text-bright)' }}>{viewingUserDetails.email.split('@')[0]}</h2>
@@ -28,7 +46,9 @@ function UserDetailsModal({
           </button>
         </header>
 
+        {/* CUERPO: TARJETAS DE RESUMEN Y TABLA DIARIA */}
         <div style={{ padding: '32px', maxHeight: '70vh', overflowY: 'auto' }}>
+          {/* Tarjetas de resumen del período */}
           <div className="grid-secondary" style={{ marginBottom: '32px' }}>
             <div className="metric-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
               <span className="metric-label">Días de Actividad</span>
@@ -52,6 +72,7 @@ function UserDetailsModal({
             </div>
           </div>
 
+          {/* Tabla de registros fecha por fecha */}
           <h3 className="metric-label" style={{ marginBottom: '15px' }}>
             <Calendar size={14} style={{ marginRight: 8 }} /> Desglose fecha por fecha
           </h3>
@@ -95,6 +116,7 @@ function UserDetailsModal({
           </table>
         </div>
 
+        {/* PIE DEL MODAL: ACCIONES ADMINISTRATIVAS SEGÚN PERMISOS */}
         <footer style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-light)' }}>
           {(!isProtectedAccount && (viewingUserDetails.role !== 'admin' || isSuperAdmin)) ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

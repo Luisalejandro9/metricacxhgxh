@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Consola técnica protegida por contraseña para diagnosticar
+ * conectividad de red (bloqueo DNS de Konecta vs proxy inverso Netlify),
+ * salud de tablas, uso de cuotas en Supabase, sincronización de versión,
+ * caché local e incidentes pasivos reportados desde la oficina.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
@@ -29,27 +35,32 @@ import { fetchRecentIncidents, clearAllIncidents } from '../lib/incidentSentinel
 
 const CURRENT_VERSION = typeof __APP_BUILD_VERSION__ !== 'undefined' ? __APP_BUILD_VERSION__ : 'dev';
 
+/**
+ * Panel técnico de diagnóstico de infraestructura, red y telemetría.
+ * @param {object} props
+ * @param {Function} props.onExit - Regresa a la vista principal de la aplicación.
+ */
 export function TechStatusDashboard({ onExit }) {
-  // Authentication state
+  // ── Estado de autenticación contra la Edge Function ──
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('tech_status_auth') === 'true' && !!sessionStorage.getItem('tech_status_password');
   });
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Diagnostic states
+  // ── Estados generales del diagnóstico y consumo de Supabase ──
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState(null);
   const [copiedReport, setCopiedReport] = useState(false);
   const [databaseUsage, setDatabaseUsage] = useState({ status: 'loading', data: null, error: null });
 
-  // 1. Direct DNS test (to see if Konecta is blocking supabase.co)
+  // 1. Prueba de DNS directo (para detectar si Konecta bloquea supabase.co)
   const [directDnsTest, setDirectDnsTest] = useState({ status: 'loading' });
 
-  // 2. Proxy test (to see if our Netlify bypass is working)
+  // 2. Prueba de proxy inverso (para verificar que el bypass en Netlify funciona)
   const [proxyTest, setProxyTest] = useState({ status: 'loading' });
 
-  // 3. Tables test
+  // 3. Prueba de lectura/salud de tablas principales
   const [tableTests, setTableTests] = useState({
     daily_metrics: { table: 'daily_metrics', label: 'Métricas Diarias', status: 'loading' },
     profiles: { table: 'profiles', label: 'Perfiles / Usuarios', status: 'loading' },
@@ -57,11 +68,11 @@ export function TechStatusDashboard({ onExit }) {
     network_incidents: { table: 'network_incidents', label: 'Centinela de Red', status: 'loading' },
   });
 
-  // 4. Version test
+  // 4. Prueba de sincronización de versión desplegada
   const [serverVersion, setServerVersion] = useState('Verificando...');
   const [versionSyncStatus, setVersionSyncStatus] = useState('checking');
 
-  // 5. Offline Cache stats
+  // 5. Estadísticas del caché offline en LocalStorage
   const [cacheStats, setCacheStats] = useState({
     timerState: false,
     countsToday: 0,
@@ -73,7 +84,11 @@ export function TechStatusDashboard({ onExit }) {
   const [loadingIncidents, setLoadingIncidents] = useState(false);
   const [clearingIncidents, setClearingIncidents] = useState(false);
 
-  // Login Handler
+  /**
+   * Consulta la Edge Function `status-diagnostics` validando la clave técnica.
+   * @param {string|null} [password] - Contraseña almacenada en sessionStorage o ingresada.
+   * @returns {Promise<object>} Conteos de tablas y métricas de uso de Supabase.
+   */
   const requestStatusDiagnostics = useCallback(async (password = sessionStorage.getItem('tech_status_password')) => {
     if (!password) throw new Error('La sesión de diagnóstico expiró. Ingresa nuevamente la contraseña.');
     const response = await fetch(`${getEffectiveSupabaseUrl()}/functions/v1/status-diagnostics`, {
@@ -91,6 +106,7 @@ export function TechStatusDashboard({ onExit }) {
     return result;
   }, []);
 
+  /** Valida la contraseña ingresada y habilita el acceso en sessionStorage. */
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -105,6 +121,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   };
 
+  /** Cierra la sesión técnica y limpia las credenciales temporales. */
   const handleLogout = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('tech_status_auth');
@@ -112,7 +129,7 @@ export function TechStatusDashboard({ onExit }) {
     setPasswordInput('');
   };
 
-  // Inspect LocalStorage cache
+  /** Inspecciona el espacio usado y claves activas dentro de LocalStorage. */
   const readCacheStats = () => {
     try {
       let total = 0;
@@ -139,11 +156,11 @@ export function TechStatusDashboard({ onExit }) {
         totalBytes: total,
       });
     } catch {
-      // Ignore
+      // Ignorar errores de acceso a almacenamiento local
     }
   };
 
-  // Test 1: Direct DNS query to supabase.co
+  /** Prueba 1: Sonda directa al dominio de Supabase sin pasar por el proxy. */
   const runDirectDnsTest = useCallback(async () => {
     setDirectDnsTest({ status: 'loading' });
     const start = performance.now();
@@ -151,7 +168,7 @@ export function TechStatusDashboard({ onExit }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      // Attempt direct connection to Supabase hostname (bypassing Netlify proxy)
+      // Intenta conexión directa al host de Supabase (evitando el proxy de Netlify)
       const res = await fetch(`${DIRECT_SUPABASE_URL}/rest/v1/`, {
         method: 'HEAD',
         signal: controller.signal,
@@ -178,7 +195,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
-  // Test 2: Netlify Proxy query
+  /** Prueba 2: Sonda al proxy inverso (/supabase/rest/v1/) alojado en Netlify. */
   const runProxyTest = useCallback(async () => {
     setProxyTest({ status: 'loading' });
     const start = performance.now();
@@ -186,7 +203,7 @@ export function TechStatusDashboard({ onExit }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-      // Test the local proxy URL: /supabase/rest/v1/
+      // Prueba la URL efectiva del proxy local: /supabase/rest/v1/
       const proxyBase = getEffectiveSupabaseUrl();
       const res = await fetch(`${proxyBase}/rest/v1/`, {
         method: 'HEAD',
@@ -224,8 +241,10 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
-  // Secure server-side diagnostics: the Edge Function validates the status password
-  // and uses its private service key so browser requests never bypass RLS.
+  /**
+   * Diagnóstico seguro del lado del servidor: la Edge Function valida la contraseña
+   * y utiliza su service key privada para consultar tablas y cuotas sin omitir RLS desde el navegador.
+   */
   const runStatusDiagnostics = useCallback(async () => {
     setTableTests(prev => Object.fromEntries(Object.entries(prev).map(([key, value]) => [key, { ...value, status: 'loading', errorMsg: null }])));
     setDatabaseUsage(prev => ({ ...prev, status: 'loading', error: null }));
@@ -249,7 +268,7 @@ export function TechStatusDashboard({ onExit }) {
   const runTableTests = runStatusDiagnostics;
   const runDatabaseUsageTest = runStatusDiagnostics;
 
-  // Test 4: Version checking
+  /** Prueba 4: Compara la versión local en el navegador con `/version.json` en Netlify. */
   const runVersionTest = useCallback(async () => {
     setVersionSyncStatus('checking');
     try {
@@ -271,7 +290,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
-  // Test 6: Sonda del Centinela Remoto (Incidentes de la oficina)
+  /** Prueba 6: Consulta incidentes recientes del Centinela Remoto en la oficina. */
   const loadOfficeIncidents = useCallback(async () => {
     setLoadingIncidents(true);
     try {
@@ -284,6 +303,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, []);
 
+  /** Limpia el historial de incidentes de oficina tras confirmar con el usuario. */
   const handleClearIncidents = async () => {
     if (!window.confirm('¿Deseas vaciar el historial de incidentes de la oficina?')) return;
     setClearingIncidents(true);
@@ -297,7 +317,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   };
 
-  // Run all tests
+  /** Ejecuta en paralelo todas las sondas de red, base de datos, versión y caché. */
   const runAllDiagnostics = useCallback(async () => {
     setIsRunningAll(true);
     readCacheStats();
@@ -318,7 +338,7 @@ export function TechStatusDashboard({ onExit }) {
     }
   }, [isAuthenticated, runAllDiagnostics]);
 
-  // Copy diagnostic report
+  /** Construye un reporte técnico en texto plano y lo copia al portapapeles. */
   const copyReportToClipboard = () => {
     const recentOfficeBlocks = officeIncidents.filter((inc) => {
       const t = new Date(inc.created_at).getTime();
@@ -376,7 +396,7 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
   };
 
   // ─────────────────────────────────────────────────────────────
-  // GATE SCREEN: Security Login Form
+  // PANTALLA DE ACCESO: Formulario de autenticación técnica
   // ─────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
@@ -431,7 +451,7 @@ URL Efectiva Supabase: ${getEffectiveSupabaseUrl()}
   }
 
   // ─────────────────────────────────────────────────────────────
-  // AUTHENTICATED: Full Technical Diagnostics Console
+  // PANEL AUTENTICADO: Consola completa de diagnósticos técnicos
   // ─────────────────────────────────────────────────────────────
   const isDirectBlocked = directDnsTest.status === 'blocked';
   const isProxyWorking = proxyTest.status === 'ok';

@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Módulo de análisis visual de productividad: KPIs comparativos,
+ * gráficos temporales (Chart.js), mapa de calor diario, rendimiento por día
+ * de la semana con modal de detalle e indicadores inteligentes automáticos.
+ */
 import React, { useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
@@ -5,6 +10,7 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
+// Paleta de colores compartida para líneas y áreas de los gráficos
 const COLORS = {
   purple: 'rgba(99, 102, 241, 1)',
   purpleFill: 'rgba(99, 102, 241, 0.18)',
@@ -18,6 +24,9 @@ const COLORS = {
   cyanFill: 'rgba(14, 165, 233, 0.12)'
 };
 
+// ─────────────────────────────────────────────────────────────
+// UTILIDADES DE FECHAS, TIEMPOS Y FORMATEO NUMÉRICO
+// ─────────────────────────────────────────────────────────────
 const pad = n => String(n).padStart(2, '0');
 const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseDate = value => {
@@ -48,6 +57,11 @@ const num = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 const fmt = (value, digits = 2) => num(value).toLocaleString('es-AR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const pctChange = (current, previous) => previous === 0 ? (current === 0 ? 0 : null) : ((current - previous) / Math.abs(previous)) * 100;
 
+/**
+ * Resume un conjunto de registros diarios calculando totales y promedios ponderados.
+ * @param {Array<object>} rows - Registros de métricas.
+ * @returns {object} Totales acumulados y tasas (gxh, tmo, resolution, closeRate).
+ */
 function summarize(rows) {
   const totals = rows.reduce((acc, row) => {
     const managed = num(row.cases_managed);
@@ -74,6 +88,12 @@ function summarize(rows) {
   };
 }
 
+/**
+ * Agrupa registros por día, semana o mes y calcula el resumen de cada bloque.
+ * @param {Array<object>} rows - Registros filtrados del período.
+ * @param {'daily'|'weekly'|'monthly'} grouping - Granularidad de agrupación.
+ * @returns {Array<object>} Grupos ordenados cronológicamente con métricas resumidas.
+ */
 function aggregateRows(rows, grouping) {
   const groups = new Map();
   rows.forEach(row => {
@@ -97,12 +117,14 @@ function aggregateRows(rows, grouping) {
   }));
 }
 
+/** Casilla de verificación compacta para activar o ocultar una serie dentro de un gráfico. */
 function MetricToggle({ checked, onChange, children }) {
   return <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer' }}>
     <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />{children}
   </label>;
 }
 
+/** Contenedor estilizado para un gráfico de líneas de Chart.js con estado vacío. */
 function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty }) {
   return <section style={{ marginTop: 18, padding: 20, background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -118,7 +140,19 @@ function ChartCard({ title, subtitle, data, options, toggles, onToggle, empty })
   </section>;
 }
 
+/**
+ * Componente principal de gráficos y analítica de productividad.
+ * @param {object} props
+ * @param {Array<object>} [props.history=[]] - Historial completo de métricas disponible.
+ * @param {object} [props.standards={}] - Estándares operativos (GxH, resolución, cierre, TMO).
+ * @param {string} [props.theme='dark'] - Tema activo ('dark' | 'light').
+ * @param {string} [props.scopeLabel=''] - Etiqueta de alcance (ej. 'Global' o usuario).
+ * @param {{start: string, end: string}|null} [props.dateRange=null] - Rango externo opcional.
+ * @param {boolean} [props.hideDateControls=false] - Oculta selectores propios cuando el padre controla fechas.
+ * @param {Function} [props.calculateRecordBonus] - Calcula la bonificación (%) a partir de GxH y resolución.
+ */
 function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLabel = '', dateRange = null, hideDateControls = false, calculateRecordBonus = () => 0 }) {
+  // ── Estado de filtros de fecha, agrupación y visibilidad de series ──
   const [initialDates] = useState(() => {
     const today = new Date();
     return {
@@ -139,6 +173,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     closed: { a: true, b: true }
   });
 
+  /** Aplica un rango predefinido ('7d', '30d', 'month') sobre los selectores locales. */
   const setPresetRange = value => {
     setPreset(value);
     const end = new Date();
@@ -150,6 +185,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     setEndDate(dateKey(end));
   };
 
+  // ── Cálculo de rango actual y período inmediatamente anterior para comparación ──
   const effectiveStartDate = dateRange?.start || startDate;
   const effectiveEndDate = dateRange?.end || endDate;
 
@@ -170,8 +206,8 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const currentRows = useMemo(() => history.filter(row => inRange(row, range.start, range.end)), [history, range]);
   const previousRows = useMemo(() => history.filter(row => inRange(row, range.previousStart, range.previousEnd)), [history, range]);
   const currentSummary = useMemo(() => summarize(currentRows), [currentRows]);
-  // Reproduce the monthly accumulated-bonus calculation used by the dashboard:
-  // cumulative managed / cumulative hours and cumulative net resolution, reset each month.
+  // Reproduce el cálculo acumulado mensual de bonificación utilizado en el dashboard:
+  // gestionados acumulados / horas acumuladas y resolución neta acumulada, reiniciando cada mes.
   const monthlyBonusSeries = useMemo(() => {
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
     const monthState = new Map();
@@ -199,6 +235,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const previousSummary = useMemo(() => summarize(previousRows), [previousRows]);
   const currentGroups = useMemo(() => aggregateRows(currentRows, grouping), [currentRows, grouping]);
 
+  // ── Configuración base de Chart.js y generadores de datasets ──
   const chartBase = {
     responsive: true,
     maintainAspectRatio: false,
@@ -314,6 +351,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     }
   });
 
+  // ── Formateadores y cálculo de KPIs comparativos vs período anterior ──
   const fmtCompact = (value, digits = 2) => num(value).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits
@@ -335,6 +373,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     { label: 'Casos cerrados', value: String(currentSummary.closed), delta: deltaLabel(currentSummary.closed, previousSummary.closed, 'casos', 0), good: currentSummary.closed >= previousSummary.closed }
   ];
 
+  // ── Datos del mapa de calor diario ──
   const dailyMap = useMemo(() => {
     const byDate = new Map();
     currentRows.forEach(row => {
@@ -367,6 +406,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const heatMetricFormat = value => `${fmt(value, 2)}${selectedHeatMetric.unit}`;
   const heatThreshold80 = selectedHeatMetric.target * 0.8;
   const heatThreshold100 = selectedHeatMetric.target;
+  // ── Agrupación y métricas por día de la semana ──
   const weekdayStats = useMemo(() => {
     const buckets = Array.from({ length: 7 }, (_, day) => ({ day, label: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][day], rows: [] }));
     currentRows.forEach(row => buckets[parseDate(row.date).getDay()].rows.push(row));
@@ -392,6 +432,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
     return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, rows]) => ({ date, rows, ...summarize(rows) }));
   }, [selectedWeekday]);
 
+  // ── Conclusiones automáticas filtradas por representatividad de muestra ──
   const weekdayInsights = useMemo(() => {
     const activeDays = weekdayStats.filter(day => day.rows.length > 0 && day.managed > 0);
     if (!activeDays.length) return { insights: [], note: 'Todavía no hay datos suficientes para analizar el rendimiento.' };
@@ -455,6 +496,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
   const cardStyle = { padding: 14, borderRadius: 10, border: '1px solid var(--border-light)', background: 'var(--bg-card)' };
 
   return <div style={{ marginTop: 24 }}>
+    {/* CABECERA Y OPCIÓN DE COMPARACIÓN */}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
       <div>
         <h2 style={{ margin: 0, color: 'var(--text-bright)', fontSize: 18 }}>Análisis de productividad{scopeLabel ? ` · ${scopeLabel}` : ''}</h2>
@@ -465,6 +507,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </label>
     </div>
 
+    {/* CONTROLES DE PERÍODO Y AGRUPACIÓN */}
     <div style={{ ...cardStyle, display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
       {!hideDateControls && <>
               <label style={{ display: 'grid', gap: 5, color: 'var(--text-dim)', fontSize: 11 }}>PERÍODO
@@ -487,6 +530,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 'auto' }}>{currentRows.length} registros en el período seleccionado</span>
     </div>
 
+    {/* TARJETAS DE KPIs DEL PERÍODO */}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
       {kpis.map(kpi => <div key={kpi.label} style={cardStyle}>
         <div style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 8 }}>{kpi.label}</div>
@@ -495,6 +539,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </div>)}
     </div>
 
+    {/* ACORDEÓN DE GRÁFICOS TEMPORALES */}
     <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
       <details style={{ ...cardStyle, padding: 0 }}>
         <summary style={{ cursor: 'pointer', padding: '14px 16px', color: 'var(--text-bright)', fontSize: 13, fontWeight: 750 }}>Bonificación del mes · Evolución diaria</summary>
@@ -522,6 +567,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </details>
     </div>
 
+    {/* MAPA DE CALOR DIARIO DE PRODUCTIVIDAD */}
     <section style={{ ...cardStyle, marginTop: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div>
@@ -574,6 +620,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </div>
     </section>
 
+    {/* TABLA DE RENDIMIENTO POR DÍA DE LA SEMANA */}
     <section style={{ ...cardStyle, marginTop: 18 }}>
       <h3 style={{ margin: '0 0 5px', color: 'var(--text-bright)', fontSize: 15 }}>Rendimiento por día de la semana</h3>
       <p style={{ margin: '0 0 12px', color: 'var(--text-dim)', fontSize: 11 }}>Totales y promedios calculados sobre los registros del período seleccionado.</p>
@@ -594,6 +641,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </div>
     </section>
 
+    {/* MODAL DE DETALLE POR DÍA DE LA SEMANA */}
     {selectedWeekday && <div role="presentation" onClick={e => { if (e.target === e.currentTarget) setSelectedWeekday(null); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,.68)', display: 'grid', placeItems: 'center', padding: 16 }}>
       <section role="dialog" aria-modal="true" aria-labelledby="weekday-detail-title" style={{ width: 'min(900px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 12, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,.35)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
@@ -614,6 +662,7 @@ function DashboardCharts({ history = [], standards = {}, theme = 'dark', scopeLa
       </section>
     </div>}
 
+    {/* SECCIÓN DE INDICADORES INTELIGENTES */}
     <section style={{ ...cardStyle, marginTop: 14, border: '1px solid rgba(99,102,241,.28)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
         <Sparkles size={16} style={{ color: '#a5b4fc' }} />

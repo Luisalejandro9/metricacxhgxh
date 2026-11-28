@@ -1,24 +1,40 @@
+/**
+ * @file AutoUpdater.jsx
+ * @description Componente silencioso de detección y aplicación de nuevas versiones en producción.
+ * Consulta periódicamente `/version.json` y recarga la aplicación cuando el usuario cambia de pestaña
+ * o permanece inactivo, mostrando además un aviso flotante opcional.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Sparkles, X } from 'lucide-react';
 
+// --- Versión compilada del cliente actual ---
 const CURRENT_VERSION = typeof __APP_BUILD_VERSION__ !== 'undefined' ? __APP_BUILD_VERSION__ : 'dev';
 
+/**
+ * Verifica actualizaciones en segundo plano y renderiza un toast informativo cuando hay una nueva versión.
+ */
 export function AutoUpdater() {
   const [hasNewVersion, setHasNewVersion] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  // --- Ciclo de vigilancia de versión en segundo plano ---
   useEffect(() => {
     // En desarrollo local (vite dev), no forzamos recarga constante
     if (import.meta.env.DEV) return;
 
     let updateDetected = false;
 
+    // Ejecuta la recarga completa de la página para aplicar la nueva compilación
     const performReload = () => {
       setIsUpdating(true);
       window.location.reload();
     };
 
+    /**
+     * Consulta `/version.json` sin caché y programa la recarga según la visibilidad o inactividad.
+     */
     const checkVersion = async () => {
       if (updateDetected) return;
       try {
@@ -88,8 +104,10 @@ export function AutoUpdater() {
     };
   }, []);
 
+  // No mostrar el aviso si no hay nueva versión o si el usuario lo cerró
   if (!hasNewVersion || dismissed) return null;
 
+  // --- Renderizado del aviso flotante de actualización ---
   return (
     <div className="silent-update-toast" role="status" aria-live="polite">
       <div className="update-toast-content">

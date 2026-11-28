@@ -1,6 +1,20 @@
+/**
+ * @fileoverview Modal administrativo de confirmación para acciones sensibles sobre
+ * cuentas de usuario: limpiar datos, eliminar perfil/sesiones, banear o desbanear.
+ */
 import React from 'react';
 import { AlertCircle, LogOut, Trash2, Eraser, Ban, UserRoundCheck } from 'lucide-react';
 
+/**
+ * Diálogo modal con mensajes y advertencias adaptados al modo de acción administrativa.
+ * @param {object} props
+ * @param {boolean} props.show - Controla la visibilidad del modal.
+ * @param {object|null} props.targetUser - Usuario objetivo sobre el que se aplicará la acción.
+ * @param {'clear'|'delete'|'ban'|'unban'} [props.mode='delete'] - Tipo de acción a confirmar.
+ * @param {boolean} props.isDeleting - Deshabilita botones mientras se ejecuta la operación.
+ * @param {Function} props.onCancel - Cancela la operación y cierra el modal.
+ * @param {Function} props.onConfirm - Ejecuta la acción confirmada.
+ */
 function DeleteConfirmModal({
   show,
   targetUser,
@@ -11,6 +25,7 @@ function DeleteConfirmModal({
 }) {
   if (!show || !targetUser) return null;
 
+  // Configuración de textos e icono según el modo seleccionado
   const config = {
     clear: {
       title: '¿Limpiar solo los datos?',
@@ -52,17 +67,22 @@ function DeleteConfirmModal({
   return (
     <div className="login-overlay drilldown-modal" style={{ zIndex: 3000 }}>
       <div className="modal" style={{ maxWidth: '450px', textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '16px', border: '1px solid var(--border-light)', padding: '30px' }}>
+        {/* ICONO DE ALERTA */}
         <div className="modal-header" style={{ justifyContent: 'center', marginBottom: '15px' }}>
           <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: 'var(--accent-error)' }}>
             <AlertCircle size={32} />
           </div>
         </div>
+
+        {/* TÍTULO, DESCRIPCIÓN Y AVISO */}
         <h2 style={{ fontSize: 22, marginBottom: 12, color: 'var(--text-bright)' }}>{config.title}</h2>
         <p style={{ marginBottom: 16, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.6 }}>{config.description}</p>
         <div style={{ background: 'rgba(239,68,68,0.05)', padding: 12, borderRadius: 10, border: '1px solid rgba(239,68,68,0.1)', marginBottom: 25, fontSize: 12, color: 'var(--accent-error)', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <ActionIcon size={16} />
           <span>{config.warning}</span>
         </div>
+
+        {/* BOTONES DE CONFIRMACIÓN */}
         <div className="modal-footer" style={{ display: 'flex', gap: 12 }}>
           <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onCancel} disabled={isDeleting}>Cancelar</button>
           <button className="btn" style={{ flex: 1, backgroundColor: 'var(--accent-error)', color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={onConfirm} disabled={isDeleting}>

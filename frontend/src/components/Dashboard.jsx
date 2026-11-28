@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, BookOpen, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import { STANDARDS, DEFAULT_GXH_TIERS, DEFAULT_RESOLUTION_TIERS } from '../utils/constants';
+import { formatTmoMin, formatTime, getTodayDateStr } from '../utils/formatters';
+import { parseStandardsFromConfig, getStatusClass, resolveTierBonus } from '../utils/standards';
 
-// Subcomponents
+// Subcomponentes del Dashboard
 import ConfirmModal from './dashboard/modals/ConfirmModal';
 import HelpModal from './dashboard/modals/HelpModal';
 import EditTimeModal from './dashboard/modals/EditTimeModal';
@@ -12,61 +15,19 @@ import EditRecordModal from './dashboard/modals/EditRecordModal';
 import DashboardSidebar from './dashboard/DashboardSidebar';
 import DashboardStats from './dashboard/DashboardStats';
 import HistoryTables from './dashboard/HistoryTables';
-import DashboardCharts from './dashboard/DashboardCharts';
 
-const STANDARDS = {
-  // GxH Working
-  GXH_GREEN: 4.00,
-  GXH_YELLOW: 3.50,
+// Carga diferida de gráficos (Chart.js) para reducir el tamaño del bundle inicial
+const DashboardCharts = lazy(() => import('./dashboard/DashboardCharts'));
 
-  // % Resolución Neta (bonifica)
-  RESOLUTION_GREEN: 84.0,
-  RESOLUTION_YELLOW: 81.0,
-
-  // Cierre — solo objetivo, NO bonifica
-  CLOSED_GREEN: 78.8,
-  CLOSED_YELLOW: 76.8,
-
-  // Tiempos
-  TIME_PER_CASE: 950,
-  TIME_PER_MANAGED: 950,
-};
-
-const DEFAULT_GXH_TIERS = [
-  { min: 4.50, bonus: 2.0 },
-  { min: 4.00, bonus: 1.0 },
-  { min: 3.50, bonus: 0.0 },
-  { min: 3.00, bonus: -1.0 },
-  { min: 0.00, bonus: -2.0 }
-];
-
-const DEFAULT_RESOLUTION_TIERS = [
-  { min: 84.50, bonus: 3.0 },
-  { min: 83.50, bonus: 2.0 },
-  { min: 82.40, bonus: 1.0 },
-  { min: 81.30, bonus: 0.0 },
-  { min: 80.20, bonus: -1.0 },
-  { min: 0.00, bonus: -2.0 }
-];
-
-const formatTmoMin = (seconds) => {
-  if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')} min`;
-};
-
-const formatTime = (totalSeconds) => {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-};
-
+/**
+ * Componente principal del Dashboard operativo.
+ * Gestiona el temporizador de jornada, contadores diarios, cálculo de métricas en vivo,
+ * auto-guardado inteligente en Supabase (o localStorage en modo Demo) y el historial mensual.
+ */
 function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
-  // Dynamic Standards State
+  // Estado dinámico de estándares del servicio (cargados desde app_config)
   const [standards, setStandards] = useState(() => {
     if (user?.isDemo) {
       const local = localStorage.getItem(`demo_app_standards_${user.id}`);
@@ -74,7 +35,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         try {
           return JSON.parse(local);
         } catch (e) {
-          console.error('Error loading demo standards', e);
+          console.error('Error al cargar estándares demo:', e);
         }
       }
     }
@@ -86,32 +47,20 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   });
   const [isLoadingStandards, setIsLoadingStandards] = useState(true);
 
-  // Dynamic Bonus Calculators using useCallback
+  // Calculadoras dinámicas de bonificación según tramos configurados
   const getGxHBonus = useCallback((value) => {
-    const val = parseFloat(value);
-    const tiers = standards.gxh_bonus_tiers || DEFAULT_GXH_TIERS;
-    const sorted = [...tiers].sort((a, b) => b.min - a.min);
-    for (const t of sorted) {
-      if (val >= t.min) return parseFloat(t.bonus);
-    }
-    return parseFloat(sorted[sorted.length - 1]?.bonus || -2.0);
+    return resolveTierBonus(value, standards.gxh_bonus_tiers, DEFAULT_GXH_TIERS);
   }, [standards.gxh_bonus_tiers]);
 
   const getResolucionBonus = useCallback((value) => {
-    const val = parseFloat(value);
-    const tiers = standards.resolution_bonus_tiers || DEFAULT_RESOLUTION_TIERS;
-    const sorted = [...tiers].sort((a, b) => b.min - a.min);
-    for (const t of sorted) {
-      if (val >= t.min) return parseFloat(t.bonus);
-    }
-    return parseFloat(sorted[sorted.length - 1]?.bonus || -2.0);
+    return resolveTierBonus(value, standards.resolution_bonus_tiers, DEFAULT_RESOLUTION_TIERS);
   }, [standards.resolution_bonus_tiers]);
 
   const calculateRecordBonus = useCallback((managedPerHour, resolutionRate) => {
     return getGxHBonus(managedPerHour) + getResolucionBonus(resolutionRate);
   }, [getGxHBonus, getResolucionBonus]);
 
-  // Fetch standards from db on mount and subscribe to live changes
+  // Carga inicial de estándares y suscripción en tiempo real a cambios de configuración
   useEffect(() => {
     const fetchStandards = async () => {
       if (!user) return;
@@ -128,23 +77,12 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           .maybeSingle();
 
         if (error) {
-          console.warn('Error fetching app_config (falling back to default standards):', error.message);
+          console.warn('Error al cargar app_config (usando estándares por defecto):', error.message);
         } else if (data) {
-          setStandards({
-            GXH_GREEN: parseFloat(data.gxh_green),
-            GXH_YELLOW: parseFloat(data.gxh_yellow),
-            RESOLUTION_GREEN: parseFloat(data.resolution_green),
-            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
-            CLOSED_GREEN: parseFloat(data.closed_green),
-            CLOSED_YELLOW: parseFloat(data.closed_yellow),
-            TIME_PER_CASE: parseInt(data.time_per_case),
-            TIME_PER_MANAGED: parseInt(data.time_per_managed),
-            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
-            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
-          });
+          setStandards(parseStandardsFromConfig(data));
         }
       } catch (err) {
-        console.error('Failed to load standards:', err);
+        console.error('Error al cargar estándares:', err);
       } finally {
         setIsLoadingStandards(false);
       }
@@ -152,25 +90,13 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
 
     fetchStandards();
 
-    // Subscribe to configuration changes in real time
+    // Suscripción en tiempo real a modificaciones de app_config
     if (!user?.isDemo) {
       const channel = supabase
         .channel('app_config_live')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload) => {
           if (payload.new && payload.new.key === 'current') {
-            const data = payload.new;
-            setStandards({
-              GXH_GREEN: parseFloat(data.gxh_green),
-              GXH_YELLOW: parseFloat(data.gxh_yellow),
-              RESOLUTION_GREEN: parseFloat(data.resolution_green),
-              RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
-              CLOSED_GREEN: parseFloat(data.closed_green),
-              CLOSED_YELLOW: parseFloat(data.closed_yellow),
-              TIME_PER_CASE: parseInt(data.time_per_case),
-              TIME_PER_MANAGED: parseInt(data.time_per_managed),
-              gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
-              resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
-            });
+            setStandards(parseStandardsFromConfig(payload.new));
           }
         })
         .subscribe();
@@ -240,14 +166,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     });
   };
 
-  const getStatusClass = (value, greenTarget, yellowTarget) => {
-    const val = parseFloat(value);
-    if (val >= greenTarget) return 'stat-meets-standard';
-    if (val >= yellowTarget) return 'stat-warning-standard';
-    return 'stat-below-standard';
-  };
-
-  // --- Centralized Error Helper ---
+  // --- Manejador centralizado de errores de Supabase ---
   const handleSupabaseError = (error, context) => {
     console.error(`${context}:`, error.message);
     if (error.message.toLowerCase().includes('fetch')) {
@@ -257,7 +176,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     }
   };
 
-  // --- Auth Handlers ---
+  // --- Cierre de sesión ---
   const handleLogout = async () => {
     if (user?.isDemo) {
       sessionStorage.removeItem('demo_session');
@@ -267,7 +186,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     await supabase.auth.signOut();
   };
 
-  // --- Data Fetching ---
+  // --- Carga de historial desde Supabase o almacenamiento local Demo ---
   const fetchHistory = async () => {
     if (!user) return;
     setIsLoadingHistory(true);
@@ -297,10 +216,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   useEffect(() => {
     fetchHistory();
 
-    // Load persisted timer state and counts
+    // Recuperar estado persistido del temporizador y contadores del día actual
     const savedState = localStorage.getItem('gxh_timer_state');
-    const localDate = new Date();
-    const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    const todayStr = getTodayDateStr();
     const savedCounts = localStorage.getItem(`gxh_counts_${todayStr}`);
 
     if (savedState) {
@@ -308,7 +226,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         const parsed = JSON.parse(savedState);
         const { seconds, isRunning, startTime, date } = parsed;
 
-        // Only restore timer if it belongs to today's date
+        // Solo restaurar si pertenece a la fecha de hoy
         if (date === todayStr) {
           if (isRunning && startTime) {
             const now = Date.now();
@@ -321,13 +239,13 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
             setIsTimerRunning(false);
           }
         } else {
-          // Reset stale timer state from previous sessions/days to 00:00:00
+          // Reiniciar temporizador obsoleto de jornadas anteriores a 00:00:00
           setTimerSeconds(0);
           setIsTimerRunning(false);
           localStorage.removeItem('gxh_timer_state');
         }
       } catch (e) {
-        console.error('Error loading timer state', e);
+        console.error('Error al cargar estado del temporizador:', e);
         setTimerSeconds(0);
         setIsTimerRunning(false);
       }
@@ -344,15 +262,14 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         setTechniciansCount(technicians || 0);
         setTransferredCount(transferred || 0);
       } catch (e) {
-        console.error('Error loading saved counts', e);
+        console.error('Error al cargar contadores guardados:', e);
       }
     }
   }, [user]);
 
-  // Persist timer state with date tag
+  // Persistir estado del temporizador etiquetado con la fecha local
   useEffect(() => {
-    const localDate = new Date();
-    const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    const todayStr = getTodayDateStr();
     const state = {
       seconds: timerSeconds,
       isRunning: isTimerRunning,
@@ -362,10 +279,9 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     localStorage.setItem('gxh_timer_state', JSON.stringify(state));
   }, [timerSeconds, isTimerRunning]);
 
-  // Persist counts state
+  // Persistir contadores diarios en localStorage
   useEffect(() => {
-    const localDate = new Date();
-    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    const dateStr = getTodayDateStr();
     const counts = {
       closed: closedCount,
       managed: managedCount,
@@ -375,7 +291,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     localStorage.setItem(`gxh_counts_${dateStr}`, JSON.stringify(counts));
   }, [closedCount, managedCount, techniciansCount, transferredCount]);
 
-  // --- Intelligent Auto-Save (Logic) ---
+  // --- Auto-guardado inteligente tras 4s de inactividad en los contadores ---
   useEffect(() => {
     if (managedCount === 0 && timerSeconds === 0) return;
 
@@ -513,9 +429,7 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
         setIsTimerRunning(false);
         startTimeRef.current = null;
         localStorage.removeItem('gxh_timer_state');
-        const localDate = new Date();
-        const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-        localStorage.removeItem(`gxh_counts_${dateStr}`);
+        localStorage.removeItem(`gxh_counts_${getTodayDateStr()}`);
         showMessage('info', 'Contadores reiniciados.');
       },
       'danger',
@@ -587,42 +501,48 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     setTimeout(() => setMessage({ type: null, text: '' }), 4000);
   };
 
-  // --- Save Metrics to Database ---
+  // --- Construcción unificada del payload de métricas diarias ---
+  const buildMetricsPayload = (dateStr) => ({
+    user_id: user.id,
+    date: dateStr,
+    total_time: formatTime(timerSeconds),
+    cases_closed: closedCount,
+    cases_managed: managedCount,
+    efficiency: parseFloat(stats.closeRate),
+    cases_per_hour: parseFloat(stats.managedPerHour),
+    avg_closed_per_hour: parseFloat(stats.closedPerHour),
+    tmo_case: stats.tmoCase,
+    tmo_managed: stats.tmoManaged,
+    technicians_sent: techniciansCount,
+    cases_transferred: transferredCount,
+    resolution_rate: parseFloat(stats.resolutionRate)
+  });
+
+  // --- Persistencia local para sesiones en modo Demo / Espectador ---
+  const persistDemoMetrics = (payload, dateStr) => {
+    payload.id = "demo-" + Date.now();
+    const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
+    const demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
+    const existingIndex = demoList.findIndex(item => item.date === dateStr);
+    if (existingIndex !== -1) {
+      payload.id = demoList[existingIndex].id;
+      demoList[existingIndex] = payload;
+    } else {
+      demoList.unshift(payload);
+    }
+    localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+    return demoList;
+  };
+
+  // --- Guardado manual de métricas en base de datos ---
   const saveToSupabase = async () => {
     if (!user) return;
     setIsSaving(true);
-    const localDate = new Date();
-    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-
-    const payload = {
-      user_id: user.id,
-      date: dateStr,
-      total_time: formatTime(timerSeconds),
-      cases_closed: closedCount,
-      cases_managed: managedCount,
-      efficiency: parseFloat(stats.closeRate),
-      cases_per_hour: parseFloat(stats.managedPerHour),
-      avg_closed_per_hour: parseFloat(stats.closedPerHour),
-      tmo_case: stats.tmoCase,
-      tmo_managed: stats.tmoManaged,
-      technicians_sent: techniciansCount,
-      cases_transferred: transferredCount,
-      resolution_rate: parseFloat(stats.resolutionRate)
-    };
+    const dateStr = getTodayDateStr();
+    const payload = buildMetricsPayload(dateStr);
 
     if (user.isDemo) {
-      payload.id = "demo-" + Date.now();
-      const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
-      let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
-      const existingIndex = demoList.findIndex(item => item.date === dateStr);
-      if (existingIndex !== -1) {
-        payload.id = demoList[existingIndex].id;
-        demoList[existingIndex] = payload;
-      } else {
-        demoList.unshift(payload);
-      }
-      localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
-      
+      const demoList = persistDemoMetrics(payload, dateStr);
       setTimeout(() => {
         showMessage('success', 'Métricas de espectador guardadas localmente.');
         setLastSavedAt(new Date());
@@ -645,42 +565,16 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
     setIsSaving(false);
   };
 
-  // --- Auto-Save Implementation ---
+  // --- Auto-guardado en segundo plano ---
   const autoSaveToSupabase = async () => {
     if (!user || managedCount === 0 || isSaving) return;
 
     setIsAutoSaving(true);
-    const localDate = new Date();
-    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-
-    const payload = {
-      user_id: user.id,
-      date: dateStr,
-      total_time: formatTime(timerSeconds),
-      cases_closed: closedCount,
-      cases_managed: managedCount,
-      efficiency: parseFloat(stats.closeRate),
-      cases_per_hour: parseFloat(stats.managedPerHour),
-      avg_closed_per_hour: parseFloat(stats.closedPerHour),
-      tmo_case: stats.tmoCase,
-      tmo_managed: stats.tmoManaged,
-      technicians_sent: techniciansCount,
-      cases_transferred: transferredCount,
-      resolution_rate: parseFloat(stats.resolutionRate)
-    };
+    const dateStr = getTodayDateStr();
+    const payload = buildMetricsPayload(dateStr);
 
     if (user.isDemo) {
-      payload.id = "demo-" + Date.now();
-      const demoDataStr = localStorage.getItem(`demo_metrics_${user.id}`);
-      let demoList = demoDataStr ? JSON.parse(demoDataStr) : [];
-      const existingIndex = demoList.findIndex(item => item.date === dateStr);
-      if (existingIndex !== -1) {
-        payload.id = demoList[existingIndex].id;
-        demoList[existingIndex] = payload;
-      } else {
-        demoList.unshift(payload);
-      }
-      localStorage.setItem(`demo_metrics_${user.id}`, JSON.stringify(demoList));
+      const demoList = persistDemoMetrics(payload, dateStr);
       setLastSavedAt(new Date());
       setHistory(demoList);
       setIsAutoSaving(false);
@@ -885,12 +779,14 @@ function Dashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
           currentDate={new Date().toLocaleDateString('en-CA')}
         />
 
-        <DashboardCharts
-          history={history}
-          standards={standards}
-          calculateRecordBonus={calculateRecordBonus}
-          theme={theme}
-        />
+        <Suspense fallback={<div className="metric-card" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando gráficos de evolución...</div>}>
+          <DashboardCharts
+            history={history}
+            standards={standards}
+            calculateRecordBonus={calculateRecordBonus}
+            theme={theme}
+          />
+        </Suspense>
       </main>
 
       <EditTimeModal

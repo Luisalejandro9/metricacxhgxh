@@ -21,83 +21,55 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import {
+  STANDARDS,
+  DEFAULT_GXH_TIERS,
+  DEFAULT_RESOLUTION_TIERS,
+  SUPER_ADMIN_EMAILS
+} from '../utils/constants';
+import { getTodayDateStr, formatLastUpdated } from '../utils/formatters';
+import { parseStandardsFromConfig, getStatusClass, resolveTierBonus } from '../utils/standards';
 
-// Subcomponents
+// Subcomponentes del Panel de Administración
 import ConfigPanel from './admin/ConfigPanel';
 import MonitorPanel from './admin/MonitorPanel';
 import UserDetailsModal from './admin/modals/UserDetailsModal';
 import DeleteConfirmModal from './admin/modals/DeleteConfirmModal';
 
-const SUPER_ADMIN_EMAILS = new Set([
-  'luis.acosta@konecta.com',
-  'lacosta161999@gmail.com'
-]);
-
+/** Verifica si el usuario objetivo pertenece al grupo protegido de Administradores Totales */
 const isProtectedSuperAdmin = (target) =>
   SUPER_ADMIN_EMAILS.has(String(target?.email || '').trim().toLowerCase());
 
-const DEFAULT_GXH_TIERS = [
-  { min: 4.50, bonus: 2.0 },
-  { min: 4.00, bonus: 1.0 },
-  { min: 3.50, bonus: 0.0 },
-  { min: 3.00, bonus: -1.0 },
-  { min: 0.00, bonus: -2.0 }
-];
-
-const DEFAULT_RESOLUTION_TIERS = [
-  { min: 84.50, bonus: 3.0 },
-  { min: 83.50, bonus: 2.0 },
-  { min: 82.40, bonus: 1.0 },
-  { min: 81.30, bonus: 0.0 },
-  { min: 80.20, bonus: -1.0 },
-  { min: 0.00, bonus: -2.0 }
-];
-
+/**
+ * Panel de Administración global.
+ * Permite monitorear métricas de todos los operadores en tiempo real, filtrar por fechas/perfiles,
+ * revisar el ranking de técnicos, gestionar roles/baneos/limpieza de datos y configurar estándares.
+ */
 function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) {
   const navigate = useNavigate();
 
-  // Navigation Tab State
+  // Pestaña activa del panel ('monitor' o 'config')
   const [activeTab, setActiveTab] = useState('monitor');
 
-  // Dynamic Standards State
+  // Estado dinámico de estándares operativos
   const [standards, setStandards] = useState({
-    GXH_GREEN: 4.00,
-    GXH_YELLOW: 3.50,
-    RESOLUTION_GREEN: 84.0,
-    RESOLUTION_YELLOW: 81.0,
-    CLOSED_GREEN: 78.8,
-    CLOSED_YELLOW: 76.8,
-    TIME_PER_CASE: 950,
-    TIME_PER_MANAGED: 950,
+    ...STANDARDS,
     gxh_bonus_tiers: DEFAULT_GXH_TIERS,
     resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
   });
   const [isLoadingStandards, setIsLoadingStandards] = useState(true);
 
+  /** Calcula la bonificación total de un registro sumando los tramos de GxH y Resolución */
   const calculateRecordBonus = useCallback((managedPerHour, resolutionRate) => {
-    const resolveTierBonus = (value, tiers, fallback) => {
-      const numericValue = Number(value);
-      const sorted = [...(Array.isArray(tiers) ? tiers : fallback)].sort((a, b) => Number(b.min) - Number(a.min));
-      const tier = sorted.find(item => numericValue >= Number(item.min));
-      return Number(tier?.bonus ?? sorted[sorted.length - 1]?.bonus ?? -2);
-    };
     return resolveTierBonus(managedPerHour, standards.gxh_bonus_tiers, DEFAULT_GXH_TIERS)
       + resolveTierBonus(resolutionRate, standards.resolution_bonus_tiers, DEFAULT_RESOLUTION_TIERS);
   }, [standards.gxh_bonus_tiers, standards.resolution_bonus_tiers]);
 
-  // Form State for configuration editing
+  // Estado del formulario de edición de configuración
   const [formConfig, setFormConfig] = useState(null);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
-  // Helper for traffic light colors
-  const getStatusClass = (value, greenTarget, yellowTarget) => {
-    const val = parseFloat(value);
-    if (val >= greenTarget) return 'stat-meets-standard';
-    if (val >= yellowTarget) return 'stat-warning-standard';
-    return 'stat-below-standard';
-  };
-
-  // Fetch standards from db
+  // Carga inicial de estándares desde Supabase y suscripción en tiempo real
   useEffect(() => {
     const fetchStandards = async () => {
       try {
@@ -110,18 +82,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         if (error) {
           console.warn('Error al cargar app_config:', error.message);
         } else if (data) {
-          setStandards({
-            GXH_GREEN: parseFloat(data.gxh_green),
-            GXH_YELLOW: parseFloat(data.gxh_yellow),
-            RESOLUTION_GREEN: parseFloat(data.resolution_green),
-            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
-            CLOSED_GREEN: parseFloat(data.closed_green),
-            CLOSED_YELLOW: parseFloat(data.closed_yellow),
-            TIME_PER_CASE: parseInt(data.time_per_case),
-            TIME_PER_MANAGED: parseInt(data.time_per_managed),
-            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
-            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
-          });
+          setStandards(parseStandardsFromConfig(data));
         }
       } catch (e) {
         console.error('Error al obtener estándares:', e);
@@ -132,24 +93,12 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
 
     fetchStandards();
 
-    // Subscribe to config changes in real time
+    // Suscripción en tiempo real a cambios en app_config
     const channel = supabase
       .channel('admin_app_config_live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload) => {
         if (payload.new && payload.new.key === 'current') {
-          const data = payload.new;
-          setStandards({
-            GXH_GREEN: parseFloat(data.gxh_green),
-            GXH_YELLOW: parseFloat(data.gxh_yellow),
-            RESOLUTION_GREEN: parseFloat(data.resolution_green),
-            RESOLUTION_YELLOW: parseFloat(data.resolution_yellow),
-            CLOSED_GREEN: parseFloat(data.closed_green),
-            CLOSED_YELLOW: parseFloat(data.closed_yellow),
-            TIME_PER_CASE: parseInt(data.time_per_case),
-            TIME_PER_MANAGED: parseInt(data.time_per_managed),
-            gxh_bonus_tiers: Array.isArray(data.gxh_bonus_tiers) ? data.gxh_bonus_tiers : DEFAULT_GXH_TIERS,
-            resolution_bonus_tiers: Array.isArray(data.resolution_bonus_tiers) ? data.resolution_bonus_tiers : DEFAULT_RESOLUTION_TIERS
-          });
+          setStandards(parseStandardsFromConfig(payload.new));
         }
       })
       .subscribe();
@@ -356,10 +305,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     }
   };
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
+  const todayStr = useMemo(() => getTodayDateStr(), []);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -589,16 +535,6 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     };
   }, [filteredMetrics]);
 
-  const formatLastUpdated = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    } catch (e) {
-      return 'N/A';
-    }
-  };
-
   const [countdown, setCountdown] = useState(15);
 
   const isProfileLoaded = profile !== undefined;
@@ -676,31 +612,11 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
         updated_by: user.id
       };
 
+      const nextStandards = parseStandardsFromConfig(payload);
+
       if (user.isDemo) {
-        localStorage.setItem(`demo_app_standards_${user.id}`, JSON.stringify({
-          GXH_GREEN: payload.gxh_green,
-          GXH_YELLOW: payload.gxh_yellow,
-          RESOLUTION_GREEN: payload.resolution_green,
-          RESOLUTION_YELLOW: payload.resolution_yellow,
-          CLOSED_GREEN: payload.closed_green,
-          CLOSED_YELLOW: payload.closed_yellow,
-          TIME_PER_CASE: payload.time_per_case,
-          TIME_PER_MANAGED: payload.time_per_managed,
-          gxh_bonus_tiers: payload.gxh_bonus_tiers,
-          resolution_bonus_tiers: payload.resolution_bonus_tiers
-        }));
-        setStandards({
-          GXH_GREEN: payload.gxh_green,
-          GXH_YELLOW: payload.gxh_yellow,
-          RESOLUTION_GREEN: payload.resolution_green,
-          RESOLUTION_YELLOW: payload.resolution_yellow,
-          CLOSED_GREEN: payload.closed_green,
-          CLOSED_YELLOW: payload.closed_yellow,
-          TIME_PER_CASE: payload.time_per_case,
-          TIME_PER_MANAGED: payload.time_per_managed,
-          gxh_bonus_tiers: payload.gxh_bonus_tiers,
-          resolution_bonus_tiers: payload.resolution_bonus_tiers
-        });
+        localStorage.setItem(`demo_app_standards_${user.id}`, JSON.stringify(nextStandards));
+        setStandards(nextStandards);
         showMessage('success', 'Configuración de espectador guardada localmente.');
         setIsSavingConfig(false);
         return;
@@ -713,18 +629,7 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
       if (error) throw error;
 
       showMessage('success', 'Configuración actualizada exitosamente.');
-      setStandards({
-        GXH_GREEN: payload.gxh_green,
-        GXH_YELLOW: payload.gxh_yellow,
-        RESOLUTION_GREEN: payload.resolution_green,
-        RESOLUTION_YELLOW: payload.resolution_yellow,
-        CLOSED_GREEN: payload.closed_green,
-        CLOSED_YELLOW: payload.closed_yellow,
-        TIME_PER_CASE: payload.time_per_case,
-        TIME_PER_MANAGED: payload.time_per_managed,
-        gxh_bonus_tiers: payload.gxh_bonus_tiers,
-        resolution_bonus_tiers: payload.resolution_bonus_tiers
-      });
+      setStandards(nextStandards);
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       showMessage('error', `Error al guardar: ${err.message}`);
@@ -733,17 +638,18 @@ function AdminDashboard({ user, profile, setNetworkError, theme, toggleTheme }) 
     }
   };
 
+  /** Restablece el formulario de configuración a los valores predeterminados */
   const resetConfigToDefault = () => {
     if (window.confirm('¿Restablecer todos los valores a los predeterminados?')) {
       setFormConfig({
-        gxh_green: 4.00,
-        gxh_yellow: 3.50,
-        resolution_green: 84.0,
-        resolution_yellow: 81.0,
-        closed_green: 78.8,
-        closed_yellow: 76.8,
-        time_per_case: 950,
-        time_per_managed: 950,
+        gxh_green: STANDARDS.GXH_GREEN,
+        gxh_yellow: STANDARDS.GXH_YELLOW,
+        resolution_green: STANDARDS.RESOLUTION_GREEN,
+        resolution_yellow: STANDARDS.RESOLUTION_YELLOW,
+        closed_green: STANDARDS.CLOSED_GREEN,
+        closed_yellow: STANDARDS.CLOSED_YELLOW,
+        time_per_case: STANDARDS.TIME_PER_CASE,
+        time_per_managed: STANDARDS.TIME_PER_MANAGED,
         gxh_bonus_tiers: DEFAULT_GXH_TIERS,
         resolution_bonus_tiers: DEFAULT_RESOLUTION_TIERS
       });

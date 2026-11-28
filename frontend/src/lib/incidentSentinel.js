@@ -1,7 +1,15 @@
+/**
+ * @file incidentSentinel.js
+ * @description Centinela pasivo de incidentes de red y utilidades de consulta/limpieza.
+ * Detecta bloqueos DNS locales mitigados por el proxy de Netlify y gestiona la tabla `network_incidents`.
+ */
+
 import { supabase, DIRECT_SUPABASE_URL } from './supabase';
 
+// --- Constantes de control ---
 const REPORT_COOLDOWN_MS = 15 * 60 * 1000; // 15 minutos de espera mínima por navegador
 
+// --- Detección pasiva de bloqueos de red ---
 /**
  * Centinela Pasivo de Incidentes:
  * Se ejecuta de manera completamente anónima y discreta.
@@ -67,6 +75,7 @@ export async function runPassiveSentinelCheck() {
   }
 }
 
+// --- Consulta y mantenimiento de incidentes registrados ---
 /**
  * Recupera los incidentes registrados en las últimas 24 horas (usado en /status)
  */
@@ -95,7 +104,7 @@ export async function clearAllIncidents() {
     const { error } = await supabase
       .from('network_incidents')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Eliminar todos los registros
     return !error;
   } catch {
     return false;

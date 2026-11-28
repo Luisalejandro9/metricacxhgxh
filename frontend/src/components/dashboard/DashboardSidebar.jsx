@@ -14,21 +14,13 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
+import { formatTmoMin, formatTime } from '../../utils/formatters';
 
-const formatTmoMin = (seconds) => {
-  if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')} min`;
-};
-
-const formatTime = (totalSeconds) => {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-};
-
+/**
+ * Barra lateral del Dashboard operativo.
+ * Muestra el usuario autenticado, el temporizador de jornada, los contadores
+ * rápidos (cerrados, gestionados, TCO y transferidos) y los estándares del servicio.
+ */
 function DashboardSidebar({
   user,
   profile,

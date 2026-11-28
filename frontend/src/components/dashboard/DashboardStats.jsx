@@ -1,23 +1,11 @@
 import React from 'react';
 import ResolutionDifferenceBreakdown from '../ResolutionDifferenceBreakdown';
 import { SquarePen, Save, Zap, Check, AlertTriangle, X, Download } from 'lucide-react';
+import { formatTmoMin, formatTime, getTodayDateStr } from '../../utils/formatters';
 
-const formatTmoMin = (seconds) => {
-  if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')} min`;
-};
+// --- ALGORITMOS DE RECUPERACIÓN EXACTA PARA LLEGAR A 0 / OBJETIVO ---
 
-const formatTime = (totalSeconds) => {
-  if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-};
-
-// --- EXACT RECOVERY ALGORITHMS TO REACH 0 / TARGET ---
+/** Calcula cuántos casos sin TCO o cerrados faltan para alcanzar el objetivo de resolución */
 const getCasesNeededToFixReso = (managed, technicians, targetPct = 84.0) => {
   if (managed === 0) return 0;
   const targetRatio = targetPct / 100;
@@ -27,6 +15,7 @@ const getCasesNeededToFixReso = (managed, technicians, targetPct = 84.0) => {
   return Math.abs(currentDiff);
 };
 
+/** Calcula cuántos cierres adicionales se requieren para alcanzar el % de cierre objetivo */
 const getCasesNeededToFixCierre = (managed, closed, targetPct = 78.8) => {
   if (managed === 0) return 0;
   const targetRatio = targetPct / 100;
@@ -35,6 +24,7 @@ const getCasesNeededToFixCierre = (managed, closed, targetPct = 78.8) => {
   return Math.abs(currentDiff);
 };
 
+/** Calcula cuántas gestiones faltan para cumplir con el GxH objetivo en las horas trabajadas */
 const getCasesNeededToFixGxH = (managed, totalHours, targetGxH = 4.0) => {
   if (totalHours === 0) return 0;
   const targetManaged = Math.ceil(totalHours * targetGxH);
@@ -42,6 +32,10 @@ const getCasesNeededToFixGxH = (managed, totalHours, targetGxH = 4.0) => {
   return needed > 0 ? needed : 0;
 };
 
+/**
+ * Panel principal de tarjetas KPI, desglose de bonificaciones, guía de indicadores
+ * y botones para guardar métricas o exportarlas a CSV.
+ */
 function DashboardStats({
   user,
   timerSeconds = 0,
@@ -75,9 +69,9 @@ function DashboardStats({
   const gxhBonus = getGxHBonus(stats.managedPerHour);
   const resoBonus = getResolucionBonus(stats.resolutionRate);
 
-  // --- CSV Download Handler ---
+  // --- Manejador de descarga del reporte diario en CSV ---
   const handleDownloadCSV = () => {
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = getTodayDateStr();
     const timeStr = formatTime(timerSeconds);
     const bonusTodayStr = totalTodayBonus.toFixed(2);
     const bonusMonthStr = accumulatedBonusTotal.toFixed(2);

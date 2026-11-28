@@ -1,5 +1,10 @@
+/**
+ * @fileoverview Utilidades y componente visual para calcular y mostrar el avance
+ * hacia los escalones de bonificación por tasa de resolución (casos sin TCO).
+ */
 import React from 'react';
 
+// Escala de bonificación por defecto (% mínimo de resolución -> % de bono)
 const DEFAULT_TIERS = [
   { min: 84.5, bonus: 3 },
   { min: 83.5, bonus: 2 },
@@ -9,6 +14,13 @@ const DEFAULT_TIERS = [
   { min: 0, bonus: -2 }
 ];
 
+/**
+ * Calcula la diferencia de casos resueltos respecto a cada escalón de bonificación.
+ * @param {number|string} managed - Total de casos gestionados.
+ * @param {number|string} technicians - Total de técnicos (TCO) enviados.
+ * @param {Array<{min: number, bonus: number}>} [tiers=DEFAULT_TIERS] - Escalones configurados.
+ * @returns {Array<{bonus: number, min: number, difference: number}>} Lista ordenada descendentemente por mínimo requerido.
+ */
 export const getResolutionTierDifferences = (managed, technicians, tiers = DEFAULT_TIERS) => {
   const total = Number(managed) || 0;
   const sent = Number(technicians) || 0;
@@ -24,18 +36,28 @@ export const getResolutionTierDifferences = (managed, technicians, tiers = DEFAU
     }));
 };
 
-// Misma escalera del ranking administrativo: piso 0%, luego 1%, 2% y techo 3%.
+/**
+ * Calcula el progreso hacia el siguiente escalón positivo de bonificación por resolución
+ * o el excedente si ya se alcanzó el techo del 3%.
+ * Misma escalera del ranking administrativo: piso 0%, luego 1%, 2% y techo 3%.
+ * @param {number|string} managed - Total de casos gestionados.
+ * @param {number|string} technicians - Total de técnicos (TCO) enviados.
+ * @param {Array<{min: number, bonus: number}>} [tiers=DEFAULT_TIERS] - Escalones configurados.
+ * @returns {object|null} Resumen con bono actual, objetivo, diferencia, casos faltantes y etiqueta legible.
+ */
 export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT_TIERS) => {
   const total = Number(managed) || 0;
   const sent = Number(technicians) || 0;
   if (total <= 0) return null;
 
+  // Ordenar todos los escalones de mayor a menor exigencia para detectar el tramo actual
   const allTiers = [...(Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_TIERS)]
     .sort((a, b) => Number(b.min) - Number(a.min));
   const resolutionRate = ((total - sent) / total) * 100;
   const currentTier = allTiers.find(tier => resolutionRate >= Number(tier.min));
   const currentBonus = Number(currentTier?.bonus ?? allTiers[allTiers.length - 1]?.bonus ?? -2);
 
+  // Filtrar escalones no negativos (0% a 3%) para definir la meta de progreso
   const positiveTiers = allTiers
     .filter(tier => Number(tier.bonus) >= 0 && Number(tier.bonus) <= 3)
     .sort((a, b) => Number(a.bonus) - Number(b.bonus));
@@ -74,6 +96,15 @@ export const getResolutionBonusProgress = (managed, technicians, tiers = DEFAULT
   };
 };
 
+/**
+ * Insignia informativa que muestra cuántos casos sin TCO faltan para el próximo
+ * escalón de resolución o el excedente acumulado al alcanzar el máximo.
+ * @param {object} props
+ * @param {number|string} props.managed - Casos gestionados.
+ * @param {number|string} props.technicians - Técnicos enviados.
+ * @param {Array<{min: number, bonus: number}>} [props.tiers] - Escalones de resolución.
+ * @param {boolean} [props.compact=false] - Si true, reduce tamaño de fuente y padding.
+ */
 function ResolutionDifferenceBreakdown({ managed, technicians, tiers, compact = false }) {
   const progress = getResolutionBonusProgress(managed, technicians, tiers);
   if (!progress) return <span>Sin datos</span>;

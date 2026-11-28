@@ -1,7 +1,41 @@
-import React from 'react';
+/**
+ * @fileoverview Panel administrativo de monitoreo operativo en tiempo real e historial
+ * unificado de operadores, con filtros de fecha, búsqueda y gráficos consolidados.
+ */
+import React, { Suspense, lazy } from 'react';
 import { Search, RefreshCw, Activity, History, ChevronRight, UserX } from 'lucide-react';
-import DashboardCharts from '../dashboard/DashboardCharts';
 
+// Carga diferida del módulo de gráficos (Chart.js)
+const DashboardCharts = lazy(() => import('../dashboard/DashboardCharts'));
+
+/**
+ * Vista principal de supervisión para administradores.
+ * @param {object} props
+ * @param {Array<object>} props.users - Lista de operadores registrados.
+ * @param {object} props.statsSummary - Totales y promedios consolidados del período.
+ * @param {object} props.standards - Estándares operativos (umbrales verde/amarillo).
+ * @param {Array<object>} props.metricsToday - Métricas de la jornada actual en vivo.
+ * @param {Array<object>} props.unifiedHistory - Resumen histórico agrupado por operador.
+ * @param {Function} props.setViewingUserDetails - Abre el modal de detalle de un operador.
+ * @param {boolean} props.isRefreshing - Estado de carga al refrescar manualmente.
+ * @param {Function} props.fetchData - Fuerza la recarga de datos desde Supabase.
+ * @param {string} props.startDate - Fecha inicial del filtro (YYYY-MM-DD).
+ * @param {Function} props.setStartDate - Actualiza `startDate`.
+ * @param {string} props.endDate - Fecha final del filtro (YYYY-MM-DD).
+ * @param {Function} props.setEndDate - Actualiza `endDate`.
+ * @param {Function} props.handleResetToCurrentMonth - Restaura el rango al mes corriente.
+ * @param {string} props.searchTerm - Texto de búsqueda por operador.
+ * @param {Function} props.setSearchTerm - Actualiza `searchTerm`.
+ * @param {Function} props.formatLastUpdated - Formatea la última marca de actualización.
+ * @param {Function} props.getStatusClass - Devuelve la clase CSS de semáforo según umbrales.
+ * @param {string} props.selectedUserEmail - Filtro actual de usuario ('all' o email).
+ * @param {Array<string>} props.excludedUserIds - IDs de perfiles excluidos de la vista global.
+ * @param {Function} props.clearExcludedUsers - Limpia la lista de usuarios excluidos.
+ * @param {Array<object>} [props.chartHistory=[]] - Historial pasado al componente de gráficos.
+ * @param {Function} props.calculateRecordBonus - Calcula el porcentaje de bono acumulado.
+ * @param {string} [props.theme='dark'] - Tema visual activo ('dark' | 'light').
+ * @param {string} [props.chartScopeLabel='Global'] - Etiqueta de alcance mostrada en los gráficos.
+ */
 function MonitorPanel({
   users,
   statsSummary,
@@ -28,10 +62,12 @@ function MonitorPanel({
   theme = 'dark',
   chartScopeLabel = 'Global'
 }) {
+  // Resolver perfiles excluidos para mostrar sus correos en el banner informativo
   const excludedUsersList = users.filter(u => excludedUserIds?.includes(u.id));
 
   return (
     <>
+      {/* CABECERA DEL PANEL Y CONTROLES DE FILTRO */}
       <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -212,15 +248,17 @@ function MonitorPanel({
       </div>
 
       {/* ANÁLISIS AVANZADO GLOBAL / POR OPERADOR */}
-      <DashboardCharts
-        history={chartHistory}
-        standards={standards}
-        calculateRecordBonus={calculateRecordBonus}
-        theme={theme}
-        scopeLabel={chartScopeLabel}
-        dateRange={{ start: startDate, end: endDate }}
-        hideDateControls
-      />
+      <Suspense fallback={<div className="metric-card" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', marginBottom: '24px' }}>Cargando gráficos de monitoreo...</div>}>
+        <DashboardCharts
+          history={chartHistory}
+          standards={standards}
+          calculateRecordBonus={calculateRecordBonus}
+          theme={theme}
+          scopeLabel={chartScopeLabel}
+          dateRange={{ start: startDate, end: endDate }}
+          hideDateControls
+        />
+      </Suspense>
 
       {/* TABLA HISTORIAL UNIFICADO */}
       <div className="metric-card" style={{ padding: '0' }}>

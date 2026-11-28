@@ -1,5 +1,12 @@
+/**
+ * @file supabase.js
+ * @description Configuración e inicialización del cliente de Supabase y utilidades de URL.
+ * Centraliza el enrutamiento a través del proxy inverso `/supabase` para evitar bloqueos DNS corporativos.
+ */
+
 import { createClient } from '@supabase/supabase-js';
 
+// --- Credenciales y configuración base ---
 export const DIRECT_SUPABASE_URL =
   import.meta.env.VITE_SUPABASE_URL || 'https://oyhlhdlubralrgjbgtqw.supabase.co';
 
@@ -10,6 +17,7 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
   console.warn('Advertencia: Usando credenciales base de Supabase para contingencia.');
 }
 
+// --- Utilidades de resolución de URLs ---
 /**
  * Obtiene la URL efectiva de Supabase.
  * En el navegador (en producción en Netlify o Vercel, o en desarrollo local con Vite),
@@ -45,10 +53,12 @@ export function getSafeMediaUrl(url) {
  * 2. Si el proxy llegase a no responder (o en un entorno sin proxy),
  *    automáticamente reintenta de forma transparente hacia la URL directa de Supabase.
  */
+// --- Transporte HTTP e inicialización del cliente Supabase ---
 // Mantener todas las solicitudes en el proxy del mismo origen.
 // No usar fallback al dominio directo: puede estar bloqueado por DNS corporativo.
 const resilientFetch = (input, init) => fetch(input, init);
 
+// Instancia única de Supabase con persistencia de sesión en localStorage
 export const supabase = createClient(
   getEffectiveSupabaseUrl(),
   SUPABASE_ANON_KEY,

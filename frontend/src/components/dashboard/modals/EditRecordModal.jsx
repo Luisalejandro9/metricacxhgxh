@@ -1,6 +1,19 @@
+/**
+ * @fileoverview Modal para editar un registro diario guardado en el historial
+ * (fecha, cantidades de casos y tiempo total en formato HH:MM:SS).
+ */
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
+/**
+ * Formulario modal de edición de un registro histórico de métricas.
+ * @param {object} props
+ * @param {boolean} props.show - Indica si el modal está abierto.
+ * @param {Function} props.onClose - Cierra el modal sin guardar.
+ * @param {object|null} props.editingRecord - Registro seleccionado para editar.
+ * @param {Function} props.onSave - Callback que recibe `formData` para persistir cambios.
+ * @param {boolean} props.isSaving - Indica si la actualización está en progreso.
+ */
 function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
   const [formData, setFormData] = useState({
     date: '',
@@ -13,6 +26,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
     transferred: 0
   });
 
+  // Sincroniza el estado local cuando se abre el modal con un registro existente
   useEffect(() => {
     if (show && editingRecord) {
       const [h, m, s] = editingRecord.total_time.split(':').map(Number);
@@ -29,6 +43,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
 
   if (!show) return null;
 
+  /** Envía los valores editados al manejador del dashboard. */
   const handleSave = () => {
     onSave(formData);
   };
@@ -36,11 +51,13 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
   return (
     <div className="modal-overlay active">
       <div className="modal" style={{ maxWidth: '600px' }}>
+        {/* CABECERA */}
         <div className="modal-header">
           <h2>Editar Registro</h2>
           <button className="btn-close" onClick={onClose}><X /></button>
         </div>
 
+        {/* CAMPOS DE FECHA Y CONTEO DE CASOS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
           <div className="input-group">
             <label>Fecha</label>
@@ -69,6 +86,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
           </div>
         </div>
 
+        {/* SELECTOR DE TIEMPO TOTAL (HORAS : MINUTOS : SEGUNDOS) */}
         <label className="metric-label" style={{ textAlign: 'center', marginBottom: '10px' }}>Tiempo Total</label>
         <div className="time-inputs">
           <div className="input-group">
@@ -87,6 +105,7 @@ function EditRecordModal({ show, onClose, editingRecord, onSave, isSaving }) {
           </div>
         </div>
 
+        {/* PIE DEL MODAL */}
         <div className="modal-footer" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={isSaving}>

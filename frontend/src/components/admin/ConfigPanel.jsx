@@ -1,5 +1,21 @@
+/**
+ * @fileoverview Panel administrativo para configurar estándares operativos
+ * (GxH, % resolución, % cierre y TMO) y tablas de bonificación por rangos.
+ */
 import React from 'react';
 
+/**
+ * Formulario de ajustes de métricas y escalas de bonificación.
+ * @param {object} props
+ * @param {object|null} props.formConfig - Estado editable de la configuración global.
+ * @param {boolean} props.isSavingConfig - Indica si hay un guardado en curso.
+ * @param {Function} props.resetConfigToDefault - Restaura los valores predeterminados.
+ * @param {Function} props.saveConfig - Persiste la configuración en backend.
+ * @param {Function} props.handleConfigChange - Actualiza un campo simple de `formConfig`.
+ * @param {Function} props.handleTierChange - Edita un escalón dentro de una tabla de bonos.
+ * @param {Function} props.addTier - Agrega un nuevo escalón de bonificación.
+ * @param {Function} props.deleteTier - Elimina un escalón de bonificación por índice.
+ */
 function ConfigPanel({
   formConfig,
   isSavingConfig,
@@ -14,6 +30,7 @@ function ConfigPanel({
 
   return (
     <div style={{ padding: '0 10px 40px 10px' }}>
+      {/* CABECERA Y ACCIONES PRINCIPALES */}
       <div className="admin-header" style={{ marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '32px', margin: 0 }}>Ajustes de Métricas</h2>
@@ -30,7 +47,7 @@ function ConfigPanel({
       </div>
 
       <div className="grid-primary" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }}>
-        {/* SECCIÓN 1: ESTÁNDARES */}
+        {/* SECCIÓN 1: ESTÁNDARES OPERATIVOS */}
         <div className="metric-card" style={{ padding: '30px', background: 'rgba(15, 23, 42, 0.4)' }}>
           <h3 style={{ color: 'var(--primary-light)', fontSize: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '20px' }}>
             🎯 Objetivos y Estándares Operativos

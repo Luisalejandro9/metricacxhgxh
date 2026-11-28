@@ -1,14 +1,12 @@
 import React from 'react';
 import { Edit3, Trash2 } from 'lucide-react';
 import { getResolutionBonusProgress } from '../ResolutionDifferenceBreakdown';
+import { formatTmoMin } from '../../utils/formatters';
 
-const formatTmoMin = (seconds) => {
-  if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00 min";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')} min`;
-};
-
+/**
+ * Tablas de historial diario y acumulados mensuales del operador.
+ * Permite filtrar por mes o fecha exacta, editar registros existentes y eliminarlos.
+ */
 function HistoryTables({
   isLoadingHistory,
   filteredHistory,

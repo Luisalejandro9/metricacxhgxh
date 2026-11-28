@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
 
-/* --- EXECUTIVE PROFESSIONAL DESIGN SYSTEM --- */
+/* --- SISTEMA DE DISEÑO EJECUTIVO PROFESIONAL --- */
 
 :root,
 [data-theme="dark"] {
-  /* Dark Theme Palette — Refined Corporate Dark */
+  /* Variables de tema oscuro — Paleta corporativa refinada */
   --bg-main: #0f1117;
   --bg-card: #181b23;
   --bg-sidebar: #141720;
@@ -31,7 +31,7 @@
   --border-strong: #3a3d4a;
   --border-focus: #3b82f6;
 
-  /* Executive Button Palette */
+  /* Paleta de botones ejecutivos */
   --btn-primary-bg: #e2e8f0;       /* Gris claro ejecutivo en modo oscuro */
   --btn-primary-text: #0f172a;     /* Texto oscuro de alto contraste */
   --btn-primary-hover: #f8fafc;
@@ -52,7 +52,7 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
   --shadow-glow: none;
 
-  /* Professional rounded corners */
+  /* Radios de borde, tipografía y transiciones */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -66,7 +66,7 @@
 }
 
 [data-theme="light"] {
-  /* Light Theme Palette — Clean Corporate Light */
+  /* Variables de tema claro — Paleta corporativa limpia */
   --bg-main: #f5f5f7;
   --bg-card: #ffffff;
   --bg-sidebar: #eeeef1;
@@ -93,7 +93,7 @@
   --border-strong: #d1d5db;
   --border-focus: #2563eb;
 
-  /* Executive Button Palette */
+  /* Paleta de botones ejecutivos */
   --btn-primary-bg: #0f172a;       /* Slate oscuro ejecutivo en modo claro */
   --btn-primary-text: #ffffff;
   --btn-primary-hover: #1e293b;
@@ -115,7 +115,7 @@
   --shadow-glow: none;
 }
 
-/* Global box model reset */
+/* --- REINICIO GLOBAL Y BASE --- */
 *,
 *::before,
 *::after {
@@ -141,7 +141,7 @@ html, body {
   flex-direction: column;
 }
 
-/* Swiss Typographic Hierarchy */
+/* --- JERARQUÍA TIPOGRÁFICA Y ELEMENTOS BASE --- */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
@@ -196,7 +196,7 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
 }
 
-/* Glass & Card Classes adapted to Executive Grid */
+/* --- TARJETAS Y SUPERFICIES --- */
 .glass {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -209,7 +209,7 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-strong);
 }
 
-/* Custom Theme Toggle Switch Button */
+/* --- BOTÓN DE CAMBIO DE TEMA --- */
 .theme-toggle-btn {
   display: flex;
   align-items: center;
@@ -233,7 +233,7 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-strong);
 }
 
-/* Sharp Scrollbars */
+/* --- BARRAS DE DESPLAZAMIENTO --- */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -252,7 +252,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SILENT AUTO-UPDATER TOAST
+   NOTIFICACIÓN DE ACTUALIZACIÓN SILENCIOSA (TOAST)
    ═══════════════════════════════════════════════════════════ */
 .silent-update-toast {
   position: fixed;
@@ -370,7 +370,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TECHNICAL STATUS DASHBOARD (/status)
+   PANEL DE ESTADO TÉCNICO (/status)
    ═══════════════════════════════════════════════════════════ */
 .tech-status-container {
   width: 100%;
@@ -386,7 +386,7 @@ input:focus, select:focus, textarea:focus {
   font-family: 'Inter', -apple-system, sans-serif;
 }
 
-/* Login Gate */
+/* Acceso de inicio de sesión técnico */
 .tech-login-card {
   width: 100%;
   max-width: 480px;
@@ -539,7 +539,7 @@ input:focus, select:focus, textarea:focus {
   color: #ffffff;
 }
 
-/* Topbar */
+/* Barra superior de navegación */
 .tech-topbar {
   width: 100%;
   background: #0d1117;
@@ -668,7 +668,7 @@ input:focus, select:focus, textarea:focus {
   cursor: not-allowed;
 }
 
-/* Main Dashboard Grid */
+/* Cuadrícula principal del panel técnico */
 .tech-main-grid {
   width: 100%;
   max-width: 1300px;
@@ -678,7 +678,7 @@ input:focus, select:focus, textarea:focus {
   gap: 24px;
 }
 
-/* Health Verdict Banner */
+/* Banner de veredicto de salud del sistema */
 .tech-verdict-banner {
   display: flex;
   align-items: center;
@@ -746,14 +746,14 @@ input:focus, select:focus, textarea:focus {
   white-space: nowrap;
 }
 
-/* Dual Column Layout */
+/* Diseño de doble columna */
 .tech-dual-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-/* Modular Cards */
+/* Tarjetas modulares de diagnóstico */
 .tech-card {
   background: #0d1117;
   border: 1px solid #21262d;
@@ -898,7 +898,7 @@ input:focus, select:focus, textarea:focus {
   color: #ffffff;
 }
 
-/* Database Tables Grid */
+/* Cuadrícula de tablas de base de datos */
 .tech-tables-grid {
   display: grid;
   gap: 12px;
@@ -967,7 +967,7 @@ input:focus, select:focus, textarea:focus {
 .color-err { color: #ef4444; }
 .color-loading { color: #38bdf8; }
 
-/* Cache Grid */
+/* Cuadrícula de métricas de caché */
 .tech-cache-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1004,7 +1004,7 @@ input:focus, select:focus, textarea:focus {
   color: var(--primary-light);
 }
 
-/* Responsiveness */
+/* Responsividad del panel técnico */
 @media (max-width: 990px) {
   .tech-dual-grid {
     grid-template-columns: 1fr;
@@ -1042,7 +1042,7 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-/* Office Sentinel Incident Monitor */
+/* Monitor de incidentes Office Sentinel */
 .tech-office-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1160,29 +1160,29 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   EXECUTIVE PROFESSIONAL REFINEMENTS
-   Clean typography, focus states, and polished UI details.
+   REFINAMIENTOS EJECUTIVOS PROFESIONALES
+   Tipografía limpia, estados de enfoque y detalles de tablas y tarjetas.
    ═══════════════════════════════════════════════════════════ */
 
-/* Professional body typography */
+/* Tipografía base del cuerpo */
 body {
   font-family: var(--font-main);
   letter-spacing: -0.01em;
 }
 
-/* Heading refinement — sentence case, tighter tracking */
+/* Refinamiento de encabezados — mayúscula inicial y espaciado compacto */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   letter-spacing: -0.02em;
   text-transform: none;
 }
 
-/* Consistent font on interactive elements */
+/* Fuente uniforme en elementos interactivos */
 button, input, select, textarea {
   font-family: var(--font-main);
 }
 
-/* Accessible focus rings */
+/* Anillos de enfoque accesibles */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -1191,32 +1191,32 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* Table headings keep uppercase treatment */
+/* Encabezados de tabla en mayúsculas */
 .history-table th {
   font-family: var(--font-heading);
   letter-spacing: 0.07em;
 }
 
-/* Tabular figures for numeric data alignment */
+/* Cifras tabulares para alineación de datos numéricos */
 .history-table td {
   font-variant-numeric: tabular-nums;
 }
 
-/* Lighter section header accent */
+/* Separador sutil en encabezados de sección */
 .swiss-section-header {
   letter-spacing: 0.1em;
   border-bottom-width: 1px;
 }
 
-/* Subtle hover lift on metric cards */
+/* Resaltado sutil al pasar el cursor sobre tarjetas de métricas */
 .metric-card:hover,
 .glass-hover:hover {
   border-color: var(--border-strong);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CIRCULAR SPINNER & LOADING STATES
-   Clean circular indicators for all loading states.
+   INDICADOR DE CARGA CIRCULAR (SPINNER) Y ESTADOS DE CARGA
+   Indicadores circulares limpios para todos los estados de carga.
    ═══════════════════════════════════════════════════════════ */
 
 .spinner,
@@ -1243,7 +1243,7 @@ textarea:focus-visible {
 }
 
 
-/* /status — mobile-first layout refinements */
+/* --- RESPONSIVIDAD MÓVIL PARA ESTADO TÉCNICO (/status) --- */
 @media (max-width: 768px) {
   .tech-status-container {
     min-height: 100dvh;

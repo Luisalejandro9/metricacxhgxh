@@ -1,7 +1,17 @@
+/**
+ * @file useAuthController.js
+ * @description Hook controlador de autenticación y sesión de usuario.
+ * Gestiona el inicio de sesión con Google ID Token, modo demostración, sincronización
+ * del perfil en Supabase, validación de dominio corporativo y recuperación ante bloqueos de red.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import { supabase, getEffectiveSupabaseUrl } from '../lib/supabase';
 import { runPassiveSentinelCheck } from '../lib/incidentSentinel';
 
+/**
+ * Valida si el correo pertenece al dominio corporativo o a cuentas administrativas autorizadas.
+ */
 const isEmailAllowed = (email) => {
   if (!email) return false;
   const normalized = email.toLowerCase();
@@ -10,15 +20,18 @@ const isEmailAllowed = (email) => {
     normalized === 'lacosta151999@gmail.com';
 };
 
+/**
+ * Hook principal que administra el ciclo de vida de la sesión, el perfil y el estado de conectividad.
+ */
 export function useAuthController() {
-  // --- Global State ---
-  const [user, setUser] = useState(null); // Current authenticated user
-  const [profile, setProfile] = useState(undefined); // undefined: not loaded, null: not found, object: loaded
-  const [loading, setLoading] = useState(true); // Loading state for initial session check
-  const [networkError, setNetworkError] = useState(false); // Detects DNS/Fetch errors (intermittent DNS blocking)
-  const [authError, setAuthError] = useState(null); // Standard auth failures
+  // --- Estado global de autenticación ---
+  const [user, setUser] = useState(null); // Usuario autenticado actual
+  const [profile, setProfile] = useState(undefined); // undefined: sin cargar, null: no encontrado, objeto: cargado
+  const [loading, setLoading] = useState(true); // Estado de carga para la verificación inicial de sesión
+  const [networkError, setNetworkError] = useState(false); // Detecta errores de DNS o red (bloqueos intermitentes)
+  const [authError, setAuthError] = useState(null); // Errores estándar de autenticación
 
-  // Refs to avoid stale closures and redundant renders in auth listeners
+  // Referencias para evitar cierres obsoletos y renderizados redundantes en los listeners
   const userRef = useRef(user);
   const profileRef = useRef(profile);
 
@@ -30,11 +43,14 @@ export function useAuthController() {
     profileRef.current = profile;
   }, [profile]);
 
-  // --- Profile Sync ---
+  // --- Sincronización del perfil de usuario ---
+  /**
+   * Consulta el perfil del usuario en `profiles` con timeout de seguridad y aprovisionamiento automático si falta.
+   */
   const syncProfile = async (userId) => {
     if (!userId) { setProfile(null); return; }
     try {
-      // Timeout after 5 seconds to prevent hanging
+      // Límite de 5 segundos para evitar bloqueos indefinidos
       const result = await Promise.race([
         supabase.from('profiles').select('*').eq('id', userId).single(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), 5000))
@@ -99,7 +115,10 @@ export function useAuthController() {
     }
   };
 
-  // --- Check if Supabase (or its Netlify Proxy) is Reachable ---
+  // --- Verificación de conectividad con Supabase (o su proxy en Netlify) ---
+  /**
+   * Envía una petición HEAD con timeout corto al proxy efectivo para comprobar conectividad.
+   */
   const checkSupabaseConnection = async () => {
     try {
       const controller = new AbortController();
@@ -120,7 +139,7 @@ export function useAuthController() {
     }
   };
 
-  // --- Centinela Pasivo de Incidentes de Red ---
+  // --- Centinela pasivo de incidentes de red ---
   useEffect(() => {
     const sentinelTimeout = setTimeout(runPassiveSentinelCheck, 3500);
     const sentinelInterval = setInterval(runPassiveSentinelCheck, 10 * 60 * 1000);
@@ -130,12 +149,16 @@ export function useAuthController() {
     };
   }, []);
 
+  // --- Inicialización de sesión y suscripción a cambios de autenticación ---
   useEffect(() => {
     let mounted = true;
 
+    /**
+     * Evalúa la sesión inicial (demo local, código OAuth en URL o sesión activa en Supabase).
+     */
     const checkSession = async () => {
       try {
-        // --- 1. Check if there is an active local Demo Session ---
+        // --- 1. Verificar si existe una sesión local de demostración activa ---
         const demoSessionStr = sessionStorage.getItem('demo_session');
         if (demoSessionStr) {
           const demoSession = JSON.parse(demoSessionStr);
@@ -147,13 +170,13 @@ export function useAuthController() {
           }
         }
 
-        // Avoid duplicate check if already handled by onAuthStateChange
+        // Evitar verificación duplicada si ya fue procesada por onAuthStateChange
         if (userRef.current) {
           if (mounted) setLoading(false);
           return;
         }
 
-        // --- 2. Check for OAuth code or access token in URL ---
+        // --- 2. Verificar código OAuth en la URL e intercambiarlo por sesión ---
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         if (code) {
@@ -167,14 +190,14 @@ export function useAuthController() {
           }
         }
 
-        // --- 3. Standard Supabase Session Check ---
+        // --- 3. Verificación estándar de sesión en Supabase ---
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
         if (mounted && data?.session) {
           const email = data.session.user.email;
           if (isEmailAllowed(email)) {
-            // Guard with ref checks
+            // Proteger actualización usando referencias actuales
             if (!userRef.current) {
               setUser(data.session.user);
             }
@@ -201,9 +224,10 @@ export function useAuthController() {
 
     checkSession();
 
+    // Listener reactivo para eventos de sesión en Supabase (login, logout, refresco de token)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
-        // Keep demo sessions active even if Supabase triggers onAuthStateChange (e.g. on background syncs)
+        // Mantener activas las sesiones demo aunque Supabase dispare onAuthStateChange (p. ej. en sincronizaciones en segundo plano)
         const demoSessionStr = sessionStorage.getItem('demo_session');
         if (demoSessionStr) {
           const demoSession = JSON.parse(demoSessionStr);
@@ -215,11 +239,11 @@ export function useAuthController() {
         if (session) {
           const email = session.user.email;
           if (isEmailAllowed(email)) {
-            // Only set user if the user object changed/is empty
+            // Actualizar usuario solo si cambió o está vacío
             if (!userRef.current || userRef.current.id !== session.user.id || userRef.current.email !== session.user.email) {
               setUser(session.user);
             }
-            // Only sync profile if it's not already loaded for this user
+            // Sincronizar perfil solo si aún no está cargado para este usuario
             if (profileRef.current === undefined || profileRef.current === null || profileRef.current.id !== session.user.id) {
               setTimeout(() => { void syncProfile(session.user.id); }, 0);
             }
@@ -231,21 +255,21 @@ export function useAuthController() {
             setTimeout(() => { void supabase.auth.signOut(); }, 0);
           }
         } else {
-          // If there was no active user anyway, just clear and return
+          // Si no había usuario activo, limpiar estado y salir
           if (!userRef.current) {
             setUser(null);
             setProfile(null);
             return;
           }
 
-          // If the event is explicitly SIGNED_OUT, then clear session
+          // Si el evento es explícitamente SIGNED_OUT, limpiar la sesión
           if (event === 'SIGNED_OUT') {
             setUser(null);
             setProfile(null);
           } else {
-            // If the event is not SIGNED_OUT, it's a transient check (like token refresh or tab focus).
-            // Do NOT clear the user or profile here to prevent unmounting the dashboard and slow reloads.
-            // Instead, do a quick connection check to update the network error status.
+            // Si el evento no es SIGNED_OUT, es una verificación transitoria (como refresco de token o foco de pestaña).
+            // No limpiar usuario ni perfil aquí para evitar desmontar el panel y provocar recargas lentas.
+            // En su lugar, comprobar rápidamente la conexión para actualizar el estado de error de red.
             setTimeout(async () => {
               const isReachable = await checkSupabaseConnection();
               setNetworkError(!isReachable);
@@ -264,7 +288,7 @@ export function useAuthController() {
     };
   }, []);
 
-  // --- Background Connection Recovery Loop ---
+  // --- Bucle de recuperación de conexión en segundo plano ---
   useEffect(() => {
     let intervalId = null;
 
@@ -290,7 +314,7 @@ export function useAuthController() {
             setLoading(false);
           }
         }
-      }, 4000); // Check every 4 seconds
+      }, 4000); // Comprobar cada 4 segundos
     }
 
     return () => {
@@ -298,10 +322,10 @@ export function useAuthController() {
     };
   }, [networkError, user]);
 
-  // --- Force Logout on Disabled/Deleted Profile ---
+  // --- Cierre de sesión forzado si el perfil está deshabilitado o eliminado ---
   useEffect(() => {
     if (user && profile !== undefined) {
-      if (user.isDemo) return; // Skip forced logout checks for local demo sessions
+      if (user.isDemo) return; // Omitir verificación de cierre forzado en sesiones locales de demostración
       if (profile?.is_enabled === false) {
         console.warn('Perfil deshabilitado o eliminado. Forzando cierre de sesión...');
         supabase.auth.signOut();
@@ -309,7 +333,10 @@ export function useAuthController() {
     }
   }, [user, profile]);
 
-  // --- Google Identity Services: ID Token flow (sin redirección OAuth a Supabase) ---
+  // --- Flujo de Google Identity Services: ID Token (sin redirección OAuth a Supabase) ---
+  /**
+   * Inicia sesión en Supabase intercambiando el ID Token y el nonce emitidos por Google.
+   */
   const handleGoogleLogin = async (idToken, nonce) => {
     try {
       setAuthError(null);
@@ -333,8 +360,10 @@ export function useAuthController() {
     }
   };
 
-  // --- Spectator Demo Authentication Handler ---
-  // Sets up simulated spectator credentials in sessionStorage
+  // --- Manejador de acceso en modo espectador (demostración) ---
+  /**
+   * Configura credenciales simuladas de espectador en sessionStorage para probar la plataforma sin backend.
+   */
   const handleSpectatorLogin = () => {
     const demoUser = {
       id: 'demo-spectator-id',
@@ -348,7 +377,7 @@ export function useAuthController() {
       is_enabled: true
     };
     
-    // Save to sessionStorage so it persists page reloads
+    // Guardar en sessionStorage para conservar la sesión tras recargas
     sessionStorage.setItem('demo_session', JSON.stringify({ user: demoUser, profile: demoProfile }));
     
     setUser(demoUser);
@@ -359,7 +388,7 @@ export function useAuthController() {
 
   const envsMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // Removed standby / DNS blocked full-screen recovery screen to allow normal rendering of Login screen with custom alerts
+  // Se omite pantalla completa de bloqueo DNS para permitir el renderizado normal del Login con alertas personalizadas
 
 
   return {

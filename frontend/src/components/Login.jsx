@@ -1,21 +1,36 @@
+/**
+ * @file Login.jsx
+ * @description Portal de inicio de sesión de la plataforma.
+ * Ofrece autenticación mediante Google Identity Services (ID Token), código OTP por correo
+ * corporativo sin redirecciones externas y acceso de demostración en modo espectador.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, RefreshCw, Sun, Moon, KeyRound, Mail, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+/**
+ * Pantalla de acceso con selector de tema, alertas de autenticación/red y métodos de ingreso.
+ */
 function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError, setNetworkError, theme, toggleTheme }) {
+  // --- Referencias y configuración de Google Identity Services ---
   const googleButtonRef = useRef(null);
   const googleHandlerRef = useRef(handleGoogleLogin);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => { googleHandlerRef.current = handleGoogleLogin; }, [handleGoogleLogin]);
 
+  // --- Inicialización y renderizado del botón de Google ---
   useEffect(() => {
     if (!googleClientId || !googleButtonRef.current) return undefined;
     let cancelled = false;
+    /**
+     * Genera un nonce criptográfico y renderiza el botón oficial de Google Sign-In.
+     */
     const renderGoogleButton = async () => {
       if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
       try {
-        // Generate a fresh nonce for every page load/sign-in initialization.
+        // Generar un nonce nuevo en cada carga o inicialización de inicio de sesión.
         const randomBytes = crypto.getRandomValues(new Uint8Array(32));
         const rawNonce = btoa(String.fromCharCode(...randomBytes));
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawNonce));
@@ -58,13 +73,16 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
     return () => { cancelled = true; };
   }, [googleClientId]);
 
-  // Email OTP state for direct access without OAuth redirects
+  // --- Estado del flujo OTP por correo para acceso directo sin redirecciones OAuth ---
   const [email, setEmail] = useState('');
   const [otpToken, setOtpToken] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpMessage, setOtpMessage] = useState(null);
 
+  /**
+   * Valida el dominio del correo y solicita a Supabase el envío de un código OTP.
+   */
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setOtpMessage(null);
@@ -94,6 +112,9 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
     }
   };
 
+  /**
+   * Verifica el código OTP de 6 dígitos ingresado por el usuario para iniciar sesión.
+   */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setOtpMessage(null);
@@ -118,6 +139,7 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
     }
   };
 
+  // --- Pantalla de advertencia si faltan variables de entorno de Supabase ---
   if (envsMissing) {
     return (
       <div className="login-overlay active">
@@ -131,11 +153,13 @@ function Login({ handleGoogleLogin, handleSpectatorLogin, envsMissing, authError
     );
   }
 
+  // --- Renderizado principal del portal de acceso ---
   return (
     <div className="login-overlay active">
       <div className="login-bg"></div>
 
       <div className="login-card" style={{ maxWidth: '440px', width: '100%' }}>
+        {/* Encabezado y selector de tema */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', color: 'var(--primary)', textTransform: 'uppercase' }}>
             Portal de Acceso
