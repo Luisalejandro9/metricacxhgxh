@@ -158,18 +158,6 @@ export function useAuthController() {
      */
     const checkSession = async () => {
       try {
-        // --- 1. Verificar si existe una sesión local de demostración activa ---
-        const demoSessionStr = sessionStorage.getItem('demo_session');
-        if (demoSessionStr) {
-          const demoSession = JSON.parse(demoSessionStr);
-          if (mounted) {
-            setUser(demoSession.user);
-            setProfile(demoSession.profile);
-            setLoading(false);
-            return;
-          }
-        }
-
         // Evitar verificación duplicada si ya fue procesada por onAuthStateChange
         if (userRef.current) {
           if (mounted) setLoading(false);
@@ -193,7 +181,28 @@ export function useAuthController() {
         // --- 3. Verificación estándar de sesión en Supabase ---
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-        
+
+        // Una sesión autenticada de Supabase siempre tiene prioridad sobre el modo Demo.
+        if (data?.session) {
+          sessionStorage.removeItem('demo_session');
+        } else {
+          const demoSessionStr = sessionStorage.getItem('demo_session');
+          if (demoSessionStr) {
+            try {
+              const demoSession = JSON.parse(demoSessionStr);
+              if (mounted && demoSession?.user?.isDemo && demoSession?.profile?.id === demoSession.user.id) {
+                setUser(demoSession.user);
+                setProfile(demoSession.profile);
+                setLoading(false);
+                return;
+              }
+            } catch (demoError) {
+              console.warn('Sesión Demo inválida; se elimina para evitar contaminación de sesión:', demoError);
+              sessionStorage.removeItem('demo_session');
+            }
+          }
+        }
+
         if (mounted && data?.session) {
           const email = data.session.user.email;
           if (isEmailAllowed(email)) {
@@ -227,16 +236,9 @@ export function useAuthController() {
     // Listener reactivo para eventos de sesión en Supabase (login, logout, refresco de token)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
-        // Mantener activas las sesiones demo aunque Supabase dispare onAuthStateChange (p. ej. en sincronizaciones en segundo plano)
-        const demoSessionStr = sessionStorage.getItem('demo_session');
-        if (demoSessionStr) {
-          const demoSession = JSON.parse(demoSessionStr);
-          setUser(demoSession.user);
-          setProfile(demoSession.profile);
-          return;
-        }
-
+        // Una sesión real de Supabase siempre prevalece; nunca restaurar Demo encima de un usuario autenticado.
         if (session) {
+          sessionStorage.removeItem('demo_session');
           const email = session.user.email;
           if (isEmailAllowed(email)) {
             // Actualizar usuario solo si cambió o está vacío
@@ -255,6 +257,23 @@ export function useAuthController() {
             setTimeout(() => { void supabase.auth.signOut(); }, 0);
           }
         } else {
+          // Restaurar Demo solo cuando no existe una sesión real de Supabase.
+          const demoSessionStr = sessionStorage.getItem('demo_session');
+          if (event !== 'SIGNED_OUT' && demoSessionStr) {
+            try {
+              const demoSession = JSON.parse(demoSessionStr);
+              if (demoSession?.user?.isDemo && demoSession?.profile?.id === demoSession.user.id) {
+                setUser(demoSession.user);
+                setProfile(demoSession.profile);
+                return;
+              }
+            } catch (demoError) {
+              console.warn('Sesión Demo inválida; se elimina:', demoError);
+              sessionStorage.removeItem('demo_session');
+            }
+          }
+          if (event === 'SIGNED_OUT') sessionStorage.removeItem('demo_session');
+
           // Si no había usuario activo, limpiar estado y salir
           if (!userRef.current) {
             setUser(null);
@@ -341,6 +360,8 @@ export function useAuthController() {
     try {
       setAuthError(null);
       setNetworkError(false);
+      // Al iniciar autenticación real, descartar cualquier sesión Demo residual de esta pestaña.
+      sessionStorage.removeItem('demo_session');
       if (!idToken || !nonce) throw new Error('Google no devolvió las credenciales necesarias para iniciar sesión.');
 
       const { error } = await supabase.auth.signInWithIdToken({
